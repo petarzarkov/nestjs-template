@@ -1,0 +1,77 @@
+{
+  "name": "nestjs-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A production-ready NestJS monolith template with TypeScript, Drizzle ORM, and modern tooling.",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "author": {
+    "name": "Petar Zarkov",
+    "email": "pzarko1@gmail.com",
+    "url": "https://github.com/petarzarkov/"
+  },
+  "license": "MIT",
+  "scripts": {
+    "prepare": "husky",
+    "dev": "nest start --watch src/main.ts --env-file .env",
+    "start": "node dist/main.js",
+    "build": "nest build",
+    "test": "node --import tsx --test src/**/*.spec.ts",
+    "test:watch": "node --import tsx --test --watch src/**/*.spec.ts",
+    "test:e2e": "node --import tsx --test test/**/*.spec.ts",
+    "test:e2e:watch": "node --import tsx --test --watch test/**/*.spec.ts",
+    "lint": "eslint . --cache --fix",
+    "format": "prettier --cache --ignore-unknown --write .",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@nestjs/axios": "4.0.1",
+    "@nestjs/bullmq": "11.0.4",
+    "@nestjs/common": "11.1.9",
+    "@nestjs/config": "4.0.2",
+    "@nestjs/core": "11.1.9",
+    "@nestjs/platform-express": "11.1.9",
+    "@nestjs/schedule": "6.1.0",
+    "@nestjs/swagger": "11.2.3",
+    "@nestjs/terminus": "11.0.0",
+    "axios": "1.13.2",
+    "bullmq": "5.66.2",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.3",
+    "decimal.js": "10.6.0",
+    "drizzle-orm": "0.45.1",
+    "pg": "8.16.3",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "uuid": "13.0.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.14",
+    "@nestjs/testing": "11.1.9",
+    "@types/express": "5.0.6",
+    "@types/node": "25.0.3",
+    "@types/pg": "8.16.0",
+    "@types/supertest": "6.0.3",
+    "@typescript-eslint/eslint-plugin": "8.50.0",
+    "@typescript-eslint/parser": "8.50.0",
+    "@types/multer": "2.0.0",
+    "drizzle-kit": "0.31.8",
+    "eslint": "9.39.2",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "prettier": "3.7.4",
+    "supertest": "7.1.4",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}

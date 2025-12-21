@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ESNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "incremental": false,
+    "removeComments": true,
+    "sourceMap": true
+  },
+  "include": ["@types/**/*.d.ts", "src/**/*", "test/**/*", "drizzle.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

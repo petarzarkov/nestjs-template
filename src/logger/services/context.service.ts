@@ -1,0 +1,37 @@
+import { Injectable } from '@nestjs/common';
+import { AsyncLocalStorage } from 'async_hooks';
+
+export interface AsyncContext {
+  requestId?: string;
+  userId?: string;
+  orgId?: string;
+  method?: string;
+  event?: string;
+  context?: string;
+  flow?: 'http' | 'rpc' | 'rmq' | 'http-external';
+  [key: string]: unknown;
+}
+
+@Injectable()
+export class ContextService {
+  private readonly asyncLocalStorage = new AsyncLocalStorage<AsyncContext>();
+
+  getContext(): AsyncContext {
+    const context = this.asyncLocalStorage.getStore();
+    if (!context) {
+      return {};
+    }
+    return { ...context };
+  }
+
+  updateContext(obj: Partial<AsyncContext>): void {
+    const context = this.asyncLocalStorage.getStore();
+    if (context) {
+      Object.assign(context, obj);
+    }
+  }
+
+  runWithContext<T>(context: AsyncContext, callback: () => T): T {
+    return this.asyncLocalStorage.run(context, callback);
+  }
+}
