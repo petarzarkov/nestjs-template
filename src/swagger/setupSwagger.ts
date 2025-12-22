@@ -1,6 +1,7 @@
-import { AppConfigService, GLOBAL_PREFIX } from '@/config';
+import { AppConfigService } from '@/config';
 import { type ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppEnv } from '@/config/enum/app-env.enum';
+import { GLOBAL_PREFIX } from '@/constants';
 import { HttpStatus, type INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';

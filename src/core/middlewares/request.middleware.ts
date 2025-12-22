@@ -1,4 +1,4 @@
-import { REQUEST_ID_HEADER_KEY } from '@/config/constants';
+import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { AsyncContext, ContextService } from '@/logger/services/context.service';
 import { Injectable, NestMiddleware } from '@nestjs/common';

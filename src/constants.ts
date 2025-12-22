@@ -1,3 +1,5 @@
+import { PaginationOrder } from '@/core/pagination/enum/pagination-order.enum';
+
 export const REQUEST_ID_HEADER_KEY = 'X-Request-Id';
 
 export const BASE_USER_TEST_PASS = 'Test123$';
@@ -25,3 +27,14 @@ export const FILES = {
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
   MIN_FILE_NAME_LENGTH: 6,
 } as const;
+
+export const PAGINATION = Object.freeze({
+  ORDER_BY_PRECEDENCE: Object.freeze(['updatedAt', 'createdAt', 'id']),
+  DEFAULT_ORDER: PaginationOrder.DESC,
+  MIN_PAGE: 1,
+  DEFAULT_PAGE: 1,
+  MIN_TAKE: 1,
+  DEFAULT_TAKE: 10,
+  MAX_TAKE: 50,
+  MAX_SEARCH: 256,
+});

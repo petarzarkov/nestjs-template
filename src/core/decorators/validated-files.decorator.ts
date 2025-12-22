@@ -1,4 +1,4 @@
-import { FILES } from '@/config/constants';
+import { FILES } from '@/constants';
 import { FileNameMinValidator } from '@/core/validators/file-name-min.validator';
 import { FileSizeMinValidator } from '@/core/validators/file-size-min.validator';
 import { ParseFilePipeBuilder, UploadedFile, UploadedFiles } from '@nestjs/common';
