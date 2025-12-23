@@ -1,96 +1,103 @@
 import { PAGINATION } from '@/constants';
 import { Injectable } from '@nestjs/common';
-import { asc, count, desc, type SQL } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { PgColumn, PgSelect, PgTable } from 'drizzle-orm/pg-core';
+import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { PageMetaDto } from './dto/page-meta.dto';
 import { PageOptionsDto } from './dto/page-options.dto';
 import { PageDto } from './dto/page.dto';
-import { PaginationOrder } from './enum/pagination-order.enum';
-
-type OrderByColumn = PgColumn | SQL | SQL.Aliased;
 
 @Injectable()
-export class PaginationFactory {
-  #resolveDefaultOrderKey(table: PgTable): PgColumn | null {
-    const tableColumns = Object.values(table) as PgColumn[];
-    const columnMap = new Map(tableColumns.map((col) => [col.name, col]));
-
+export class PaginationFactory<
+  Entity extends ObjectLiteral,
+  OrderKey extends Extract<keyof Entity, string> = Extract<
+    keyof Entity,
+    string
+  >,
+> {
+  #resolveDefaultOrderKey<Entity extends ObjectLiteral>(
+    qb: SelectQueryBuilder<Entity>,
+  ) {
+    const cols = qb.expressionMap.mainAlias?.metadata?.columns ?? [];
+    const names = new Set(cols.map(c => c.propertyName));
     for (const key of PAGINATION.ORDER_BY_PRECEDENCE) {
-      const column = columnMap.get(key);
-      if (column) return column;
+      if (names.has(key)) return key;
     }
     return null;
   }
 
-  #withPagination<T extends PgSelect>(
-    qb: T,
-    orderByColumn: OrderByColumn,
-    orderFn: typeof asc | typeof desc,
-    page: number,
-    pageSize: number
-  ) {
-    const offset = (page - 1) * pageSize;
-    return qb.orderBy(orderFn(orderByColumn)).limit(pageSize).offset(offset);
-  }
-
-  async paginate<TTable extends PgTable>(
-    db: NodePgDatabase<Record<string, never>>,
-    table: TTable,
+  async paginate(
+    queryBuilder: SelectQueryBuilder<Entity>,
     pageOptionsDto: PageOptionsDto,
-    options?: {
-      where?: SQL;
-      orderBy?: OrderByColumn;
-      select?: Record<string, SQL | PgColumn>;
+    orderBy?: OrderKey,
+    computedColumns?: string[],
+  ): Promise<PageDto<Entity>> {
+    const skip = (pageOptionsDto.page - 1) * pageOptionsDto.take;
+    const dataQb = queryBuilder.clone();
+    const extendedQuery = queryBuilder.skip(skip).take(pageOptionsDto.take);
+
+    const orderKeyToUse =
+      (typeof orderBy === 'string' && orderBy) ||
+      this.#resolveDefaultOrderKey(queryBuilder);
+
+    if (orderKeyToUse) {
+      extendedQuery.orderBy(
+        `${queryBuilder.alias}.${orderKeyToUse}`,
+        pageOptionsDto.order,
+      );
     }
-  ) {
-    const { where, orderBy, select } = options || {};
 
-    // Resolve order by column
-    const orderColumn = orderBy || this.#resolveDefaultOrderKey(table);
-    if (!orderColumn) {
-      throw new Error('No order column specified and no default order column found');
-    }
+    if (computedColumns && computedColumns.length > 0) {
+      const dataPromise = extendedQuery.getRawAndEntities();
+      const countQb = dataQb.clone();
+      const countPromise = countQb
+        .select(`COUNT(DISTINCT "${queryBuilder.alias}"."id")`, 'count')
+        .getRawOne<{ count: string }>();
 
-    const orderFn = pageOptionsDto.order === PaginationOrder.ASC ? asc : desc;
+      const [data, countResult] = await Promise.all([
+        dataPromise,
+        countPromise,
+      ]);
 
-    // Build base query - TypeScript will infer types from table parameter
-    const baseQuery =
-      select && Object.keys(select).length > 0
-        ? db.select(select).from(table as unknown as PgTable)
-        : db.select().from(table as unknown as PgTable);
+      const itemCount = parseInt(countResult?.count || '0', 10);
+      const { entities, raw } = data;
 
-    // Build count query using dynamic query builder
-    const countQuery = db
-      .select({ count: count() })
-      .from(table as unknown as PgTable)
-      .$dynamic();
-    const countPromise = where ? countQuery.where(where).execute() : countQuery.execute();
+      const rawDataMap = new Map<string, ObjectLiteral>();
+      const idColumn = `${queryBuilder.alias}_id`;
 
-    // Build paginated data query using dynamic query builder
-    const dataQuery = baseQuery.$dynamic();
-    const paginatedQuery = where
-      ? this.#withPagination(
-          dataQuery.where(where),
-          orderColumn,
-          orderFn,
-          pageOptionsDto.page,
-          pageOptionsDto.take
-        )
-      : this.#withPagination(
-          dataQuery,
-          orderColumn,
-          orderFn,
-          pageOptionsDto.page,
-          pageOptionsDto.take
+      for (const rawRow of raw) {
+        const entityId = rawRow[idColumn];
+        if (entityId !== undefined && !rawDataMap.has(entityId)) {
+          rawDataMap.set(entityId, rawRow);
+        }
+      }
+
+      const mergedEntities = entities.map(entity => {
+        const rawRow = rawDataMap.get(entity.id);
+
+        if (!rawRow) return entity;
+
+        const computedValues = computedColumns.reduce(
+          (acc, columnName) => {
+            const rawKeyWithoutPrefix = columnName;
+            const rawKeyWithPrefix = `${queryBuilder.alias}_${columnName}`;
+
+            if (rawKeyWithoutPrefix in rawRow) {
+              acc[columnName] = rawRow[rawKeyWithoutPrefix];
+            } else if (rawKeyWithPrefix in rawRow) {
+              acc[columnName] = rawRow[rawKeyWithPrefix];
+            }
+            return acc;
+          },
+          {} as Record<string, unknown>,
         );
 
-    const dataPromise = paginatedQuery.execute();
+        return { ...entity, ...computedValues };
+      });
 
-    // Execute queries in parallel
-    const [countResult, entities] = await Promise.all([countPromise, dataPromise]);
+      const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+      return new PageDto(mergedEntities as Entity[], pageMetaDto);
+    }
 
-    const itemCount = Number(countResult[0]?.count || 0);
+    const [entities, itemCount] = await extendedQuery.getManyAndCount();
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
 
     return new PageDto(entities, pageMetaDto);

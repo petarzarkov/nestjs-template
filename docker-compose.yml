@@ -1,28 +1,28 @@
-version: '3.8'
-
 services:
-  pgdb:
-    image: postgres:17-alpine
-    container_name: pgdb
+  app-db:
+    container_name: app-db
+    image: public.ecr.aws/docker/library/postgres:17.5
     env_file:
       - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
     volumes:
-      - pgdb-data:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
+    networks:
+      - app
+    environment:
+      # Set additional PostgreSQL specific environment variables
+      PGPORT: ${POSTGRES_PORT}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
-      interval: 10s
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 2s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
+  app-redis:
+    image: public.ecr.aws/docker/library/redis:8.4.0
+    container_name: app-redis
     env_file:
       - .env
     ports:
@@ -46,7 +46,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app
 
 volumes:
-  pgdb-data:
+  postgres-data:
   redis-data:
+
+networks:
+  app:
+    name: app-network
+    driver: bridge

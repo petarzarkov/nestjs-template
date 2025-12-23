@@ -10,9 +10,10 @@ import {
   HttpStatus,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { DrizzleError } from 'drizzle-orm';
 import { Response } from 'express';
+import { EntityNotFoundError, QueryFailedError, TypeORMError } from 'typeorm';
 
 interface ExceptionContext {
   status: HttpStatus;
@@ -21,19 +22,21 @@ interface ExceptionContext {
 }
 
 /**
- * Exception filter to handle Drizzle database errors and convert them to appropriate HTTP responses
+ * Exception filter to handle TypeORM database errors and convert them to appropriate HTTP responses
  */
 @Injectable()
-@Catch(DrizzleError)
-export class DrizzleExceptionFilter implements ExceptionFilter {
+@Catch(TypeORMError)
+export class TypeOrmExceptionFilter implements ExceptionFilter {
   constructor(
     private readonly logger: ContextLogger,
-    private readonly contextService: ContextService
+    private readonly contextService: ContextService,
   ) {}
 
-  catch(exception: DrizzleError, host: ArgumentsHost): void {
+  catch(exception: TypeORMError, host: ArgumentsHost): void {
     this.contextService.updateContext({
-      context: this.contextService.getContext().context || 'DrizzleExceptionFilter.catch',
+      context:
+        this.contextService.getContext().context ||
+        'TypeOrmExceptionFilter.catch',
     });
 
     const ctx = host.switchToHttp();
@@ -43,10 +46,11 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
       exception: new InternalServerErrorException('Database error occurred'),
     };
 
-    // Check if it's a Postgres error
-    const pgError = exception.cause as { code?: string; detail?: string } | undefined;
-    if (pgError?.code) {
-      exceptionCtx = this.handlePostgresError(pgError);
+    if (exception instanceof EntityNotFoundError) {
+      exceptionCtx.status = HttpStatus.NOT_FOUND;
+      exceptionCtx.exception = new NotFoundException('Entity not found');
+    } else if (exception instanceof QueryFailedError) {
+      exceptionCtx = this.handleQueryFailed(exception);
     } else {
       exceptionCtx = {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -64,20 +68,29 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
     response.status(exceptionCtx.status).json(responseBody);
   }
 
-  private handlePostgresError(error: { code?: string; detail?: string }): ExceptionContext {
+  private handleQueryFailed(exception: QueryFailedError): ExceptionContext {
+    const error = exception.driverError as unknown as {
+      code?: string;
+      detail?: string;
+      cause?: unknown;
+    };
     const errorCode = error?.code;
 
     switch (errorCode) {
       case '23505': // Unique constraint violation
         return {
           status: HttpStatus.CONFLICT,
-          exception: new ConflictException('A record with the provided data already exists'),
+          exception: new ConflictException(
+            'A record with the provided data already exists',
+          ),
           detail: error?.detail,
         };
       case '23503': // Foreign key constraint violation
         return {
           status: HttpStatus.BAD_REQUEST,
-          exception: new BadRequestException('Invalid reference to related entity'),
+          exception: new BadRequestException(
+            'Invalid reference to related entity',
+          ),
           detail: error?.detail,
         };
       case '23502': // Not null constraint violation
@@ -89,13 +102,17 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
       case '23514': // Check constraint violation
         return {
           status: HttpStatus.BAD_REQUEST,
-          exception: new BadRequestException('Data does not meet validation requirements'),
+          exception: new BadRequestException(
+            'Data does not meet validation requirements',
+          ),
           detail: error?.detail,
         };
       case '42P01': // Undefined table
         return {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          exception: new InternalServerErrorException('Database configuration error'),
+          exception: new InternalServerErrorException(
+            'Database configuration error',
+          ),
           detail: error?.detail,
         };
       case '42703': // Undefined column
@@ -107,7 +124,9 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
       default:
         return {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          exception: new InternalServerErrorException('Database operation failed'),
+          exception: new InternalServerErrorException(
+            'Database operation failed',
+          ),
           detail: error?.detail,
         };
     }

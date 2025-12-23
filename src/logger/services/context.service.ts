@@ -4,7 +4,6 @@ import { AsyncLocalStorage } from 'async_hooks';
 export interface AsyncContext {
   requestId?: string;
   userId?: string;
-  orgId?: string;
   method?: string;
   event?: string;
   context?: string;

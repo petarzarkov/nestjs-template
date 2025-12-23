@@ -1,5 +1,5 @@
-import { AppConfigService } from '@/config';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
+import { AppConfigService } from '@/config/services/app.config.service';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { Injectable } from '@nestjs/common';
 
@@ -12,13 +12,14 @@ export class SlackService {
 
   constructor(
     private readonly configService: AppConfigService<ValidatedServiceConfig>,
-    private readonly logger: ContextLogger
+    private readonly logger: ContextLogger,
   ) {
     this.slackConfig = this.configService.get('slack');
     this.appConfig = this.configService.get('app');
     this.serviceConfig = this.configService.get('service');
     this.canSendMessage =
-      this.slackConfig.botToken !== undefined && this.slackConfig.botToken !== '';
+      this.slackConfig.botToken !== undefined &&
+      this.slackConfig.botToken !== '';
   }
 
   async sendMessage(message: string, emoji: `:${string}:` = ':awesome_cylon:') {
@@ -75,7 +76,8 @@ export class SlackService {
                   : []),
               ],
               footer: this.appConfig.name,
-              footer_icon: 'https://emoji.slack-edge.com/T4WRCSVM0/lime/425fa9df3cfcc179.png',
+              footer_icon:
+                'https://emoji.slack-edge.com/T4WRCSVM0/lime/425fa9df3cfcc179.png',
               ts: Math.floor(Date.now() / 1000),
             },
           ],

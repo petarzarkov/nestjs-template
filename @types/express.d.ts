@@ -1,12 +1,8 @@
-interface ExampleUser {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { SanitizedUser } from '@/users/entity/user.entity';
 
 declare global {
   namespace Express {
-    interface User extends ExampleUser {}
+    interface User extends SanitizedUser {}
     interface Locals {
       startTime: number;
     }

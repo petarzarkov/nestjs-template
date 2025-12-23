@@ -8,7 +8,7 @@ import {
   validateSync,
   ValidationError,
 } from 'class-validator';
-import { ConfigValidationError } from '../env.validation';
+import { ConfigValidationError } from '../config-validation.error';
 
 export class RedisVars {
   @IsString()
@@ -60,7 +60,9 @@ export const validateRedisConfig = (config: Record<string, unknown>) => {
       })
       .join('\n - ');
 
-    throw new ConfigValidationError(`Redis configuration validation error:\n - ${errorMessages}`);
+    throw new ConfigValidationError(
+      `Redis configuration validation error:\n - ${errorMessages}`,
+    );
   }
 
   return getRedisConfig(validatedConfig);

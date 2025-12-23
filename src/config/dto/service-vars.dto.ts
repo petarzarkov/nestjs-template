@@ -29,7 +29,9 @@ export class ServiceVars {
   @IsOptional()
   @Transform(({ obj }) => {
     if (typeof obj.LOG_MASK_FIELDS === 'string') {
-      return obj.LOG_MASK_FIELDS.split(',').map((field: string) => field.trim());
+      return obj.LOG_MASK_FIELDS.split(',').map((field: string) =>
+        field.trim(),
+      );
     }
     return LOGGER.defaultMaskFields;
   })
@@ -38,7 +40,9 @@ export class ServiceVars {
   @IsOptional()
   @Transform(({ obj }) => {
     if (typeof obj.LOG_FILTER_EVENTS === 'string') {
-      return obj.LOG_FILTER_EVENTS.split(',').map((field: string) => field.trim());
+      return obj.LOG_FILTER_EVENTS.split(',').map((field: string) =>
+        field.trim(),
+      );
     }
     return LOGGER.defaultFilterEvents;
   })
@@ -58,7 +62,9 @@ export class ServiceVars {
   @Max(65535)
   API_PORT!: number;
 
-  @ValidateIf((obj: ServiceVars) => [AppEnv.STG, AppEnv.PRD].includes(obj.APP_ENV))
+  @ValidateIf((obj: ServiceVars) =>
+    [AppEnv.STG, AppEnv.PRD].includes(obj.APP_ENV),
+  )
   @IsString({
     message: 'SWAGGER_TOKEN is required when APP_ENV is "stage" or "prod".',
   })
@@ -125,6 +131,14 @@ export class ServiceVars {
   @IsTimeZone()
   @IsOptional()
   TZ: string = 'UTC';
+
+  @IsString()
+  JWT_SECRET!: string;
+
+  @IsNumber()
+  @Min(1)
+  @Max(604800)
+  JWT_EXPIRATION: number = 604800;
 }
 
 export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
@@ -214,6 +228,10 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
        * @default "C0948FPCD8W" // iiso-cicd
        */
       channel: config.SLACK_CHANNEL,
+    },
+    jwt: {
+      secret: config.JWT_SECRET,
+      expiration: config.JWT_EXPIRATION,
     },
   };
 };

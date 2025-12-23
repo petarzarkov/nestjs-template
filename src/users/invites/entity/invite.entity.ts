@@ -1,0 +1,53 @@
+import { UserRole } from '@/users/enum/user-role.enum';
+import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity()
+export class Invite {
+  @ApiProperty()
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @ApiProperty()
+  @Column({ unique: true })
+  email!: string;
+
+  @Index({ unique: true })
+  @Column()
+  inviteCode!: string;
+
+  @ApiProperty()
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+  })
+  role!: UserRole;
+
+  @ApiProperty({ enum: InviteStatus, default: InviteStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: InviteStatus,
+    default: InviteStatus.PENDING,
+  })
+  status!: InviteStatus;
+
+  @ApiProperty()
+  @Column()
+  expiresAt!: Date;
+
+  @ApiProperty()
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @ApiProperty()
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}

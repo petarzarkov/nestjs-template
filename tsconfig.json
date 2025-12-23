@@ -19,6 +19,6 @@
     "removeComments": true,
     "sourceMap": true
   },
-  "include": ["@types/**/*.d.ts", "src/**/*", "test/**/*", "drizzle.config.ts"],
+  "include": ["@types/**/*.d.ts", "src/**/*", "test/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"]
 }

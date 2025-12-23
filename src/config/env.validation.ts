@@ -1,16 +1,10 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import pkg from '../../package.json';
+import { ConfigValidationError } from './config-validation.error';
 import { getDbConfig } from './dto/db-vars.dto';
 import { getServiceConfig } from './dto/service-vars.dto';
 import { EnvVars } from './env-vars.dto';
-
-export class ConfigValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigValidationError';
-  }
-}
 
 export const validateConfig = (config: Record<string, unknown>) => {
   const validatedConfig = plainToInstance(EnvVars, config, {
@@ -23,7 +17,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
 
   if (errors.length > 0) {
     const errorMessages = errors
-      .map((error) => {
+      .map(error => {
         if (error.constraints) {
           return Object.values(error.constraints).join(', ');
         }
@@ -31,7 +25,9 @@ export const validateConfig = (config: Record<string, unknown>) => {
       })
       .join('\n - ');
 
-    throw new ConfigValidationError(`Configuration validation error:\n - ${errorMessages}`);
+    throw new ConfigValidationError(
+      `Configuration validation error:\n - ${errorMessages}`,
+    );
   }
 
   return {

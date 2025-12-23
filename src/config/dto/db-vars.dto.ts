@@ -10,7 +10,6 @@ import {
   validateSync,
   ValidationError,
 } from 'class-validator';
-import { ConfigValidationError } from '../env.validation';
 
 export class DbVars {
   @IsString()
@@ -25,11 +24,12 @@ export class DbVars {
   @IsString()
   POSTGRES_HOST!: string;
 
+  @Transform(({ value }) => (value ? parseInt(String(value), 10) : 5438))
   @IsNumber()
   @Min(0)
   @Max(65535)
   @IsOptional()
-  POSTGRES_PORT: number = 5432;
+  POSTGRES_PORT: number = 5438;
 
   @IsBoolean()
   @IsOptional()
@@ -38,11 +38,26 @@ export class DbVars {
   })
   POSTGRES_USE_SSL?: boolean;
 
-  @ValidateIf((vars: DbVars) => !!vars.POSTGRES_USE_SSL)
+  @ValidateIf(vars => !!vars.POSTGRES_USE_SSL)
   @IsString({
-    message: 'POSTGRES_CA_PATH needs to be defined when POSTGRES_USE_SSL is true.',
+    message:
+      'POSTGRES_CA_PATH needs to be defined when POSTGRES_USE_SSL is true.',
   })
   POSTGRES_CA_PATH!: string;
+
+  @Transform(({ value }) => (value ? parseInt(String(value), 10) : 60))
+  @IsNumber()
+  @Min(0)
+  @Max(60)
+  @IsOptional()
+  CONNECTION_RETRIES: number = 60;
+
+  @Transform(({ value }) => (value ? parseInt(String(value), 10) : 7500))
+  @IsNumber()
+  @Min(0)
+  @Max(7500)
+  @IsOptional()
+  CONNECTION_RETRY_DELAY: number = 7500;
 }
 
 export const getDbConfig = (config: DbVars) => {
@@ -55,9 +70,13 @@ export const getDbConfig = (config: DbVars) => {
       name: config.POSTGRES_DB,
       useSsl: config.POSTGRES_USE_SSL,
       caPath: config.POSTGRES_CA_PATH,
+      retries: config.CONNECTION_RETRIES,
+      retryDelay: config.CONNECTION_RETRY_DELAY,
     },
   };
 };
+
+import { ConfigValidationError } from '../config-validation.error';
 
 export const validateDbConfig = (config: Record<string, unknown>) => {
   const validatedConfig = plainToInstance(DbVars, config, {
@@ -78,7 +97,9 @@ export const validateDbConfig = (config: Record<string, unknown>) => {
       })
       .join('\n - ');
 
-    throw new ConfigValidationError(`Configuration validation error:\n - ${errorMessages}`);
+    throw new ConfigValidationError(
+      `Configuration validation error:\n - ${errorMessages}`,
+    );
   }
 
   return getDbConfig(validatedConfig);

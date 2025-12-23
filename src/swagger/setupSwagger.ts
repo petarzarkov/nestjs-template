@@ -1,14 +1,15 @@
-import { AppConfigService } from '@/config';
 import { type ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppEnv } from '@/config/enum/app-env.enum';
-import { GLOBAL_PREFIX } from '@/constants';
+import { AppConfigService } from '@/config/services/app.config.service';
+import { DOCS_AFFIX, GLOBAL_PREFIX } from '@/constants';
+import { PageMetaDto } from '@/core/pagination/dto/page-meta.dto';
 import { HttpStatus, type INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import pkgJson from '../../package.json';
 
 export function setupSwagger(app: INestApplication) {
-  const SWAGGER_PATH = `/${GLOBAL_PREFIX}/api-docs`;
+  const SWAGGER_PATH = `/${GLOBAL_PREFIX}/${DOCS_AFFIX}`;
   const configService = app.get(AppConfigService<ValidatedServiceConfig>);
   const appConfig = configService.get('app');
 
@@ -32,7 +33,7 @@ export function setupSwagger(app: INestApplication) {
       }
 
       return res.status(HttpStatus.FORBIDDEN).send('Forbidden');
-    }
+    },
   );
 
   const title = `${pkgJson.name} ${appConfig.env}`;
@@ -40,7 +41,11 @@ export function setupSwagger(app: INestApplication) {
     .setTitle(title)
     .setDescription(pkgJson.description ?? '')
     .setVersion(pkgJson.version)
-    .setContact(pkgJson.author?.name ?? '', pkgJson.author?.url ?? '', pkgJson.author?.email ?? '')
+    .setContact(
+      pkgJson.author?.name ?? '',
+      pkgJson.author?.url ?? '',
+      pkgJson.author?.email ?? '',
+    )
     .addBearerAuth(
       {
         type: 'http',
@@ -50,11 +55,14 @@ export function setupSwagger(app: INestApplication) {
         name: 'Authorization',
         description: 'Enter your access token',
       },
-      'bearerAuth'
+      'bearerAuth',
     )
     .addSecurityRequirements('bearerAuth')
     .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig, {
+    extraModels: [PageMetaDto],
+  });
   SwaggerModule.setup(SWAGGER_PATH, app, document, {
     customSiteTitle: title,
     customCss: '.swagger-ui .topbar { display: none }',

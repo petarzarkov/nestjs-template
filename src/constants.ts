@@ -5,9 +5,19 @@ export const REQUEST_ID_HEADER_KEY = 'X-Request-Id';
 export const BASE_USER_TEST_PASS = 'Test123$';
 
 export const GLOBAL_PREFIX = 'api';
+export const DOCS_AFFIX = 'docs';
+
+export const PASSWORD_HASH_ROUNDS = 10;
 
 export const LOGGER = {
-  defaultMaskFields: ['accessToken', 'jwt', 'password', 'secret', 'key', 'phone'],
+  defaultMaskFields: [
+    'accessToken',
+    'jwt',
+    'password',
+    'secret',
+    'key',
+    'phone',
+  ],
   defaultFilterEvents: [
     `/${GLOBAL_PREFIX}/service/up`,
     `/${GLOBAL_PREFIX}/service/health`,

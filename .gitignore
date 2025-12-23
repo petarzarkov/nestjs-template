@@ -44,5 +44,6 @@ docker-compose.override.yml
 *.njsproj
 *.sln
 
+.tmp
 .eslintcache
 .prettiercache
