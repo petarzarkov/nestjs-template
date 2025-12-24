@@ -51,15 +51,15 @@ export class EmailService {
     payload: CreateEmailOptions,
     options?: CreateEmailRequestOptions,
   ) {
-    if (this.appConfig.nodeEnv !== 'production') {
-      this.logger.verbose(
-        'Skipping email sending in non-production node environment',
-        {
-          subject: payload.subject,
-        },
-      );
-      return;
-    }
+    // if (this.appConfig.nodeEnv !== 'production') {
+    //   this.logger.verbose(
+    //     'Skipping email sending in non-production node environment',
+    //     {
+    //       subject: payload.subject,
+    //     },
+    //   );
+    //   return;
+    // }
     await (this.sendQueue = this.sendQueue.then(async () => {
       const now = Date.now();
       const waitMs = Math.max(0, this.minIntervalMs - (now - this.lastSentAt));
@@ -90,7 +90,7 @@ export class EmailService {
       from: this.sender,
       to: [email],
       subject: `Welcome to IISO, ${name}!`,
-      react: WelcomeEmailTemplate({ name }),
+      react: WelcomeEmailTemplate({ name, webAppUrl: this.baseAppUrl }),
     });
 
     return result;

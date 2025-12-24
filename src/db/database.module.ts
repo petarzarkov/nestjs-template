@@ -1,5 +1,4 @@
-import { ValidatedDbConfig } from '@/config/dto/db-vars.dto';
-import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
+import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { DynamicModule, Module } from '@nestjs/common';
@@ -12,7 +11,8 @@ import { DataSource } from 'typeorm';
 import { SnakeNamingStrategy } from './strategies/snake-case.strategy';
 
 /**
- * Database module for initializing multiple database connections.
+ * Database module for initializing database connections.
+ * Supports optional Redis caching when REDIS_HOST and REDIS_CACHE_ENABLED are set.
  */
 @Module({})
 export class DatabaseModule {
@@ -22,14 +22,38 @@ export class DatabaseModule {
     return TypeOrmModule.forRootAsync({
       inject: [AppConfigService, ContextLogger],
       useFactory: (
-        configService: AppConfigService<
-          ValidatedDbConfig & ValidatedServiceConfig
-        >,
+        configService: AppConfigService<ValidatedConfig>,
         logger: ContextLogger,
       ) => {
         const dbConfig = configService.getOrThrow('db');
         const appConfig = configService.getOrThrow('app');
+        const redisConfig = configService.get('redis');
         this.logger = logger;
+
+        // Configure Redis cache if enabled
+        const cacheConfig =
+          redisConfig?.cacheEnabled && redisConfig.host
+            ? {
+                cache: {
+                  type: 'ioredis' as const,
+                  options: {
+                    host: redisConfig.host,
+                    port: redisConfig.port,
+                    password: redisConfig.password,
+                    db: redisConfig.db,
+                  },
+                  duration: 30000, // 30 seconds default TTL
+                },
+              }
+            : {};
+
+        if (redisConfig?.cacheEnabled) {
+          logger.log('TypeORM Redis cache enabled', {
+            host: redisConfig.host,
+            port: redisConfig.port,
+          });
+        }
+
         return {
           type: 'postgres',
           host: dbConfig.host,
@@ -57,6 +81,7 @@ export class DatabaseModule {
             return true;
           },
           verboseRetryLog: true,
+          ...cacheConfig,
         };
       },
       dataSourceFactory: async options => {

@@ -2,12 +2,14 @@ import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { Transport } from '@nestjs/microservices';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckService,
   HealthIndicatorFunction,
   MemoryHealthIndicator,
+  MicroserviceHealthIndicator,
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 
@@ -23,9 +25,11 @@ export class HealthController {
     private health: HealthCheckService,
     private db: TypeOrmHealthIndicator,
     private memory: MemoryHealthIndicator,
+    private microservice: MicroserviceHealthIndicator,
   ) {
     this.appConfig = this.configService.getOrThrow('app');
     this.serviceConfig = this.configService.getOrThrow('service');
+    const redisConfig = this.configService.get('redis');
 
     this.checks.push(() => this.db.pingCheck('db'));
 
@@ -35,6 +39,20 @@ export class HealthController {
         this.serviceConfig.maxMemoryCheck * 1024 * 1024,
       ),
     );
+
+    // Add Redis health check if Redis is configured
+    if (redisConfig?.host) {
+      this.checks.push(() =>
+        this.microservice.pingCheck('redis', {
+          transport: Transport.REDIS,
+          options: {
+            host: redisConfig.host,
+            port: redisConfig.port,
+            password: redisConfig.password,
+          },
+        }),
+      );
+    }
   }
 
   @Get('health')
@@ -52,6 +70,7 @@ export class HealthController {
     status: HttpStatus.OK,
   })
   version() {
+    const redisConfig = this.configService.get('redis');
     return {
       name: this.appConfig.name,
       version: this.appConfig.version,
@@ -59,6 +78,15 @@ export class HealthController {
       commitMessage: this.serviceConfig.commitMessage,
       commitSha: this.serviceConfig.commitSha,
       tz: this.appConfig.timezone,
+      redis: redisConfig
+        ? {
+            enabled: true,
+            cacheEnabled: redisConfig.cacheEnabled,
+            throttleEnabled: redisConfig.throttleEnabled,
+            wsAdapterEnabled: redisConfig.wsAdapterEnabled,
+            pubsubEnabled: redisConfig.pubsubEnabled,
+          }
+        : { enabled: false },
       versions: process.versions,
     };
   }

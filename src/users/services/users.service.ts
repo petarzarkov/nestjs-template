@@ -1,4 +1,6 @@
 import { password as passwordUtil } from '@/core/utils/password.util';
+import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -20,6 +22,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly invitesRepository: InvitesRepository,
+    private readonly eventPublisher: EventPublisherService,
     @InjectEntityManager() private readonly entityManager: EntityManager,
   ) {}
 
@@ -41,6 +44,17 @@ export class UsersService {
       password: hashedPassword,
       roles,
     });
+
+    // Publish user registered event
+    await this.eventPublisher.publishEvent(
+      EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+      {
+        email: user.email,
+        name: user.email.split('@')[0],
+        type: 'direct',
+      },
+      { emitToAdmins: true },
+    );
 
     return user;
   }
@@ -70,6 +84,17 @@ export class UsersService {
     });
     invite.status = InviteStatus.ACCEPTED;
     await this.invitesRepository.save(invite);
+
+    // Publish user registered event (from invite)
+    await this.eventPublisher.publishEvent(
+      EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+      {
+        email: user.email,
+        name: user.email.split('@')[0],
+        type: 'invite',
+      },
+      { emitToAdmins: true },
+    );
 
     return user;
   }

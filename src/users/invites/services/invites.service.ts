@@ -1,3 +1,5 @@
+import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
 import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
 import { Invite } from '@/users/invites/entity/invite.entity';
@@ -13,6 +15,7 @@ export class InvitesService {
   constructor(
     private readonly invitesRepository: InvitesRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly eventPublisher: EventPublisherService,
   ) {}
 
   async findAll(query: ListInvitesQueryDto): Promise<Invite[]> {
@@ -54,6 +57,13 @@ export class InvitesService {
 
       const updatedInvite = await this.invitesRepository.save(existingInvite);
 
+      // Publish invite event
+      await this.eventPublisher.publishEvent(
+        EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+        { invite: updatedInvite },
+        { emitToAdmins: true },
+      );
+
       return updatedInvite;
     }
 
@@ -71,6 +81,13 @@ export class InvitesService {
     });
 
     const savedInvite = await this.invitesRepository.save(inviteToCreate);
+
+    // Publish invite event
+    await this.eventPublisher.publishEvent(
+      EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+      { invite: savedInvite },
+      { emitToAdmins: true },
+    );
 
     return savedInvite;
   }

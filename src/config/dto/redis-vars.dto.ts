@@ -1,5 +1,6 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -12,7 +13,8 @@ import { ConfigValidationError } from '../config-validation.error';
 
 export class RedisVars {
   @IsString()
-  REDIS_HOST!: string;
+  @IsOptional()
+  REDIS_HOST?: string;
 
   @IsNumber()
   @Min(0)
@@ -30,14 +32,57 @@ export class RedisVars {
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : 0))
   REDIS_DB: number = 0;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  REDIS_CACHE_ENABLED: boolean = false;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  REDIS_THROTTLE_ENABLED: boolean = false;
+
+  @IsNumber()
+  @Min(1000)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 60000))
+  REDIS_THROTTLE_TTL: number = 60000; // 60 seconds in ms
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 100))
+  REDIS_THROTTLE_LIMIT: number = 100; // requests per TTL
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  REDIS_WS_ADAPTER_ENABLED: boolean = false;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  REDIS_PUBSUB_ENABLED: boolean = false;
 }
 
 export const getRedisConfig = (config: RedisVars) => {
+  // Only return config if REDIS_HOST is defined
+  if (!config.REDIS_HOST) {
+    return undefined;
+  }
+
   return {
     host: config.REDIS_HOST,
     port: config.REDIS_PORT,
     password: config.REDIS_PASSWORD,
     db: config.REDIS_DB,
+    cacheEnabled: config.REDIS_CACHE_ENABLED,
+    throttleEnabled: config.REDIS_THROTTLE_ENABLED,
+    throttleTtl: config.REDIS_THROTTLE_TTL,
+    throttleLimit: config.REDIS_THROTTLE_LIMIT,
+    wsAdapterEnabled: config.REDIS_WS_ADAPTER_ENABLED,
+    pubsubEnabled: config.REDIS_PUBSUB_ENABLED,
   };
 };
 
@@ -47,7 +92,7 @@ export const validateRedisConfig = (config: Record<string, unknown>) => {
   });
 
   const errors = validateSync(validatedConfig, {
-    skipMissingProperties: false,
+    skipMissingProperties: true,
   });
 
   if (errors.length > 0) {
@@ -68,4 +113,6 @@ export const validateRedisConfig = (config: Record<string, unknown>) => {
   return getRedisConfig(validatedConfig);
 };
 
-export type ValidatedRedisConfig = ReturnType<typeof getRedisConfig>;
+export type ValidatedRedisConfig = NonNullable<
+  ReturnType<typeof getRedisConfig>
+>;

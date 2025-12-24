@@ -22,7 +22,7 @@ export const InviteEmailTemplate = ({
 }: InviteEmailProps) => (
   <Html>
     <Head />
-    <Preview>You have been invited to join IISO!</Preview>
+    <Preview>You have been invited to join!</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>

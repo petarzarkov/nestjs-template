@@ -36,12 +36,44 @@ describe('Health Endpoints (e2e)', () => {
         name: string;
         version: string;
         env: string;
+        redis: {
+          enabled: boolean;
+          cacheEnabled?: boolean;
+          throttleEnabled?: boolean;
+          wsAdapterEnabled?: boolean;
+          pubsubEnabled?: boolean;
+        };
       }>('/api/service/config');
 
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty('name');
       expect(response.data).toHaveProperty('version');
       expect(response.data).toHaveProperty('env');
+      expect(response.data).toHaveProperty('redis');
+      expect(typeof response.data.redis.enabled).toBe('boolean');
+    });
+
+    test('should include redis config status', async () => {
+      const response = await ctx.api.get<{
+        redis: {
+          enabled: boolean;
+          cacheEnabled?: boolean;
+          throttleEnabled?: boolean;
+          wsAdapterEnabled?: boolean;
+          pubsubEnabled?: boolean;
+        };
+      }>('/api/service/config');
+
+      expect(response.status).toBe(200);
+
+      // Redis should show its enabled/disabled status
+      if (response.data.redis.enabled) {
+        // If Redis is enabled, feature flags should be present
+        expect(response.data.redis).toHaveProperty('cacheEnabled');
+        expect(response.data.redis).toHaveProperty('throttleEnabled');
+        expect(response.data.redis).toHaveProperty('wsAdapterEnabled');
+        expect(response.data.redis).toHaveProperty('pubsubEnabled');
+      }
     });
   });
 });

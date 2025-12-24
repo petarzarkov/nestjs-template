@@ -43,6 +43,8 @@ bun start                   # Start production build
 bun test                    # Run unit tests (Bun test runner)
 bun test --watch            # Run tests in watch mode
 bun run test:e2e            # Run e2e tests
+bun run email               # Run email server
+bun run email:export        # Export email templates
 bun run lint                # Lint code
 bun run format              # Format code
 bun run migration:gen $Name # Generate migration
@@ -63,6 +65,32 @@ bun run db:drop             # Drop db schema
 - **API Docs**: Swagger/OpenAPI integration
 - **Health Checks**: Terminus health monitoring
 - **Testing**: Bun's built-in test runner with TypeScript support
+- **WebSockets**: Socket.io gateway with authentication
+- **Email**: React Email templates with Resend
+
+## Redis Features (Optional)
+
+All Redis features are optional and activated via environment variables. Requires `REDIS_HOST` to be set.
+
+| Feature               | Env Variable                    | Description                                           |
+| --------------------- | ------------------------------- | ----------------------------------------------------- |
+| **Caching**           | `REDIS_CACHE_ENABLED=true`      | Global `CacheInterceptor` with Redis store            |
+| **Throttling**        | `REDIS_THROTTLE_ENABLED=true`   | Global `ThrottlerGuard` with Redis storage            |
+| **WebSocket Adapter** | `REDIS_WS_ADAPTER_ENABLED=true` | Socket.io Redis adapter for multi-instance support    |
+| **Pub/Sub Events**    | `REDIS_PUBSUB_ENABLED=true`     | NestJS microservices Redis transport for event system |
+
+### Event System
+
+When `REDIS_PUBSUB_ENABLED=true`, the following events are published:
+
+- `user.registered` - When a new user registers (direct or via invite)
+- `user.invited` - When an invite is created
+- `user.password_reset` - When a password reset is requested
+
+Events are handled by `NotificationHandler` using `@EventPattern` decorators, which:
+
+- Sends appropriate emails via `EmailService`
+- Emits WebSocket notifications via `EventsGateway`
 
 ## Project Structure
 
@@ -74,6 +102,14 @@ src/
 ├── db/              # TypeORM data source and migrations
 ├── health/          # Health check endpoints
 ├── logger/          # Logging service
+├── notifications/   # Email, WebSocket gateway, event handlers
+├── redis/           # Redis module (caching, throttling, pub/sub)
 ├── swagger/         # API documentation setup
 └── users/           # User management and invites
 ```
+
+## Health Endpoints
+
+- `GET /api/service/health` - Full health check (DB, memory, Redis if configured)
+- `GET /api/service/up` - Simple uptime check
+- `GET /api/service/config` - Service configuration and Redis feature status

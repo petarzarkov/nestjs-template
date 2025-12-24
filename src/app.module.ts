@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { HelpersModule } from './helpers/helpers.module';
 import { LoggerModule } from './logger/logger.module';
 import { NotificationModule } from './notifications/notification.module';
+import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     }),
     HelpersModule,
     DatabaseModule.forRoot(),
+    RedisModule.forRootAsync(),
     PaginationModule,
     LoggerModule,
     HealthModule,

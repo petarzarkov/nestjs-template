@@ -22,6 +22,12 @@ This document outlines the environment variables required for the project. These
 |---|---|---|---|
 | `REDIS_HOST` | No description provided. | `localhost` | .env.example |
 | `REDIS_PORT` | No description provided. | `6383` | .env.example |
+| `REDIS_CACHE_ENABLED` | Enable Redis-backed caching (CacheInterceptor) | `true` | .env.example |
+| `REDIS_THROTTLE_ENABLED` | Enable Redis-backed rate limiting (ThrottlerGuard) | `true` | .env.example |
+| `REDIS_THROTTLE_TTL` | Throttle time window in ms (default: 60000 = 60s) | `60000` | .env.example |
+| `REDIS_THROTTLE_LIMIT` | Max requests per TTL (default: 100) | `100` | .env.example |
+| `REDIS_WS_ADAPTER_ENABLED` | Enable Redis adapter for Socket.io (multi-instance support) | `true` | .env.example |
+| `REDIS_PUBSUB_ENABLED` | Enable Redis pub/sub for event system | `true` | .env.example |
 
 ### Email
 
@@ -52,7 +58,7 @@ This document outlines the environment variables required for the project. These
 
 | Variable | Description | Default Value | Source |
 |---|---|---|---|
-| `WS_PORT` | No description provided. | `3001` | .env.example |
+| `WS_PORT` | No description provided. | `2999` | .env.example |
 | `WS_PATH` | No description provided. | `/ws` | .env.example |
 | `WS_TRANSPORTS` | No description provided. | `'websocket'` | .env.example |
 

@@ -1,5 +1,7 @@
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
+import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -17,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly passwordResetTokensRepository: PasswordResetTokensRepository,
+    private readonly eventPublisher: EventPublisherService,
     private jwtService: JwtService,
   ) {}
 
@@ -63,6 +66,17 @@ export class AuthService {
     await this.passwordResetTokensRepository.createToken(
       user.id,
       passwordResetToken,
+    );
+
+    // Publish password reset event
+    await this.eventPublisher.publishEvent(
+      EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.email.split('@')[0],
+        resetToken: passwordResetToken,
+      },
     );
   }
 

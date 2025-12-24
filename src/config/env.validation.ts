@@ -3,6 +3,7 @@ import { validateSync } from 'class-validator';
 import pkg from '../../package.json';
 import { ConfigValidationError } from './config-validation.error';
 import { getDbConfig } from './dto/db-vars.dto';
+import { getRedisConfig } from './dto/redis-vars.dto';
 import { getServiceConfig } from './dto/service-vars.dto';
 import { EnvVars } from './env-vars.dto';
 
@@ -33,6 +34,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
   return {
     ...getServiceConfig(pkg, validatedConfig),
     ...getDbConfig(validatedConfig),
+    redis: getRedisConfig(validatedConfig),
   } as const;
 };
 
