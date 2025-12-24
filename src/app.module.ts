@@ -9,7 +9,9 @@ import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { PaginationModule } from './core/pagination/pagination.module';
 import { DatabaseModule } from './db/database.module';
 import { HealthModule } from './health/health.module';
+import { HelpersModule } from './helpers/helpers.module';
 import { LoggerModule } from './logger/logger.module';
+import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -18,12 +20,14 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
       validate: validateConfig,
     }),
+    HelpersModule,
     DatabaseModule.forRoot(),
     PaginationModule,
     LoggerModule,
     HealthModule,
     AuthModule,
     UsersModule,
+    NotificationModule,
   ],
   providers: [
     HttpLoggingInterceptor,

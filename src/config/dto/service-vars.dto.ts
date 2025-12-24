@@ -13,8 +13,9 @@ import {
 import { LOGGER } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';
+import { WsVars } from './ws-vars.dto';
 
-export class ServiceVars {
+export class ServiceVars extends WsVars {
   @IsEnum(AppEnv)
   APP_ENV: AppEnv = AppEnv.LOCAL;
 
@@ -139,12 +140,33 @@ export class ServiceVars {
   @Min(1)
   @Max(604800)
   JWT_EXPIRATION: number = 604800;
+
+  @IsString()
+  @IsOptional()
+  CORS_ORIGIN: string = '*';
+
+  @IsString()
+  @IsOptional()
+  RESEND_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  EMAIL_SENDER?: string;
+
+  @IsString()
+  @IsOptional()
+  ADMIN_EMAIL?: string;
+
+  @IsString()
+  @IsOptional()
+  WEB_URL?: string;
 }
 
 export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
   return {
     isProd: config.APP_ENV === AppEnv.PRD,
     app: {
+      webUrl: config.WEB_URL || 'http://localhost:3000',
       name: pkg.name,
       /**
        * This should determine business logic and running environment.
@@ -232,6 +254,23 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
     jwt: {
       secret: config.JWT_SECRET,
       expiration: config.JWT_EXPIRATION,
+    },
+    ws: {
+      connectTimeout: config.WS_CONNECT_TIMEOUT,
+      pingInterval: config.WS_PING_INTERVAL,
+      pingTimeout: config.WS_PING_TIMEOUT,
+      cleanupEmptyChildNamespaces: config.WS_CLEANUP_EMPTY_CHILD_NAMESPACES,
+      path: config.WS_PATH,
+      port: config.WS_PORT,
+    },
+    cors: {
+      origin: config.CORS_ORIGIN,
+    },
+    email: {
+      apiKey: config.RESEND_API_KEY,
+      sender: config.EMAIL_SENDER || 'no-reply@ggg.com',
+      adminEmail: config.ADMIN_EMAIL || 'admin@gmail.com',
+      maxPerSecond: 2,
     },
   };
 };

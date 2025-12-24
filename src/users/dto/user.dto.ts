@@ -21,3 +21,5 @@ export class GetUsersQueryDto extends PageOptionsDto {
   })
   suspended?: boolean;
 }
+
+export class UserDto extends OmitType(User, ['password'] as const) {}
