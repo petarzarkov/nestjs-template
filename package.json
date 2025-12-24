@@ -82,13 +82,11 @@
     "@types/passport-local": "1.0.38",
     "@types/pg": "8.16.0",
     "@types/react": "19.1.0",
-    "@types/supertest": "6.0.3",
     "glob": "13.0.0",
     "husky": "9.1.7",
     "inquirer": "13.1.0",
     "lint-staged": "16.2.7",
     "socket.io-client": "4.8.3",
-    "supertest": "7.1.4",
     "typescript": "5.9.3"
   },
   "lint-staged": {
