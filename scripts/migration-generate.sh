@@ -26,6 +26,7 @@ MIGRATION_PATH="$MIGRATIONS_DIR/$KEBAB_CASE_NAME"
 echo "✅ Formatting name to: '$KEBAB_CASE_NAME'"
 echo "✅ Generating migration at: $MIGRATION_PATH"
 
+
 # Run the typeorm command to generate the migration
 bun run typeorm migration:generate "$MIGRATION_PATH"
 
@@ -40,15 +41,9 @@ if [ -z "$LATEST_MIGRATION" ]; then
 fi
 
 FILE_PATH="$MIGRATIONS_DIR/$LATEST_MIGRATION"
-echo "✅ Formatting SQL in: $FILE_PATH"
+echo "✅ Formatting migration file: $FILE_PATH"
 
-# Add /* sql */ hint to queryRunner.query() calls so prettier can format the SQL
-awk '{
-  gsub(/queryRunner\.query\(`/, "queryRunner.query(/* sql */ `");
-  print
-}' "$FILE_PATH" > "$FILE_PATH.tmp" && mv "$FILE_PATH.tmp" "$FILE_PATH"
-
-# Run prettier on all migration files
-prettier --cache --ignore-unknown --write "$MIGRATIONS_DIR/**/*.ts"
+# Run Biome on the generated migration file
+bun run biome format --write "$FILE_PATH"
 
 echo "✅ Migration generated and formatted successfully!"

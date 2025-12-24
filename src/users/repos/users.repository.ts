@@ -1,12 +1,12 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DeepPartial, FindOneOptions, Repository } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginationFactory } from '@/core/pagination/pagination.factory';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { GetUsersQueryDto } from '@/users/dto/user.dto';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, FindOneOptions, Repository } from 'typeorm';
-import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 @Injectable()
 export class UsersRepository {
@@ -22,6 +22,7 @@ export class UsersRepository {
     const { search, suspended } = getUsersQueryDto;
 
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
+    // biome-ignore lint/suspicious/noDoubleEquals: false positive
     if (suspended != undefined) {
       queryBuilder.andWhere({
         suspended,
