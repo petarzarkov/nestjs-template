@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.tmp
+
+# Build output (will be created in container)
+dist
+
+# Development files
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# IDE and editor
+.vscode
+.idea
+*.swp
+*.swo
+.cursor
+
+# Testing
+e2e
+*.spec.ts
+*.test.ts
+coverage
+
+# Documentation
+*.md
+!README.md
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Bun
+bun.lockb.backup
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
