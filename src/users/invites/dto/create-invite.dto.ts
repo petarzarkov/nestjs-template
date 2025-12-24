@@ -9,7 +9,8 @@ export class CreateInviteDto {
 
   @ApiProperty({
     description: 'The role to assign to the invited user',
-    enum: UserRole,
+    enum: Object.values(UserRole),
+    example: UserRole.USER,
   })
   @IsEnum(UserRole)
   role!: UserRole;

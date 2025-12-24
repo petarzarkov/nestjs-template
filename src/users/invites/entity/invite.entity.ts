@@ -24,14 +24,17 @@ export class Invite {
   @Column()
   inviteCode!: string;
 
-  @ApiProperty()
+  @ApiProperty({ enum: Object.values(UserRole), example: UserRole.USER })
   @Column({
     type: 'enum',
     enum: UserRole,
   })
   role!: UserRole;
 
-  @ApiProperty({ enum: InviteStatus, default: InviteStatus.PENDING })
+  @ApiProperty({
+    enum: Object.values(InviteStatus),
+    default: InviteStatus.PENDING,
+  })
   @Column({
     type: 'enum',
     enum: InviteStatus,

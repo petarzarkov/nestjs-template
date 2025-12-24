@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "A production-ready NestJS monolith template with TypeScript, TypeORM, and modern tooling.",
-  "engines": {
-    "node": ">=22.0.0",
-    "pnpm": ">=9.0.0"
-  },
   "author": {
     "name": "Petar Zarkov",
     "email": "pzarko1@gmail.com",
@@ -15,23 +11,21 @@
   "license": "MIT",
   "scripts": {
     "prepare": "husky",
-    "dev": "nest start --watch src/main.ts --env-file .env",
-    "start": "node --max-old-space-size=1024 dist/main.js",
-    "build": "nest build",
-    "gen:env:docs": "tsx ./scripts/gen-env-docs.ts",
-    "test": "node --import tsx --test src/**/*.spec.ts",
-    "test:watch": "node --import tsx --test --watch src/**/*.spec.ts",
-    "test:e2e": "node --import tsx --test test/**/*.spec.ts",
-    "test:e2e:watch": "node --import tsx --test --watch test/**/*.spec.ts",
+    "dev": "bun --watch src/main.ts",
+    "start": "bun dist/main.js",
+    "build": "bun run nest build",
+    "gen:env:docs": "bun ./scripts/gen-env-docs.ts",
+    "test": "bun test src/**/*.spec.ts",
+    "test:watch": "bun test --watch src/**/*.spec.ts",
+    "test:e2e": "bun test --env-file=./e2e/.env --preload ./e2e/setup/preload.ts ./e2e/**/*.e2e.spec.ts",
     "lint": "eslint . --cache --fix",
     "format": "prettier --cache --ignore-unknown --write .",
-    "typeorm": "dotenv -e .env -- ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/db/data-source-options.ts",
+    "typeorm": "bun --env-file=.env ./node_modules/typeorm/cli.js -d src/db/data-source-options.ts",
     "migration:gen": "bash ./scripts/migration-generate.sh",
-    "postmigration:gen": "bash ./scripts/format-migration.sh",
-    "migration:run": "pnpm typeorm migration:run",
-    "migration:revert": "pnpm typeorm migration:revert",
-    "db:drop": "pnpm typeorm schema:drop",
-    "create:admin": "dotenv -e .env -- ts-node -P ./tsconfig.json -r tsconfig-paths/register ./scripts/create-admin.ts"
+    "migration:run": "bun run typeorm migration:run",
+    "migration:revert": "bun run typeorm migration:revert",
+    "db:drop": "bun run typeorm schema:drop",
+    "create:admin": "bun --env-file=.env ./scripts/create-admin.ts"
   },
   "dependencies": {
     "@nestjs/axios": "4.0.1",
@@ -55,7 +49,6 @@
     "react-dom": "19.1.0",
     "react-email": "5.1.0",
     "axios": "1.13.2",
-    "bcrypt": "6.0.0",
     "bullmq": "5.66.2",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.3",
@@ -69,34 +62,29 @@
     "uuid": "13.0.0"
   },
   "devDependencies": {
-    "@types/bcrypt": "6.0.0",
-    "@types/react": "19.1.0",
     "@nestjs/cli": "11.0.14",
-    "@nestjs/testing": "11.1.9",
+    "@types/bun": "latest",
     "@types/express": "5.0.6",
-    "@types/node": "25.0.3",
+    "@types/multer": "2.0.0",
+    "@types/passport-jwt": "4.0.1",
+    "@types/passport-local": "1.0.38",
     "@types/pg": "8.16.0",
+    "@types/react": "19.1.0",
     "@types/supertest": "6.0.3",
     "@typescript-eslint/eslint-plugin": "8.50.0",
     "@typescript-eslint/parser": "8.50.0",
-    "@types/passport-local": "1.0.38",
-    "@types/passport-jwt": "4.0.1",
-    "@types/multer": "2.0.0",
-    "dotenv-cli": "11.0.0",
-    "tsconfig-paths": "4.2.0",
-    "ts-node": "10.9.2",
-    "glob": "13.0.0",
-    "eslint-config-prettier": "10.1.8",
     "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.4",
+    "glob": "13.0.0",
     "husky": "9.1.7",
+    "inquirer": "13.1.0",
     "lint-staged": "16.2.7",
     "prettier": "3.7.4",
     "prettier-plugin-embed": "0.5.1",
     "prettier-plugin-sql": "0.19.2",
-    "inquirer": "13.1.0",
+    "socket.io-client": "^4.8.3",
     "supertest": "7.1.4",
-    "tsx": "4.21.0",
     "typescript": "5.9.3"
   },
   "lint-staged": {
@@ -104,6 +92,5 @@
       "eslint --fix",
       "prettier --write"
     ]
-  },
-  "packageManager": "pnpm@10.23.0"
+  }
 }

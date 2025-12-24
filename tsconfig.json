@@ -20,6 +20,6 @@
     "removeComments": true,
     "sourceMap": true
   },
-  "include": ["@types/**/*.d.ts", "src/**/*", "test/**/*", "scripts/**/*"],
+  "include": ["@types/**/*.d.ts", "src/**/*", "e2e/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"]
 }

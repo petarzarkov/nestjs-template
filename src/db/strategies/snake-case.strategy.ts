@@ -1,6 +1,20 @@
 import type { NamingStrategyInterface } from 'typeorm';
 import { DefaultNamingStrategy } from 'typeorm';
-import { snakeCase } from 'typeorm/util/StringUtils';
+
+/**
+ * Convert a string to snake_case.
+ * Local implementation to avoid Bun compatibility issues with TypeORM internal modules.
+ */
+export function snakeCase(str: string): string {
+  return (
+    str
+      // ABc -> a_bc
+      .replace(/([A-Z])([A-Z])([a-z])/g, '$1_$2$3')
+      // aC -> a_c
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .toLowerCase()
+  );
+}
 
 export class SnakeNamingStrategy
   extends DefaultNamingStrategy

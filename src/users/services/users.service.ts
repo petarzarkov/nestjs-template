@@ -1,3 +1,4 @@
+import { password as passwordUtil } from '@/core/utils/password.util';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -8,10 +9,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
 import { EntityManager } from 'typeorm';
 
-import { PASSWORD_HASH_ROUNDS } from '@/constants';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { GetUsersQueryDto, UpdateUserDto } from '../dto/user.dto';
 import { UserRole } from '../enum/user-role.enum';
@@ -35,7 +34,7 @@ export class UsersService {
   }
 
   async createUser(email: string, password: string) {
-    const hashedPassword = await bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
+    const hashedPassword = await passwordUtil.hash(password);
     const roles = [UserRole.USER];
     const user = await this.usersRepository.create({
       email,
@@ -63,7 +62,7 @@ export class UsersService {
       throw new ForbiddenException('Expired invite');
     }
 
-    const hashedPassword = await bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
+    const hashedPassword = await passwordUtil.hash(password);
     const user = await this.usersRepository.create({
       email: invite.email,
       password: hashedPassword,

@@ -7,19 +7,18 @@ A production-ready NestJS monolith template with TypeScript, TypeORM, and modern
 - **Modular Monolith**: Clean module boundaries without microservices complexity
 - **Type Safety**: End-to-end type safety from DB schema to API
 - **Recovery-Oriented**: Database-first design with PostgreSQL persistence
-- **Modern Stack**: Node.js 22+, NestJS 11, TypeORM, TypeScript
+- **Modern Stack**: Bun runtime, NestJS 11, TypeORM, TypeScript
 
 ## Prerequisites
 
-- Node.js >= 22.0.0
-- pnpm >= 9.0.0
+- Bun >= 1.0.0
 - Docker (for PostgreSQL and Redis)
 
 ## Quick Start
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Start infrastructure
 docker compose up -d
@@ -29,27 +28,27 @@ cp .env.example .env
 # Edit .env with your configuration
 
 # Run database migrations
-pnpm migration:run
+bun run migration:run
 
 # Start development server
-pnpm dev
+bun dev
 ```
 
 ## Scripts
 
 ```bash
-pnpm dev                    # Development with hot reload
-pnpm build                  # Build for production
-pnpm start                  # Start production build
-pnpm test                   # Run unit tests (Node.js native runner)
-pnpm test:watch             # Run tests in watch mode
-pnpm test:e2e               # Run e2e tests
-pnpm lint                   # Lint code
-pnpm format                 # Format code
-pnpm migration:gen $MigrationName         # Generate migration
-pnpm migration:run          # Run migrations
-pnpm migration:revert       # Revert last migration
-pnpm db:drop                # Drop db schema
+bun dev                     # Development with hot reload
+bun run build               # Build for production
+bun start                   # Start production build
+bun test                    # Run unit tests (Bun test runner)
+bun test --watch            # Run tests in watch mode
+bun run test:e2e            # Run e2e tests
+bun run lint                # Lint code
+bun run format              # Format code
+bun run migration:gen $Name # Generate migration
+bun run migration:run       # Run migrations
+bun run migration:revert    # Revert last migration
+bun run db:drop             # Drop db schema
 ```
 
 ## Core Features
@@ -63,11 +62,11 @@ pnpm db:drop                # Drop db schema
 - **Pagination**: Reusable pagination factory
 - **API Docs**: Swagger/OpenAPI integration
 - **Health Checks**: Terminus health monitoring
-- **Testing**: Node.js native test runner with TypeScript support
+- **Testing**: Bun's built-in test runner with TypeScript support
 
 ## Project Structure
 
-```
+```bash
 src/
 ├── auth/            # Authentication & authorization
 ├── config/          # Environment configuration

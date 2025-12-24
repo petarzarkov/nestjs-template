@@ -7,7 +7,15 @@ import { Color } from '../color';
 import { LogLevel } from '../log-level.enum';
 import { ContextService } from './context.service';
 
-const defaultMaskFields = ['token', 'jwt', 'password', 'secret', 'apiPass', 'apiKey', 'apiSecret'];
+const defaultMaskFields = [
+  'token',
+  'jwt',
+  'password',
+  'secret',
+  'apiPass',
+  'apiKey',
+  'apiSecret',
+];
 
 type LogEntry = Record<string, unknown> & {
   error?: Error;
@@ -35,7 +43,7 @@ export class ContextLogger implements LoggerService {
 
   constructor(
     private readonly configService: AppConfigService<ValidatedServiceConfig>,
-    private readonly contextService: ContextService
+    private readonly contextService: ContextService,
   ) {
     this.appConfig = this.configService.getOrThrow('app');
     this.logConfig = this.configService.getOrThrow('log');
@@ -43,7 +51,9 @@ export class ContextLogger implements LoggerService {
     this.isDevelopment = this.appConfig.nodeEnv !== 'production';
     this.maskFields =
       this.logConfig.maskFields && this.logConfig.maskFields?.length > 0
-        ? Array.from(new Set([...defaultMaskFields, ...this.logConfig.maskFields]))
+        ? Array.from(
+            new Set([...defaultMaskFields, ...this.logConfig.maskFields]),
+          )
         : defaultMaskFields;
 
     this.maxArrayLength = this.logConfig.maxArrayLength || 1;
@@ -52,49 +62,67 @@ export class ContextLogger implements LoggerService {
   log(message: string, ...optionalParams: unknown[]): void;
   log(message: Record<string, unknown>): void;
   log(message: Error): void;
-  log(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  log(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.LOG, message, optionalParams);
   }
 
   error(message: string, ...optionalParams: unknown[]): void;
   error(message: Record<string, unknown>): void;
   error(message: Error): void;
-  error(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  error(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.ERROR, message, optionalParams);
   }
 
   warn(message: string, ...optionalParams: unknown[]): void;
   warn(message: Record<string, unknown>): void;
   warn(message: Error): void;
-  warn(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  warn(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.WARN, message, optionalParams);
   }
 
   debug(message: string, ...optionalParams: unknown[]): void;
   debug(message: Record<string, unknown>): void;
   debug(message: Error): void;
-  debug(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  debug(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.DEBUG, message, optionalParams);
   }
 
   verbose(message: string, ...optionalParams: unknown[]): void;
   verbose(message: Record<string, unknown>): void;
   verbose(message: Error): void;
-  verbose(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  verbose(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.VERBOSE, message, optionalParams);
   }
 
   fatal(message: string, ...optionalParams: unknown[]): void;
   fatal(message: Record<string, unknown>): void;
   fatal(message: Error): void;
-  fatal(message: string | Record<string, unknown> | Error, ...optionalParams: unknown[]): void {
+  fatal(
+    message: string | Record<string, unknown> | Error,
+    ...optionalParams: unknown[]
+  ): void {
     this.#writeLog(LogLevel.FATAL, message, optionalParams);
   }
 
   #writeLog(
     level: LogLevel,
     message: string | Record<string, unknown> | Error,
-    optionalParams: unknown[]
+    optionalParams: unknown[],
   ): void {
     if (!this.#shouldLog(level)) {
       return;
@@ -112,7 +140,7 @@ export class ContextLogger implements LoggerService {
       preparedMessage,
       finalExtra,
       finalError,
-      invalidMessageInfo
+      invalidMessageInfo,
     );
 
     const sanitizedLogEntry = this.#sanitizeLogEntry(logEntry);
@@ -124,7 +152,9 @@ export class ContextLogger implements LoggerService {
     console.log(output);
   }
 
-  #prepareMessage(message: string | Record<string, unknown> | Error | unknown): {
+  #prepareMessage(
+    message: string | Record<string, unknown> | Error | unknown,
+  ): {
     preparedMessage: string;
     invalidMessageInfo?: LogEntry;
     messageError?: Error;
@@ -174,7 +204,7 @@ export class ContextLogger implements LoggerService {
 
   #extractErrorAndExtra(
     params: unknown[],
-    level: LogLevel
+    level: LogLevel,
   ): {
     error: Error | null;
     extra: LogEntry;
@@ -187,7 +217,9 @@ export class ContextLogger implements LoggerService {
         error = param;
       } else if (typeof param === 'string') {
         const isErrorLevel =
-          level === LogLevel.WARN || level === LogLevel.ERROR || level === LogLevel.FATAL;
+          level === LogLevel.WARN ||
+          level === LogLevel.ERROR ||
+          level === LogLevel.FATAL;
         if (isErrorLevel) {
           error = new Error(param);
         } else {
@@ -221,7 +253,7 @@ export class ContextLogger implements LoggerService {
     message: string,
     extra: LogEntry,
     error?: Error | null,
-    invalidMessageInfo?: LogEntry
+    invalidMessageInfo?: LogEntry,
   ): LogEntry {
     const context = this.contextService.getContext();
 
@@ -260,8 +292,8 @@ export class ContextLogger implements LoggerService {
         continue;
       }
 
-      const shouldMask = this.maskFields.some((field) =>
-        key.toLowerCase().includes(field.toLowerCase())
+      const shouldMask = this.maskFields.some(field =>
+        key.toLowerCase().includes(field.toLowerCase()),
       );
 
       if (shouldMask) {
@@ -283,7 +315,7 @@ export class ContextLogger implements LoggerService {
   }
 
   #sanitizeArray(array: unknown[], visited: WeakSet<object>): unknown[] {
-    return array.map((item) => {
+    return array.map(item => {
       if (this.#isPlainObject(item)) {
         return this.#sanitizeLogEntry(item, visited);
       } else if (Array.isArray(item)) {
@@ -312,11 +344,15 @@ export class ContextLogger implements LoggerService {
       flow: Color.brightGreen,
     };
 
-    return jsonString.replace(/(".*?":\s*)(.*?)(?=,|\n|$)/g, (_, key, value) => {
-      const keyWithoutQuotes = key.replace(/"/g, '').slice(0, -1);
-      const colorizer = colorMap[keyWithoutQuotes] || this.#getValueColor(value);
-      return `${Color.cyan(key)}${colorizer(value)}`;
-    });
+    return jsonString.replace(
+      /(".*?":\s*)(.*?)(?=,|\n|$)/g,
+      (_, key, value) => {
+        const keyWithoutQuotes = key.replace(/"/g, '').slice(0, -1);
+        const colorizer =
+          colorMap[keyWithoutQuotes] || this.#getValueColor(value);
+        return `${Color.cyan(key)}${colorizer(value)}`;
+      },
+    );
   }
 
   #getValueColor(value: string): ColorFn {
@@ -377,11 +413,17 @@ export class ContextLogger implements LoggerService {
 
   #isPlainObject(obj: unknown): obj is Record<string, unknown> {
     return (
-      typeof obj === 'object' && obj !== null && !Array.isArray(obj) && !(obj instanceof Error)
+      typeof obj === 'object' &&
+      obj !== null &&
+      !Array.isArray(obj) &&
+      !(obj instanceof Error)
     );
   }
 
-  #findNestedError(obj: Record<string, unknown>, visited = new WeakSet()): Error | null {
+  #findNestedError(
+    obj: Record<string, unknown>,
+    visited = new WeakSet(),
+  ): Error | null {
     if (!obj || typeof obj !== 'object') {
       return null;
     }
@@ -457,8 +499,17 @@ export class ContextLogger implements LoggerService {
       const entries: Record<string, unknown> = {};
       try {
         for (const [key, val] of value.entries()) {
-          if (val instanceof File) {
-            entries[key] = `[File: ${val.name} (${val.size} bytes, ${val.type})]`;
+          // Duck-type check for File-like objects (works in both Node and Bun)
+          if (
+            val &&
+            typeof val === 'object' &&
+            'name' in val &&
+            'size' in val &&
+            'type' in val
+          ) {
+            const file = val as { name: string; size: number; type: string };
+            entries[key] =
+              `[File: ${file.name} (${file.size} bytes, ${file.type})]`;
           } else {
             entries[key] = val;
           }
@@ -469,8 +520,17 @@ export class ContextLogger implements LoggerService {
       }
     }
 
-    if (typeof File !== 'undefined' && value instanceof File) {
-      return `[File: ${value.name} (${value.size} bytes, ${value.type})]`;
+    // Duck-type check for File-like objects (works in both Node and Bun)
+    if (
+      value &&
+      typeof value === 'object' &&
+      'name' in value &&
+      'size' in value &&
+      'type' in value &&
+      typeof (value as { arrayBuffer?: unknown }).arrayBuffer === 'function'
+    ) {
+      const file = value as { name: string; size: number; type: string };
+      return `[File: ${file.name} (${file.size} bytes, ${file.type})]`;
     }
 
     if (typeof Blob !== 'undefined' && value instanceof Blob) {
@@ -506,14 +566,17 @@ export class ContextLogger implements LoggerService {
 
   #sliceArray<T>(array: T[]): unknown[] {
     if (array.length <= this.maxArrayLength) {
-      return array.map((item) => this.#makeSafeForJson(item));
+      return array.map(item => this.#makeSafeForJson(item));
     }
 
     const slicedArray = array
       .slice(0, this.maxArrayLength)
-      .map((item) => this.#makeSafeForJson(item));
+      .map(item => this.#makeSafeForJson(item));
 
-    return [...slicedArray, `[TRUNCATED: ${array.length - this.maxArrayLength} more items]`];
+    return [
+      ...slicedArray,
+      `[TRUNCATED: ${array.length - this.maxArrayLength} more items]`,
+    ];
   }
 }
 
@@ -538,6 +601,6 @@ export const bootstrapLogger = (pkg: PackageJson) => {
         throw new Error(`Key ${key} not bootstraped`);
       },
     } as unknown as AppConfigService<ValidatedServiceConfig>,
-    new ContextService()
+    new ContextService(),
   );
 };

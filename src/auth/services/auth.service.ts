@@ -1,4 +1,5 @@
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
+import { password as passwordUtil } from '@/core/utils/password.util';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -9,7 +10,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -29,7 +29,7 @@ export class AuthService {
       return null;
     }
 
-    const match = await bcrypt.compare(pass, user.password);
+    const match = await passwordUtil.verify(pass, user.password);
     if (!match) {
       return null;
     }
@@ -76,7 +76,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = await passwordUtil.hash(newPassword);
     await this.usersRepository.save(user);
     await this.passwordResetTokensRepository.invalidateUserTokens(user.id);
     return { message: 'Password reset successful' };

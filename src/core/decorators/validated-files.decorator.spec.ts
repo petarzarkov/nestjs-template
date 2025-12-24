@@ -1,12 +1,18 @@
 import { BadRequestException } from '@nestjs/common';
+import { describe, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
 import { FILES } from '../../constants';
-import { ValidatedFile, validatedFilePipe, ValidatedFiles } from './validated-files.decorator';
+import {
+  ValidatedFile,
+  validatedFilePipe,
+  ValidatedFiles,
+} from './validated-files.decorator';
 
 describe('ValidatedFiles Decorator Integration Tests', () => {
   // Mock file factories
-  const createMockFile = (overrides: Partial<Express.Multer.File> = {}): Express.Multer.File => ({
+  const createMockFile = (
+    overrides: Partial<Express.Multer.File> = {},
+  ): Express.Multer.File => ({
     fieldname: 'file',
     originalname: 'testfile.pdf',
     encoding: '7bit',
@@ -77,7 +83,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         const unsupportedFile = createUnsupportedFile();
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(unsupportedFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(unsupportedFile),
+          BadRequestException,
+        );
       });
 
       test('should reject files that do not match regex pattern', async () => {
@@ -91,7 +100,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         });
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(unsupportedFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(unsupportedFile),
+          BadRequestException,
+        );
       });
     });
 
@@ -130,7 +142,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         const tooSmallFile = createSmallFile(FILES.MIN_SIZE - 1);
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(tooSmallFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(tooSmallFile),
+          BadRequestException,
+        );
       });
 
       test('should reject files above maximum size', async () => {
@@ -139,7 +154,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         const tooLargeFile = createLargeFile(FILES.MAX_SIZE + 1);
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(tooLargeFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(tooLargeFile),
+          BadRequestException,
+        );
       });
 
       test('should reject files below custom minimum size', async () => {
@@ -152,7 +170,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         const tooSmallFile = createSmallFile(minSize - 1);
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(tooSmallFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(tooSmallFile),
+          BadRequestException,
+        );
       });
 
       test('should reject files above custom maximum size', async () => {
@@ -165,7 +186,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         const tooLargeFile = createLargeFile(maxSize + 1);
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(tooLargeFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(tooLargeFile),
+          BadRequestException,
+        );
       });
 
       test('should handle files exactly at size boundaries', async () => {
@@ -216,7 +240,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         });
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(invalidFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(invalidFile),
+          BadRequestException,
+        );
       });
 
       test('should accept files with custom minimum filename length', async () => {
@@ -245,7 +272,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         });
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(invalidFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(invalidFile),
+          BadRequestException,
+        );
       });
 
       test('should handle files without extension correctly', async () => {
@@ -301,8 +331,8 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
           assert.ok(error instanceof BadRequestException);
           assert.ok(
             (error as BadRequestException).message.includes(
-              'File name "abc" must be at least 6 characters long'
-            )
+              'File name "abc" must be at least 6 characters long',
+            ),
           );
         }
       });
@@ -338,7 +368,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         });
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(invalidFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(invalidFile),
+          BadRequestException,
+        );
       });
 
       test('should reject file with valid size but invalid type', async () => {
@@ -350,7 +383,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
         });
 
         // Act & Assert
-        await assert.rejects(() => pipe.transform(invalidFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(invalidFile),
+          BadRequestException,
+        );
       });
     });
 
@@ -390,7 +426,11 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
           assert.fail('Expected validation to throw');
         } catch (error) {
           assert.ok(error instanceof BadRequestException);
-          assert.ok((error as BadRequestException).message.includes('Validation failed'));
+          assert.ok(
+            (error as BadRequestException).message.includes(
+              'Validation failed',
+            ),
+          );
         }
       });
 
@@ -405,11 +445,19 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
           assert.fail('Expected validation to throw');
         } catch (error) {
           assert.ok(error instanceof BadRequestException);
-          assert.ok((error as BadRequestException).message.includes('must not be empty'));
           assert.ok(
-            (error as BadRequestException).message.includes(`minimum size: ${FILES.MIN_SIZE} bytes`)
+            (error as BadRequestException).message.includes(
+              'must not be empty',
+            ),
           );
-          assert.ok((error as BadRequestException).message.includes('smallfile.pdf'));
+          assert.ok(
+            (error as BadRequestException).message.includes(
+              `minimum size: ${FILES.MIN_SIZE} bytes`,
+            ),
+          );
+          assert.ok(
+            (error as BadRequestException).message.includes('smallfile.pdf'),
+          );
         }
       });
     });
@@ -431,7 +479,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
       test('should reject if any file is invalid', async () => {
         // Arrange
         const pipe = validatedFilePipe({ fileType: 'application/pdf' });
-        const files = [createMockFile({ originalname: 'filename1.pdf' }), createUnsupportedFile()];
+        const files = [
+          createMockFile({ originalname: 'filename1.pdf' }),
+          createUnsupportedFile(),
+        ];
 
         // Act & Assert
         await assert.rejects(() => pipe.transform(files), BadRequestException);
@@ -443,7 +494,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
           fileType: 'application/pdf',
           minSize: 2048,
         });
-        const files = [createMockFile({ size: 2048 }), createMockFile({ size: 4096 })];
+        const files = [
+          createMockFile({ size: 2048 }),
+          createMockFile({ size: 4096 }),
+        ];
 
         // Act & Assert - should not throw
         const result = await pipe.transform(files);
@@ -478,7 +532,10 @@ describe('ValidatedFiles Decorator Integration Tests', () => {
 
         // Should reject below minimum
         const tooSmallFile = createSmallFile(FILES.MIN_SIZE - 1);
-        await assert.rejects(() => pipe.transform(tooSmallFile), BadRequestException);
+        await assert.rejects(
+          () => pipe.transform(tooSmallFile),
+          BadRequestException,
+        );
       });
 
       test('should handle falsy values for size options correctly', async () => {

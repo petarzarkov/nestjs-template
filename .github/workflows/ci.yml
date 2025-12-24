@@ -12,52 +12,31 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [25.2.1]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: 9
+          bun-version: latest
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        id: pnpm-setup
-        with:
-          run_install: false
-
-      - name: Resolve pnpm store path
-        id: pnpm-store
-        shell: bash
-        run: echo "dir=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
+      - name: Cache Bun dependencies
         uses: actions/cache@v4
-        id: pnpm-cache
         with:
-          path: ${{ steps.pnpm-store.outputs.dir }}
-          key: ${{ runner.os }}-pnpm-${{ matrix.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-${{ matrix.node-version }}-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        shell: bash
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: bun install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: bun run lint
 
       - name: Build
-        run: pnpm build
+        run: bun run build
 
       - name: Run Tests
-        run: pnpm test
+        run: bun test

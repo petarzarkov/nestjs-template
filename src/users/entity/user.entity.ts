@@ -35,8 +35,9 @@ export class User {
     array: true,
   })
   @ApiProperty({
-    enum: UserRole,
+    enum: Object.values(UserRole),
     isArray: true,
+    example: [UserRole.USER],
   })
   @IsUniqueEnumArrayDecorator(UserRole)
   roles!: UserRole[];
