@@ -1,6 +1,6 @@
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
+import { PasswordDecorator } from '@/core/decorators/password.decorator';
 
 export class RegisterWithInviteDto {
   @PasswordDecorator()

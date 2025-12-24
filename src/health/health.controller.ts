@@ -1,6 +1,3 @@
-import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
-import { ValidatedConfig } from '@/config/env.validation';
-import { AppConfigService } from '@/config/services/app.config.service';
 import { Controller, Get, HttpStatus } from '@nestjs/common';
 import { Transport } from '@nestjs/microservices';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -12,6 +9,9 @@ import {
   MicroserviceHealthIndicator,
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
+import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
+import { ValidatedConfig } from '@/config/env.validation';
+import { AppConfigService } from '@/config/services/app.config.service';
 
 @ApiTags('service')
 @Controller('service')

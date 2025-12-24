@@ -1,5 +1,3 @@
-import { UserRole } from '@/users/enum/user-role.enum';
-import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
@@ -9,6 +7,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserRole } from '@/users/enum/user-role.enum';
+import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 
 @Entity()
 export class Invite {

@@ -1,4 +1,3 @@
-import type { InvitePayload } from '@/notifications/dto/user-notifications.dto';
 import {
   Body,
   Button,
@@ -9,7 +8,7 @@ import {
   Preview,
   Text,
 } from '@react-email/components';
-import * as React from 'react';
+import type { InvitePayload } from '@/notifications/dto/user-notifications.dto';
 import { button, container, h1, main, text } from './email-styles';
 
 interface InviteEmailProps extends InvitePayload {

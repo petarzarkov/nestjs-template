@@ -29,15 +29,19 @@ export class HelpersService {
     const urlString = typeof base === 'string' ? base : base.href;
     const baseUrlReplaced = this.interpolate(urlString, pathParams);
     const pathReplaced = path && this.interpolate(path, pathParams);
-    const baseUrlFinal = this.#buildUrlFromString(baseUrlReplaced, pathReplaced);
+    const baseUrlFinal = this.#buildUrlFromString(
+      baseUrlReplaced,
+      pathReplaced,
+    );
     return this.#buildUrlWithQuery(baseUrlFinal, queryParams);
   }
 
   #buildUrlWithQuery(baseUrl: string | URL, queryParams?: ParamsType): URL {
-    const url = typeof baseUrl === 'string' ? this.#buildUrlFromString(baseUrl) : baseUrl;
+    const url =
+      typeof baseUrl === 'string' ? this.#buildUrlFromString(baseUrl) : baseUrl;
 
     if (queryParams) {
-      Object.keys(queryParams).forEach((key) => {
+      Object.keys(queryParams).forEach(key => {
         const value = queryParams[key];
         if (value != null) {
           url.searchParams.set(key, value.toString());
@@ -58,7 +62,7 @@ export class HelpersService {
       // Combine the pathname with the new path
       const existingPath = urlObject.pathname.endsWith('/')
         ? urlObject.pathname
-        : urlObject.pathname + '/';
+        : `${urlObject.pathname}/`;
       urlObject.pathname = existingPath + cleanPath;
     }
 
@@ -71,10 +75,13 @@ export class HelpersService {
     }
 
     let result = template;
-    Object.keys(params).forEach((key) => {
+    Object.keys(params).forEach(key => {
       const value = params[key];
       if (value != null) {
-        result = result.replace(new RegExp(`\\{${key}\\}`, 'gi'), value.toString());
+        result = result.replace(
+          new RegExp(`\\{${key}\\}`, 'gi'),
+          value.toString(),
+        );
       }
     });
 
@@ -91,12 +98,12 @@ export class HelpersService {
   }
 
   async delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async executeWithRetry<T>(
     operation: () => Promise<T> | T,
-    config?: Partial<RetryOptions<T>>
+    config?: Partial<RetryOptions<T>>,
   ): Promise<T> {
     const {
       maxRetries = 3,
@@ -105,10 +112,10 @@ export class HelpersService {
         // Retry 5xx server errors and other retryable status codes
         return (
           status >= HttpStatus.INTERNAL_SERVER_ERROR ||
-          status == HttpStatus.REQUEST_TIMEOUT ||
-          status == HttpStatus.CONFLICT ||
-          status == HttpStatus.UNPROCESSABLE_ENTITY ||
-          status == HttpStatus.TOO_MANY_REQUESTS
+          status === HttpStatus.REQUEST_TIMEOUT ||
+          status === HttpStatus.CONFLICT ||
+          status === HttpStatus.UNPROCESSABLE_ENTITY ||
+          status === HttpStatus.TOO_MANY_REQUESTS
         );
       },
       onAttempt,
@@ -134,8 +141,12 @@ export class HelpersService {
         // Check if it's an HTTP response error with status
         const httpError = lastError as Error & { status?: number };
         const status =
-          lastError instanceof HttpException ? lastError.getStatus() : httpError.status;
-        const shouldRetryStatus = status ? shouldRetryOnStatus(status as HttpStatus) : true; // Retry non-HTTP errors by default
+          lastError instanceof HttpException
+            ? lastError.getStatus()
+            : httpError.status;
+        const shouldRetryStatus = status
+          ? shouldRetryOnStatus(status as HttpStatus)
+          : true; // Retry non-HTTP errors by default
 
         const willRetry = shouldRetryStatus && !isAborted;
 
@@ -182,7 +193,7 @@ export class HelpersService {
 
   private calculateBackoffDelay(attempt: number, baseDelay: number): number {
     // Exponential backoff with jitter: baseDelay * (2^attempt) + random(0, 1000)
-    const exponentialDelay = baseDelay * Math.pow(2, attempt);
+    const exponentialDelay = baseDelay * 2 ** attempt;
     const jitter = Math.random() * 1000;
     return Math.min(exponentialDelay + jitter, 30000); // Cap at 30 seconds
   }
@@ -214,23 +225,33 @@ export class HelpersService {
         return new ConflictException(message);
       case HttpStatus.UNPROCESSABLE_ENTITY:
         return new UnprocessableEntityException(message);
-      case HttpStatus.INTERNAL_SERVER_ERROR:
-      case HttpStatus.BAD_GATEWAY:
-      case HttpStatus.SERVICE_UNAVAILABLE:
-      case HttpStatus.GATEWAY_TIMEOUT:
       default:
         return new InternalServerErrorException(message);
     }
   }
 
   public async makeExternalApiCall<TRequest, TResponse>(
-    params: AuthenticatedApiRequestConfig<TRequest, TResponse>
+    params: AuthenticatedApiRequestConfig<TRequest, TResponse>,
   ): Promise<TResponse> {
-    const { flow, httpService, config, headerFactory, baseUrl, logger, errorHandler } =
-      params || {};
+    const {
+      flow,
+      httpService,
+      config,
+      headerFactory,
+      baseUrl,
+      logger,
+      errorHandler,
+    } = params || {};
 
-    const { method, endpoint, payload, pathParams, queryParams, retryOptions, timeoutMs } =
-      config || {};
+    const {
+      method,
+      endpoint,
+      payload,
+      pathParams,
+      queryParams,
+      retryOptions,
+      timeoutMs,
+    } = config || {};
 
     try {
       return await this.executeWithRetry(
@@ -258,10 +279,12 @@ export class HelpersService {
             ...(timeoutMs && { timeout: timeoutMs }),
           };
 
-          const response = await firstValueFrom(httpService.request<TResponse>(axiosConfig));
+          const response = await firstValueFrom(
+            httpService.request<TResponse>(axiosConfig),
+          );
           if (!response) {
             throw new InternalServerErrorException(
-              `No response received from ${method} ${url.href}`
+              `No response received from ${method} ${url.href}`,
             );
           }
 
@@ -274,7 +297,7 @@ export class HelpersService {
             ((attempt, isRetry) => {
               logger?.log(
                 `External API call: ${flow} ${method} ${endpoint} (Attempt ${attempt}${isRetry ? ' (retry)' : ''})`,
-                { request: payload }
+                { request: payload },
               );
             }),
           onSuccess:
@@ -282,7 +305,7 @@ export class HelpersService {
             ((response, attempt) => {
               logger?.log(
                 `External API call: ${flow} ${method} ${endpoint} successful (Attempt ${attempt})`,
-                { response }
+                { response },
               );
             }),
           onError:
@@ -306,13 +329,16 @@ export class HelpersService {
                   : {}),
               };
 
-              logger?.error(`External API call failed: ${flow} ${method} ${endpoint}`, {
-                err: cleanError,
-                attempt,
-                willRetry,
-              });
+              logger?.error(
+                `External API call failed: ${flow} ${method} ${endpoint}`,
+                {
+                  err: cleanError,
+                  attempt,
+                  willRetry,
+                },
+              );
             }),
-        }
+        },
       );
     } catch (error) {
       // Use provided error handler or default error handler for AxiosError
@@ -332,14 +358,14 @@ export class HelpersService {
    */
   tryParseTimestamp(timestamp: string): Date {
     try {
-      const numericTimestamp = parseInt(timestamp);
-      if (isNaN(numericTimestamp)) {
+      const numericTimestamp = parseInt(timestamp, 10);
+      if (Number.isNaN(numericTimestamp)) {
         return new Date();
       }
 
       return new Date(numericTimestamp);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch (_error) {
       return new Date();
     }
   }

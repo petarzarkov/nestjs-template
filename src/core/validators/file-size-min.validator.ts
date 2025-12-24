@@ -8,17 +8,13 @@ export class FileSizeMinValidator extends FileValidator<
   FileSizeMinValidatorOptions,
   Express.Multer.File
 > {
-  constructor(validationOptions: FileSizeMinValidatorOptions) {
-    super(validationOptions);
-  }
-
   isValid(file?: Express.Multer.File | Express.Multer.File[]): boolean {
     if (!file) {
       return false;
     }
 
     if (Array.isArray(file)) {
-      return file.every((f) => f?.size >= this.validationOptions.minSize);
+      return file.every(f => f?.size >= this.validationOptions.minSize);
     }
 
     return file.size >= this.validationOptions.minSize;

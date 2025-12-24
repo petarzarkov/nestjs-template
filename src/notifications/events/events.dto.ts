@@ -1,7 +1,7 @@
-import type { EventMap, EventType } from '@/notifications/events/events';
-import type { SanitizedUser } from '@/users/entity/user.entity';
 import type { DefaultEventsMap } from 'socket.io';
 import { Server, Socket } from 'socket.io';
+import type { EventMap, EventType } from '@/notifications/events/events';
+import type { SanitizedUser } from '@/users/entity/user.entity';
 
 export class WebSocketBaseMessage<T = unknown> {
   message!: string;

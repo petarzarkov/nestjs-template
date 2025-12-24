@@ -6,7 +6,7 @@ import { IsEmail, IsNotEmpty, IsOptional, NotContains } from 'class-validator';
 export const IsEmailDecorator = (
   optional = false,
   description: string = 'The email address of the user.',
-  opts?: ApiPropertyOptions
+  opts?: ApiPropertyOptions,
 ) => {
   const decorators = [
     ApiProperty({

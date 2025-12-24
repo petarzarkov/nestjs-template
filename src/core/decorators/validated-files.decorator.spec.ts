@@ -1,11 +1,11 @@
-import { BadRequestException } from '@nestjs/common';
 import { describe, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { BadRequestException } from '@nestjs/common';
 import { FILES } from '../../constants';
 import {
   ValidatedFile,
-  validatedFilePipe,
   ValidatedFiles,
+  validatedFilePipe,
 } from './validated-files.decorator';
 
 describe('ValidatedFiles Decorator Integration Tests', () => {

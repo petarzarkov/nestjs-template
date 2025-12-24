@@ -5,7 +5,10 @@ import { ConfigService } from '@nestjs/config';
  * A custom, pre-typed wrapper around the NestJS ConfigService.
  * This service is automatically aware of the `ValidatedConfig` type structure.
  */
-export class AppConfigService<ValidatedConfig> extends ConfigService<ValidatedConfig, true> {
+export class AppConfigService<ValidatedConfig> extends ConfigService<
+  ValidatedConfig,
+  true
+> {
   /**
    * A simplified getter that automatically infers the return type
    * of a top-level key from the `ValidatedConfig` object.

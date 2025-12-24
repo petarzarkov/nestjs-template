@@ -1,5 +1,3 @@
-import { LoginRequestDto } from '@/auth/dto/login-request.dto';
-import { SanitizedUser } from '@/users/entity/user.entity';
 import {
   BadRequestException,
   Injectable,
@@ -9,6 +7,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Strategy } from 'passport-local';
+import { LoginRequestDto } from '@/auth/dto/login-request.dto';
+import { SanitizedUser } from '@/users/entity/user.entity';
 import { AuthService } from '../services/auth.service';
 
 @Injectable()

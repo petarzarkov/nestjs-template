@@ -1,3 +1,11 @@
+import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { BaseResponseDto } from '@/auth/dto/base-response.dto';
 import { LoginRequestDto } from '@/auth/dto/login-request.dto';
@@ -11,14 +19,6 @@ import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
-import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiExtraModels,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthService } from './services/auth.service';
 

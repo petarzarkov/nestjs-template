@@ -12,20 +12,24 @@ export interface UuidParamOptions {
 export const UuidParam = (options: UuidParamOptions) => {
   const { name } = options;
 
-  return createParamDecorator((data: unknown, ctx: ExecutionContext): string => {
-    const request = ctx.switchToHttp().getRequest();
-    const paramValue = request.params[name];
+  return createParamDecorator(
+    (_data: unknown, ctx: ExecutionContext): string => {
+      const request = ctx.switchToHttp().getRequest();
+      const paramValue = request.params[name];
 
-    if (!paramValue) {
-      throw new BadRequestException(`Parameter '${name}' is required`);
-    }
+      if (!paramValue) {
+        throw new BadRequestException(`Parameter '${name}' is required`);
+      }
 
-    if (!validate(paramValue)) {
-      throw new BadRequestException(`Parameter '${name}' must be a valid UUID`);
-    }
+      if (!validate(paramValue)) {
+        throw new BadRequestException(
+          `Parameter '${name}' must be a valid UUID`,
+        );
+      }
 
-    return paramValue;
-  })();
+      return paramValue;
+    },
+  )();
 };
 
 // Utility function to generate ApiParam decorators for UUID parameters

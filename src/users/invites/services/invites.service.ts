@@ -1,3 +1,6 @@
+import * as crypto from 'node:crypto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
 import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
@@ -6,9 +9,6 @@ import { Invite } from '@/users/invites/entity/invite.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
 import { UsersRepository } from '@/users/repos/users.repository';
-import { ConflictException, Injectable } from '@nestjs/common';
-import * as crypto from 'crypto';
-import { In } from 'typeorm';
 
 @Injectable()
 export class InvitesService {
@@ -19,7 +19,7 @@ export class InvitesService {
   ) {}
 
   async findAll(query: ListInvitesQueryDto): Promise<Invite[]> {
-    if (query.statuses && query.statuses.length) {
+    if (query.statuses?.length) {
       return this.invitesRepository.find({
         where: {
           status: In(query.statuses),

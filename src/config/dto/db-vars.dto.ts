@@ -7,8 +7,8 @@ import {
   Max,
   Min,
   ValidateIf,
-  validateSync,
   ValidationError,
+  validateSync,
 } from 'class-validator';
 
 export class DbVars {

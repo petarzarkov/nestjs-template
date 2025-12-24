@@ -6,8 +6,8 @@ import {
   IsString,
   Max,
   Min,
-  validateSync,
   ValidationError,
+  validateSync,
 } from 'class-validator';
 import { ConfigValidationError } from '../config-validation.error';
 

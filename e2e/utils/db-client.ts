@@ -1,9 +1,9 @@
+import type { Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SnakeNamingStrategy } from '@/db/strategies/snake-case.strategy';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
 import { Invite } from '@/users/invites/entity/invite.entity';
-import type { Repository } from 'typeorm';
-import { DataSource } from 'typeorm';
 import { E2E } from '../constants';
 
 // Entity list for this template

@@ -1,8 +1,8 @@
+import { Controller, Injectable, UseInterceptors } from '@nestjs/common';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import type { BaseEvent } from '@/redis/pubsub/base-event.dto';
 import { EventLoggingInterceptor } from '@/redis/pubsub/event-logging.interceptor';
-import { Controller, Injectable, UseInterceptors } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
 import { EmailService } from './email/services/email.service';
 import { EVENT_CONSTANTS } from './events/events';
 import { EventsGateway } from './events/events.gateway';
@@ -14,7 +14,7 @@ export class NotificationHandler {
   constructor(
     private readonly emailService: EmailService,
     private readonly eventsGateway: EventsGateway,
-    private readonly logger: ContextLogger,
+    readonly _logger: ContextLogger,
   ) {}
 
   @EventPattern(EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED)

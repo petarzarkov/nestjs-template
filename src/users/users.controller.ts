@@ -1,3 +1,14 @@
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import {
@@ -12,17 +23,6 @@ import { PaginatedDto } from '@/core/pagination/dto/paginated.dto';
 import { GetUsersQueryDto, UpdateUserDto } from '@/users/dto/user.dto';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
-import {
-  Body,
-  Controller,
-  ForbiddenException,
-  Get,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './services/users.service';
 
 @ApiTags('users')
@@ -40,7 +40,7 @@ export class UsersController {
     type: PaginatedDto(SanitizedUser),
   })
   async getUsers(
-    @CurrentUser() currentUser: SanitizedUser,
+    @CurrentUser() _currentUser: SanitizedUser,
     @Query() queryDto: GetUsersQueryDto,
   ): Promise<PageDto<SanitizedUser>> {
     return this.usersService.getUsersPaginated(queryDto);

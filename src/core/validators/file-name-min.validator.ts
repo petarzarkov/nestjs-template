@@ -1,5 +1,5 @@
+import path from 'node:path';
 import { FileValidator } from '@nestjs/common';
-import path from 'path';
 
 interface FileNameMinValidatorOptions {
   minLength: number;
@@ -9,17 +9,13 @@ export class FileNameMinValidator extends FileValidator<
   FileNameMinValidatorOptions,
   Express.Multer.File
 > {
-  constructor(validationOptions: FileNameMinValidatorOptions) {
-    super(validationOptions);
-  }
-
   isValid(file?: Express.Multer.File | Express.Multer.File[]): boolean {
     if (!file) {
       return false;
     }
 
     if (Array.isArray(file)) {
-      return file.every((f) => this.validateSingleFile(f));
+      return file.every(f => this.validateSingleFile(f));
     }
 
     return this.validateSingleFile(file);

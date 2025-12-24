@@ -1,10 +1,3 @@
-import { password as passwordUtil } from '@/core/utils/password.util';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
-import { SanitizedUser } from '@/users/entity/user.entity';
-import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
-import { InvitesRepository } from '@/users/invites/repos/invites.repository';
-import { UsersRepository } from '@/users/repos/users.repository';
 import {
   ForbiddenException,
   Injectable,
@@ -12,8 +5,14 @@ import {
 } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
-
 import { PageDto } from '@/core/pagination/dto/page.dto';
+import { password as passwordUtil } from '@/core/utils/password.util';
+import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
+import { SanitizedUser } from '@/users/entity/user.entity';
+import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
+import { InvitesRepository } from '@/users/invites/repos/invites.repository';
+import { UsersRepository } from '@/users/repos/users.repository';
 import { GetUsersQueryDto, UpdateUserDto } from '../dto/user.dto';
 import { UserRole } from '../enum/user-role.enum';
 
@@ -23,7 +22,7 @@ export class UsersService {
     private readonly usersRepository: UsersRepository,
     private readonly invitesRepository: InvitesRepository,
     private readonly eventPublisher: EventPublisherService,
-    @InjectEntityManager() private readonly entityManager: EntityManager,
+    @InjectEntityManager() readonly _entityManager: EntityManager,
   ) {}
 
   async getUsersPaginated(

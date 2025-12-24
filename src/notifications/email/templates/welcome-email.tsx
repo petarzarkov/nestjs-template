@@ -8,7 +8,6 @@ import {
   Preview,
   Text,
 } from '@react-email/components';
-import * as React from 'react';
 import { button, container, h1, main, text } from './email-styles';
 
 interface WelcomeEmailProps {
@@ -33,7 +32,7 @@ export const WelcomeEmailTemplate = ({
           To get started, we recommend exploring your dashboard and setting up
           your profile.
         </Text>
-        <Button style={button} href={webAppUrl + '/login'}>
+        <Button style={button} href={`${webAppUrl}/login`}>
           Go to Your Dashboard
         </Button>
       </Container>

@@ -5,11 +5,10 @@ import {
   Head,
   Heading,
   Html,
-  Text,
   Section,
+  Text,
 } from '@react-email/components';
-import * as React from 'react';
-import { main, container, h1, text, button, section } from './email-styles';
+import { button, container, h1, main, section, text } from './email-styles';
 
 interface PasswordResetEmailProps {
   name: string;

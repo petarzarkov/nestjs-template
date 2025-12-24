@@ -1,5 +1,3 @@
-import { IsUniqueEnumArrayDecorator } from '@/core/decorators/is-unique-enum.decorator';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsUUID } from 'class-validator';
 import {
@@ -9,6 +7,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { IsUniqueEnumArrayDecorator } from '@/core/decorators/is-unique-enum.decorator';
+import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { UserRole } from '../enum/user-role.enum';
 
 @Entity()

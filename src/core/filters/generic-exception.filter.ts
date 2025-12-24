@@ -1,5 +1,3 @@
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { ContextService } from '@/logger/services/context.service';
 import {
   ArgumentsHost,
   BadRequestException,
@@ -11,6 +9,8 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { ContextService } from '@/logger/services/context.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
 
 /**
  * Generic exception filter that catches all types of exceptions
@@ -21,7 +21,7 @@ import { Response } from 'express';
 export class GenericExceptionFilter implements ExceptionFilter {
   constructor(
     private readonly logger: ContextLogger,
-    private readonly contextService: ContextService
+    private readonly contextService: ContextService,
   ) {}
 
   /**
@@ -31,7 +31,9 @@ export class GenericExceptionFilter implements ExceptionFilter {
    */
   catch(exception: unknown, host: ArgumentsHost): void {
     this.contextService.updateContext({
-      context: this.contextService.getContext().context || 'GenericExceptionFilter.catch',
+      context:
+        this.contextService.getContext().context ||
+        'GenericExceptionFilter.catch',
     });
 
     const ctx = host.switchToHttp();
@@ -47,7 +49,7 @@ export class GenericExceptionFilter implements ExceptionFilter {
       responseBody instanceof Object
     ) {
       const enhancedResponse = this.enhanceBadRequestResponse(
-        responseBody as Record<string, unknown>
+        responseBody as Record<string, unknown>,
       );
       responseBody = enhancedResponse as string | object;
     }
@@ -116,12 +118,16 @@ export class GenericExceptionFilter implements ExceptionFilter {
 
     // Default fallback
     return {
-      httpException: new InternalServerErrorException('An unknown error occurred'),
+      httpException: new InternalServerErrorException(
+        'An unknown error occurred',
+      ),
       status: HttpStatus.INTERNAL_SERVER_ERROR,
     };
   }
 
-  private enhanceBadRequestResponse(responseBody: Record<string, unknown> | null) {
+  private enhanceBadRequestResponse(
+    responseBody: Record<string, unknown> | null,
+  ) {
     if (responseBody === null) {
       return responseBody;
     }
@@ -136,7 +142,9 @@ export class GenericExceptionFilter implements ExceptionFilter {
         const errorFields = message.map((error: unknown, index: number) => {
           if (typeof error === 'string') {
             // Handle special case: "property 'fieldName' should not exist"
-            const propertyMatch = error.match(/property '([^']+)' should not exist/);
+            const propertyMatch = error.match(
+              /property '([^']+)' should not exist/,
+            );
             if (propertyMatch) {
               return {
                 field: propertyMatch[1],

@@ -1,6 +1,14 @@
-import { PAGINATION } from '@/constants';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { PAGINATION } from '@/constants';
 import { PaginationOrder } from '../enum/pagination-order.enum';
 
 export class PageOptionsDto {

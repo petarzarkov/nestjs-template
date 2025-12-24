@@ -1,3 +1,9 @@
+import {
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { CreateEmailOptions, CreateEmailRequestOptions, Resend } from 'resend';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
@@ -8,12 +14,6 @@ import {
   PasswordResetPayload,
   RegisteredPayload,
 } from '@/notifications/dto/user-notifications.dto';
-import {
-  HttpStatus,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { CreateEmailOptions, CreateEmailRequestOptions, Resend } from 'resend';
 import InviteEmailTemplate from '../templates/invite-email';
 import PasswordResetEmailTemplate from '../templates/password-reset-email';
 import WelcomeEmailTemplate from '../templates/welcome-email';
@@ -51,15 +51,16 @@ export class EmailService {
     payload: CreateEmailOptions,
     options?: CreateEmailRequestOptions,
   ) {
-    // if (this.appConfig.nodeEnv !== 'production') {
-    //   this.logger.verbose(
-    //     'Skipping email sending in non-production node environment',
-    //     {
-    //       subject: payload.subject,
-    //     },
-    //   );
-    //   return;
-    // }
+    if (this.appConfig.nodeEnv !== 'production') {
+      this.logger.verbose(
+        'Skipping email sending in non-production node environment',
+        {
+          subject: payload.subject,
+        },
+      );
+      return;
+    }
+    // biome-ignore lint/suspicious/noAssignInExpressions: false positive
     await (this.sendQueue = this.sendQueue.then(async () => {
       const now = Date.now();
       const waitMs = Math.max(0, this.minIntervalMs - (now - this.lastSentAt));

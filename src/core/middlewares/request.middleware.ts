@@ -1,21 +1,25 @@
-import { REQUEST_ID_HEADER_KEY } from '@/constants';
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { AsyncContext, ContextService } from '@/logger/services/context.service';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { v4, validate } from 'uuid';
+import { REQUEST_ID_HEADER_KEY } from '@/constants';
+import {
+  AsyncContext,
+  ContextService,
+} from '@/logger/services/context.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
 
 @Injectable()
 export class RequestMiddleware implements NestMiddleware {
   constructor(
     private readonly logger: ContextLogger,
-    private readonly contextService: ContextService
+    private readonly contextService: ContextService,
   ) {}
 
   use(req: Request, res: Response, next: NextFunction) {
     const startTime = Date.now();
     const incomingReqId = req.get(REQUEST_ID_HEADER_KEY);
-    const requestId = incomingReqId && validate(incomingReqId) ? incomingReqId : v4();
+    const requestId =
+      incomingReqId && validate(incomingReqId) ? incomingReqId : v4();
     const eventPath = req.originalUrl?.split('?')?.[0] || req.originalUrl;
 
     res.setHeader(REQUEST_ID_HEADER_KEY, requestId);
@@ -35,7 +39,7 @@ export class RequestMiddleware implements NestMiddleware {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.socket.remoteAddress,
         contentType: req.headers['content-type'],
-        accept: req.headers['accept'],
+        accept: req.headers.accept,
       });
 
       next();

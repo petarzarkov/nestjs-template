@@ -1,10 +1,10 @@
-import type { ValidatedConfig } from '@/config/env.validation';
-import type { AppConfigService } from '@/config/services/app.config.service';
 import type { INestApplicationContext } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Redis } from 'ioredis';
 import type { ServerOptions } from 'socket.io';
+import type { ValidatedConfig } from '@/config/env.validation';
+import type { AppConfigService } from '@/config/services/app.config.service';
 
 export class SocketConfigAdapter extends IoAdapter {
   private pubClient?: Redis;
@@ -17,7 +17,7 @@ export class SocketConfigAdapter extends IoAdapter {
     super(app);
   }
 
-  createIOServer(port: number, options?: ServerOptions) {
+  createIOServer(_port: number, options?: ServerOptions) {
     const wsConfig = this.configService.getOrThrow('ws');
     const corsConfig = this.configService.getOrThrow('cors.origin');
     const appConfig = this.configService.getOrThrow('app');

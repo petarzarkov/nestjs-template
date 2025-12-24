@@ -40,7 +40,7 @@ export class SnakeNamingStrategy
   }
 
   joinColumnName(relationName: string, referencedColumnName: string): string {
-    return snakeCase(relationName + '_' + referencedColumnName);
+    return snakeCase(`${relationName}_${referencedColumnName}`);
   }
 
   joinTableName(
@@ -63,19 +63,17 @@ export class SnakeNamingStrategy
     propertyName: string,
     columnName?: string,
   ): string {
-    return snakeCase(
-      tableName + '_' + (columnName ? columnName : propertyName),
-    );
+    return snakeCase(`${tableName}_${columnName ? columnName : propertyName}`);
   }
 
   classTableInheritanceParentColumnName(
     parentTableName: string,
     parentTableIdPropertyName: string,
   ): string {
-    return snakeCase(parentTableName + '_' + parentTableIdPropertyName);
+    return snakeCase(`${parentTableName}_${parentTableIdPropertyName}`);
   }
 
   eagerJoinRelationAlias(alias: string, propertyPath: string): string {
-    return alias + '__' + propertyPath.replace('.', '_');
+    return `${alias}__${propertyPath.replace('.', '_')}`;
   }
 }

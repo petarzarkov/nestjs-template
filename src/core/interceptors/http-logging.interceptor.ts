@@ -1,15 +1,20 @@
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { ContextService } from '@/logger/services/context.service';
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { ContextService } from '@/logger/services/context.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
 
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {
   constructor(
     private readonly logger: ContextLogger,
-    private readonly contextService: ContextService
+    private readonly contextService: ContextService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -48,7 +53,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
         });
 
         throw err;
-      })
+      }),
     );
   }
 }

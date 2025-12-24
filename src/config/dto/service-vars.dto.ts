@@ -1,4 +1,3 @@
-import { LogLevel } from '@/logger/log-level.enum';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
@@ -10,6 +9,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { LogLevel } from '@/logger/log-level.enum';
 import { LOGGER } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';

@@ -27,7 +27,7 @@ export class UnionValidationPipe implements PipeTransform {
     const errors = await validate(transformedValue);
 
     const errorMessages = errors.flatMap(
-      ({ constraints }) => constraints && Object.values(constraints)
+      ({ constraints }) => constraints && Object.values(constraints),
     );
     if (errorMessages.length > 0) {
       throw new BadRequestException(errorMessages.join(', '));

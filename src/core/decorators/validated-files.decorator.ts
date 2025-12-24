@@ -1,7 +1,11 @@
+import {
+  ParseFilePipeBuilder,
+  UploadedFile,
+  UploadedFiles,
+} from '@nestjs/common';
 import { FILES } from '@/constants';
 import { FileNameMinValidator } from '@/core/validators/file-name-min.validator';
 import { FileSizeMinValidator } from '@/core/validators/file-size-min.validator';
-import { ParseFilePipeBuilder, UploadedFile, UploadedFiles } from '@nestjs/common';
 
 interface ValidatedFilesOptions {
   fileType: string | RegExp;
@@ -20,12 +24,12 @@ export const validatedFilePipe = (options: ValidatedFilesOptions) => {
     .addValidator(
       new FileSizeMinValidator({
         minSize: options.minSize || FILES.MIN_SIZE,
-      })
+      }),
     )
     .addValidator(
       new FileNameMinValidator({
         minLength: options.minFileNameLength || FILES.MIN_FILE_NAME_LENGTH,
-      })
+      }),
     )
     .addMaxSizeValidator({ maxSize: options.maxSize || FILES.MAX_SIZE })
     .build();

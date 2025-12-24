@@ -1,11 +1,3 @@
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/auth/guards/roles.guard';
-import { ApiJwtAuth } from '@/core/decorators';
-import { Roles } from '@/core/decorators/roles.decorator';
-import { UserRole } from '@/users/enum/user-role.enum';
-import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
-import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
-import { Invite } from '@/users/invites/entity/invite.entity';
 import {
   Body,
   Controller,
@@ -17,6 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/auth/guards/roles.guard';
+import { ApiJwtAuth } from '@/core/decorators';
+import { Roles } from '@/core/decorators/roles.decorator';
+import { UserRole } from '@/users/enum/user-role.enum';
+import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
+import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
+import { Invite } from '@/users/invites/entity/invite.entity';
 import { InvitesService } from './services/invites.service';
 
 @ApiTags('invites')

@@ -1,12 +1,3 @@
-import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
-import { ValidatedConfig } from '@/config/env.validation';
-import { AppConfigService } from '@/config/services/app.config.service';
-import { REQUEST_ID_HEADER_KEY } from '@/constants';
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { ContextService } from '@/logger/services/context.service';
-import { EventMap, EventType } from '@/notifications/events/events';
-import { UserRole } from '@/users/enum/user-role.enum';
-import { UsersService } from '@/users/services/users.service';
 import { HttpStatus, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -17,6 +8,15 @@ import {
 } from '@nestjs/websockets';
 import { ExtendedError, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
+import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
+import { ValidatedConfig } from '@/config/env.validation';
+import { AppConfigService } from '@/config/services/app.config.service';
+import { REQUEST_ID_HEADER_KEY } from '@/constants';
+import { ContextService } from '@/logger/services/context.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
+import { EventMap, EventType } from '@/notifications/events/events';
+import { UserRole } from '@/users/enum/user-role.enum';
+import { UsersService } from '@/users/services/users.service';
 import { ExtendedSocket, WebSocketBaseMessage, WSServer } from './events.dto';
 
 export const ROOMS = {
@@ -74,8 +74,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ipAddress: socket.handshake.address,
           userAgent: socket.handshake.headers['user-agent'],
           contentType: socket.handshake.headers['content-type'],
-          accept: socket.handshake.headers['accept'],
-          origin: socket.handshake.headers['origin'],
+          accept: socket.handshake.headers.accept,
+          origin: socket.handshake.headers.origin,
         },
         async () => {
           try {

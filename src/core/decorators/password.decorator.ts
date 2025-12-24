@@ -1,4 +1,3 @@
-import { BASE_USER_TEST_PASS } from '@/constants';
 import { applyDecorators } from '@nestjs/common';
 import type { ApiPropertyOptions } from '@nestjs/swagger';
 import { ApiProperty } from '@nestjs/swagger';
@@ -9,6 +8,7 @@ import {
   IsStrongPassword,
   MaxLength,
 } from 'class-validator';
+import { BASE_USER_TEST_PASS } from '@/constants';
 
 export const PasswordDecorator = (
   optional = false,

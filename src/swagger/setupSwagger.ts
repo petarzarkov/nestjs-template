@@ -1,11 +1,11 @@
+import { HttpStatus, type INestApplication } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NextFunction, Request, Response } from 'express';
 import { type ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppEnv } from '@/config/enum/app-env.enum';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { DOCS_AFFIX, GLOBAL_PREFIX } from '@/constants';
 import { PageMetaDto } from '@/core/pagination/dto/page-meta.dto';
-import { HttpStatus, type INestApplication } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import type { NextFunction, Request, Response } from 'express';
 import pkgJson from '../../package.json';
 
 export function setupSwagger(app: INestApplication) {

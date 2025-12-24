@@ -1,4 +1,3 @@
-import { ContextLogger } from '@/logger/services/context-logger.service';
 import {
   CallHandler,
   ExecutionContext,
@@ -7,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { RedisContext } from '@nestjs/microservices';
 import { Observable, tap } from 'rxjs';
+import { ContextLogger } from '@/logger/services/context-logger.service';
 
 /**
  * Global interceptor for logging all Redis pub/sub event handlers.

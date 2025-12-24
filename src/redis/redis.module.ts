@@ -1,6 +1,3 @@
-import type { ValidatedConfig } from '@/config/env.validation';
-import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/logger/services/context-logger.service';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
@@ -8,6 +5,9 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-ioredis-yet';
+import type { ValidatedConfig } from '@/config/env.validation';
+import { AppConfigService } from '@/config/services/app.config.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
 import { EventLoggingInterceptor } from './pubsub/event-logging.interceptor';
 import { EventPublisherService } from './pubsub/event-publisher.service';
 import { REDIS_EVENT_CLIENT } from './redis.constants';
@@ -48,7 +48,7 @@ export class RedisModule {
         ThrottlerModule.forRootAsync({
           inject: [AppConfigService],
           useFactory: (configService: AppConfigService<ValidatedConfig>) => {
-            const redisConfig = configService.get('redis')!;
+            const redisConfig = configService.getOrThrow('redis');
             return {
               throttlers: [
                 {
@@ -82,7 +82,7 @@ export class RedisModule {
           useFactory: async (
             configService: AppConfigService<ValidatedConfig>,
           ) => {
-            const redisConfig = configService.get('redis')!;
+            const redisConfig = configService.getOrThrow('redis');
             return {
               store: await redisStore({
                 host: redisConfig.host,
@@ -113,7 +113,7 @@ export class RedisModule {
               configService: AppConfigService<ValidatedConfig>,
               logger: ContextLogger,
             ) => {
-              const redisConfig = configService.get('redis')!;
+              const redisConfig = configService.getOrThrow('redis');
               logger.log('Redis pub/sub enabled', {
                 host: redisConfig.host,
                 port: redisConfig.port,

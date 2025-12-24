@@ -4,13 +4,13 @@ import { IsArray, IsEnum } from 'class-validator';
 
 export function IsUniqueEnumArrayDecorator(
   enumType: Record<string, string | number>,
-  validationOptions?: ValidationOptions
+  validationOptions?: ValidationOptions,
 ) {
   return applyDecorators(
     IsArray(validationOptions),
     IsEnum(enumType, {
       ...validationOptions,
       each: true,
-    })
+    }),
   );
 }

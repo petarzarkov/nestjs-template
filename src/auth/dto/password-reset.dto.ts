@@ -1,7 +1,7 @@
-import { IsEmailDecorator } from '@/core/decorators/email.decorator';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, Length, Matches } from 'class-validator';
+import { IsEmailDecorator } from '@/core/decorators/email.decorator';
+import { PasswordDecorator } from '@/core/decorators/password.decorator';
 
 export class RequestPasswordResetDto {
   @IsEmailDecorator()

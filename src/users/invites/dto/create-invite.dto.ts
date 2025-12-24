@@ -1,7 +1,7 @@
-import { IsEmailDecorator } from '@/core/decorators/email.decorator';
-import { UserRole } from '@/users/enum/user-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
+import { IsEmailDecorator } from '@/core/decorators/email.decorator';
+import { UserRole } from '@/users/enum/user-role.enum';
 
 export class CreateInviteDto {
   @IsEmailDecorator()

@@ -1,6 +1,4 @@
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { ContextService } from '@/logger/services/context.service';
-import { EventMap, EventType } from '@/notifications/events/events';
+import { randomUUID } from 'node:crypto';
 import {
   Inject,
   Injectable,
@@ -9,7 +7,9 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { randomUUID } from 'crypto';
+import { ContextService } from '@/logger/services/context.service';
+import { ContextLogger } from '@/logger/services/context-logger.service';
+import { EventMap, EventType } from '@/notifications/events/events';
 import { REDIS_EVENT_CLIENT } from '../redis.constants';
 import type { BaseEvent } from './base-event.dto';
 

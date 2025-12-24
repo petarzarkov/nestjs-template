@@ -7,7 +7,7 @@ export class AppConfigModule {
   static forRoot<ValidatedConfig extends Record<string, unknown>>(
     options: ConfigModuleOptions<ValidatedConfig> | undefined = {
       isGlobal: true,
-    }
+    },
   ): DynamicModule {
     return {
       module: AppConfigModule,

@@ -1,9 +1,9 @@
-import { PAGINATION } from '@/constants';
 import { Injectable } from '@nestjs/common';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { PAGINATION } from '@/constants';
+import { PageDto } from './dto/page.dto';
 import { PageMetaDto } from './dto/page-meta.dto';
 import { PageOptionsDto } from './dto/page-options.dto';
-import { PageDto } from './dto/page.dto';
 
 @Injectable()
 export class PaginationFactory<

@@ -1,7 +1,7 @@
+import { Module } from '@nestjs/common';
 import { DatabaseModule } from '@/db/database.module';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
 import { InvitesService } from '@/users/invites/services/invites.service';
-import { Module } from '@nestjs/common';
 import { User } from '../entity/user.entity';
 import { UsersRepository } from '../repos/users.repository';
 import { Invite } from './entity/invite.entity';

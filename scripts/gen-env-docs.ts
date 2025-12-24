@@ -1,6 +1,6 @@
-import * as glob from 'glob';
 import fs from 'node:fs';
 import path from 'node:path';
+import * as glob from 'glob';
 
 /**
  * Configuration for grouping environment variables.
@@ -40,6 +40,7 @@ function generateEnvDocs(): void {
   }
 
   console.log(`Found ${envFiles.length} .env.sample files:`);
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: nn
   envFiles.forEach(file => console.log(`  - ${file}`));
 
   const allParsedVars: ParsedVariable[] = [];

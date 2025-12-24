@@ -1,8 +1,8 @@
+import { Injectable, LoggerService } from '@nestjs/common';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppEnv } from '@/config/enum/app-env.enum';
 import { PackageJson } from '@/config/PackageJson';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { Injectable, LoggerService } from '@nestjs/common';
 import { Color } from '../color';
 import { LogLevel } from '../log-level.enum';
 import { ContextService } from './context.service';
@@ -223,7 +223,7 @@ export class ContextLogger implements LoggerService {
         if (isErrorLevel) {
           error = new Error(param);
         } else {
-          extra[`context`] = param;
+          extra.context = param;
         }
       } else if (this.#isPlainObject(param)) {
         if (param.err instanceof Error) {
@@ -356,7 +356,7 @@ export class ContextLogger implements LoggerService {
   }
 
   #getValueColor(value: string): ColorFn {
-    if (value === 'true' || value === 'false' || !isNaN(Number(value))) {
+    if (value === 'true' || value === 'false' || !Number.isNaN(Number(value))) {
       return Color.yellow;
     }
     if (value === 'null') {
@@ -538,7 +538,7 @@ export class ContextLogger implements LoggerService {
     }
 
     if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) {
-      return `[HTMLElement: ${value.tagName.toLowerCase()}${value.id ? '#' + value.id : ''}${value.className ? '.' + value.className.split(' ').join('.') : ''}]`;
+      return `[HTMLElement: ${value.tagName.toLowerCase()}${value.id ? `#${value.id}` : ''}${value.className ? `.${value.className.split(' ').join('.')}` : ''}]`;
     }
 
     if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
@@ -557,7 +557,7 @@ export class ContextLogger implements LoggerService {
       JSON.stringify(value);
       return value;
     } catch {
-      if (value.constructor && value.constructor.name) {
+      if (value.constructor?.name) {
         return `[${value.constructor.name}: object not serializable]`;
       }
       return '[Object: not serializable]';

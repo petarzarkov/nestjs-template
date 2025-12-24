@@ -1,5 +1,5 @@
-import { UserRole } from '@/users/enum/user-role.enum';
 import { afterEach, describe, expect, test } from 'bun:test';
+import { UserRole } from '@/users/enum/user-role.enum';
 import { E2E } from '../constants';
 import { E2E_ADMIN, getTestContext } from '../setup/context';
 

@@ -1,7 +1,7 @@
+import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '@/db/database.module';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
-import { forwardRef, Module } from '@nestjs/common';
 import { InvitesModule } from './invites/invites.module';
 import { PasswordResetTokensRepository } from './repos/password-reset-tokens.repository';
 import { UsersRepository } from './repos/users.repository';
