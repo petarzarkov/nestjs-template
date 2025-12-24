@@ -12,19 +12,19 @@ const groupConfig: Record<string, string | string[]> = {
   'PostgreSQL Database': 'POSTGRES_',
   RabbitMQ: 'RABBITMQ_',
   Redis: 'REDIS_',
-  'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'], // <-- Updated to use an array
+  Email: 'EMAIL_',
+  'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'],
   'Security & JWT': 'JWT_',
-  'Email Services (Resend)': 'RESEND_',
+  WebSocket: 'WS_',
   'HTTP Client': 'HTTP_REQ_',
-  General: '', // A catch-all for variables that don't match other prefixes
+  General: '',
 };
 
-// Interface for a parsed environment variable
 interface ParsedVariable {
   name: string;
   value: string;
   description: string;
-  source: string; // Track which file the variable came from
+  source: string;
 }
 
 /**
@@ -131,15 +131,14 @@ function groupVariables(
           }
           grouped[title].push(v);
           assigned = true;
-          break; // Exit the inner loop (prefixes) once a match is found
+          break;
         }
       }
       if (assigned) {
-        break; // Exit the outer loop (titles)
+        break;
       }
     }
 
-    // If after checking all specific prefixes, no group was assigned, add to the "General" group.
     if (!assigned) {
       const generalTitle =
         groupTitles.find(title => groupConfig[title] === '') || 'General';
@@ -175,14 +174,12 @@ function generateMarkdown(
     markdown += '| Variable | Description | Default Value | Source |\n';
     markdown += '|---|---|---|---|\n';
 
-    // Remove duplicates by variable name, keeping the first occurrence
     const uniqueVars = vars.reduce(
       (acc: ParsedVariable[], current: ParsedVariable) => {
         const existing = acc.find(v => v.name === current.name);
         if (!existing) {
           acc.push(current);
         } else {
-          // If duplicate found, add source information to the existing entry
           existing.source += `, ${current.source}`;
         }
         return acc;
@@ -214,5 +211,4 @@ function writeMarkdownFile(content: string): void {
   fs.writeFileSync(outputPath, content);
 }
 
-// Run the script
 generateEnvDocs();

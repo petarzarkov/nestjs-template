@@ -11,7 +11,7 @@ const { db } = validateDbConfig(process.env);
 /**
  * Default PostgreSQL connection options
  */
-const dbOptions: DataSourceOptions = {
+export const dbOptions: DataSourceOptions = {
   type: 'postgres',
   host: db.host,
   port: db.port,

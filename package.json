@@ -30,7 +30,8 @@
     "postmigration:gen": "bash ./scripts/format-migration.sh",
     "migration:run": "pnpm typeorm migration:run",
     "migration:revert": "pnpm typeorm migration:revert",
-    "db:drop": "pnpm typeorm schema:drop"
+    "db:drop": "pnpm typeorm schema:drop",
+    "create:admin": "dotenv -e .env -- ts-node -P ./tsconfig.json -r tsconfig-paths/register ./scripts/create-admin.ts"
   },
   "dependencies": {
     "@nestjs/axios": "4.0.1",
@@ -93,6 +94,7 @@
     "prettier": "3.7.4",
     "prettier-plugin-embed": "0.5.1",
     "prettier-plugin-sql": "0.19.2",
+    "inquirer": "13.1.0",
     "supertest": "7.1.4",
     "tsx": "4.21.0",
     "typescript": "5.9.3"

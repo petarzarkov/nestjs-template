@@ -46,9 +46,10 @@ pnpm test:watch             # Run tests in watch mode
 pnpm test:e2e               # Run e2e tests
 pnpm lint                   # Lint code
 pnpm format                 # Format code
-pnpm migration:gen          # Generate migration
+pnpm migration:gen $MigrationName         # Generate migration
 pnpm migration:run          # Run migrations
-pnpm migration:revert        # Revert last migration
+pnpm migration:revert       # Revert last migration
+pnpm db:drop                # Drop db schema
 ```
 
 ## Core Features

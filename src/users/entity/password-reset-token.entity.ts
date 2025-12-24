@@ -28,16 +28,16 @@ export class PasswordResetToken {
   @IsString()
   token!: string;
 
-  @Column()
-  expiresAt!: Date;
-
   @Column({ default: false })
   @IsBoolean()
   used!: boolean;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamptz' })
+  expiresAt!: Date;
+
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

@@ -1,7 +1,7 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class IntialMigrations1766486785633 implements MigrationInterface {
-  name = 'IntialMigrations1766486785633';
+export class InitialMig1766559547809 implements MigrationInterface {
+  name = 'InitialMig1766559547809';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(/* sql */ `
@@ -14,8 +14,8 @@ export class IntialMigrations1766486785633 implements MigrationInterface {
         "password" character varying NOT NULL,
         "roles" "public"."user_roles_enum" array NOT NULL,
         "suspended" boolean NOT NULL DEFAULT FALSE,
-        "created_at" TIMESTAMP NOT NULL DEFAULT now(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+        "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+        "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email"),
         CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")
       )
@@ -24,10 +24,10 @@ export class IntialMigrations1766486785633 implements MigrationInterface {
       CREATE TABLE "password_reset_token" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4 (),
         "token" character varying NOT NULL,
-        "expires_at" TIMESTAMP NOT NULL,
         "used" boolean NOT NULL DEFAULT FALSE,
-        "created_at" TIMESTAMP NOT NULL DEFAULT now(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+        "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL,
+        "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+        "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "user_id" uuid,
         CONSTRAINT "PK_838af121380dfe3a6330e04f5bb" PRIMARY KEY ("id")
       )
@@ -45,9 +45,9 @@ export class IntialMigrations1766486785633 implements MigrationInterface {
         "invite_code" character varying NOT NULL,
         "role" "public"."invite_role_enum" NOT NULL,
         "status" "public"."invite_status_enum" NOT NULL DEFAULT 'pending',
-        "expires_at" TIMESTAMP NOT NULL,
-        "created_at" TIMESTAMP NOT NULL DEFAULT now(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+        "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL,
+        "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+        "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         CONSTRAINT "UQ_658d8246180c0345d32a100544e" UNIQUE ("email"),
         CONSTRAINT "PK_fc9fa190e5a3c5d80604a4f63e1" PRIMARY KEY ("id")
       )

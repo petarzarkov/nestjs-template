@@ -40,14 +40,14 @@ export class Invite {
   status!: InviteStatus;
 
   @ApiProperty()
-  @Column()
+  @Column({ type: 'timestamptz' })
   expiresAt!: Date;
 
   @ApiProperty()
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
   @ApiProperty()
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

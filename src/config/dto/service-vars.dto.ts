@@ -147,7 +147,7 @@ export class ServiceVars extends WsVars {
 
   @IsString()
   @IsOptional()
-  RESEND_API_KEY?: string;
+  EMAIL_API_KEY?: string;
 
   @IsString()
   @IsOptional()
@@ -155,7 +155,7 @@ export class ServiceVars extends WsVars {
 
   @IsString()
   @IsOptional()
-  ADMIN_EMAIL?: string;
+  EMAIL_ADMIN?: string;
 
   @IsString()
   @IsOptional()
@@ -267,9 +267,9 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       origin: config.CORS_ORIGIN,
     },
     email: {
-      apiKey: config.RESEND_API_KEY,
+      apiKey: config.EMAIL_API_KEY,
       sender: config.EMAIL_SENDER || 'no-reply@ggg.com',
-      adminEmail: config.ADMIN_EMAIL || 'admin@gmail.com',
+      adminEmail: config.EMAIL_ADMIN || 'admin@gmail.com',
       maxPerSecond: 2,
     },
   };

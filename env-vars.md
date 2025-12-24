@@ -8,6 +8,7 @@ This document outlines the environment variables required for the project. These
 
 | Variable | Description | Default Value | Source |
 |---|---|---|---|
+| `POSTGRES_DATA_DIR` | No description provided. | `.tmp/postgres_data` | .env.example |
 | `POSTGRES_HOST` | No description provided. | `localhost` | .env.example |
 | `POSTGRES_PORT` | No description provided. | `5438` | .env.example |
 | `POSTGRES_USER` | No description provided. | `postgres` | .env.example |
@@ -21,6 +22,14 @@ This document outlines the environment variables required for the project. These
 |---|---|---|---|
 | `REDIS_HOST` | No description provided. | `localhost` | .env.example |
 | `REDIS_PORT` | No description provided. | `6383` | .env.example |
+
+### Email
+
+| Variable | Description | Default Value | Source |
+|---|---|---|---|
+| `EMAIL_API_KEY` | Your API key for the service. | `testestsetst` | .env.example |
+| `EMAIL_SENDER` | The "From" address for outgoing emails. | `'App Dev <dev@resend.dev.com>'` | .env.example |
+| `EMAIL_ADMIN` | No description provided. | `admin@dev.com` | .env.example |
 
 ### Application & API
 
@@ -39,9 +48,26 @@ This document outlines the environment variables required for the project. These
 |---|---|---|---|
 | `JWT_EXPIRATION` | The expiration time for JWTs, in seconds (e.g., 3600 = 1 hour). | `3600` | .env.example |
 
+### WebSocket
+
+| Variable | Description | Default Value | Source |
+|---|---|---|---|
+| `WS_PORT` | No description provided. | `3001` | .env.example |
+| `WS_PATH` | No description provided. | `/ws` | .env.example |
+| `WS_TRANSPORTS` | No description provided. | `'websocket'` | .env.example |
+
+### HTTP Client
+
+| Variable | Description | Default Value | Source |
+|---|---|---|---|
+| `HTTP_REQ_TIMEOUT` | The timeout for outgoing HTTP requests, in milliseconds. | `10000` | .env.example |
+| `HTTP_REQ_MAX_REDIRECTS` | The maximum number of redirects to follow for an HTTP request. | `5` | .env.example |
+
 ### General
 
 | Variable | Description | Default Value | Source |
 |---|---|---|---|
 | `NODE_ENV` | # The current service environment (e.g., development, staging, production). | `development` | .env.example |
+| `CORS_ORIGIN` | wildcard for dev | `'*'` | .env.example |
+| `TZ` | No description provided. | `UTC` | .env.example |
 
