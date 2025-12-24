@@ -13,7 +13,7 @@ export function getE2EConfig() {
     DB: {
       HOST: process.env.E2E_DB_HOST || 'localhost',
       PORT: parseInt(process.env.E2E_DB_PORT || '5438', 10),
-      NAME: process.env.E2E_DB_NAME || 'pgdb',
+      NAME: process.env.E2E_DB || 'pgdb',
       USER: process.env.E2E_DB_USER || 'postgres',
       PASS: process.env.E2E_DB_PASS || 'postgres',
     },
