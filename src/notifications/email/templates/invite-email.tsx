@@ -8,6 +8,8 @@ import {
   Preview,
   Text,
 } from '@react-email/components';
+// biome-ignore lint/correctness/noUnusedImports: File is a module
+import React from 'react';
 import type { InvitePayload } from '@/notifications/dto/user-notifications.dto';
 import { button, container, h1, main, text } from './email-styles';
 

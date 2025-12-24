@@ -8,6 +8,8 @@ import {
   Section,
   Text,
 } from '@react-email/components';
+// biome-ignore lint/correctness/noUnusedImports: File is a module
+import React from 'react';
 import { button, container, h1, main, section, text } from './email-styles';
 
 interface PasswordResetEmailProps {
