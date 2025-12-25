@@ -4,7 +4,7 @@ import { cwd } from 'node:process';
 import { DynamicModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { ContextLogger } from '@/logger/services/context-logger.service';
@@ -31,19 +31,17 @@ export class DatabaseModule {
         DatabaseModule.logger = logger;
 
         // Configure Redis cache if enabled
-        const cacheConfig =
+        const cacheConfig: DataSourceOptions['cache'] =
           redisConfig?.cacheEnabled && redisConfig.host
             ? {
-                cache: {
-                  type: 'ioredis' as const,
-                  options: {
-                    host: redisConfig.host,
-                    port: redisConfig.port,
-                    password: redisConfig.password,
-                    db: redisConfig.db,
-                  },
-                  duration: 30000, // 30 seconds default TTL
+                type: 'ioredis' as const,
+                options: {
+                  host: redisConfig.host,
+                  port: redisConfig.port,
+                  password: redisConfig.password,
+                  db: redisConfig.db,
                 },
+                duration: 30000, // 30 seconds default TTL
               }
             : {};
 
@@ -81,7 +79,9 @@ export class DatabaseModule {
             return true;
           },
           verboseRetryLog: true,
-          ...cacheConfig,
+          ...(cacheConfig && {
+            cache: cacheConfig,
+          }),
         };
       },
       dataSourceFactory: async options => {
