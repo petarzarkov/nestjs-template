@@ -27,6 +27,36 @@ export class UsersService {
     @InjectEntityManager() readonly entityManager: EntityManager,
   ) {}
 
+  private async createUserWithLocalAuth(
+    email: string,
+    hashedPassword: string,
+    roles: UserRole[],
+    additionalTransactionOps?: (txManager: EntityManager) => Promise<void>,
+  ): Promise<User> {
+    return this.entityManager.transaction(async txManager => {
+      const user = txManager.create(User, {
+        email,
+        password: hashedPassword,
+        roles,
+      });
+      const savedUser = await txManager.save(User, user);
+
+      const authProvider = txManager.create(AuthProvider, {
+        userId: savedUser.id,
+        provider: OAuthProvider.LOCAL,
+        authProviderId: null,
+        passwordHash: hashedPassword,
+      });
+      await txManager.save(AuthProvider, authProvider);
+
+      if (additionalTransactionOps) {
+        await additionalTransactionOps(txManager);
+      }
+
+      return savedUser;
+    });
+  }
+
   async getUsersPaginated(
     getUsersQueryDto: GetUsersQueryDto,
   ): Promise<PageDto<SanitizedUser>> {
@@ -39,31 +69,9 @@ export class UsersService {
 
   async createUser(email: string, password: string) {
     const hashedPassword = await passwordUtil.hash(password);
-    const roles = [UserRole.USER];
-
-    // Create user and auth provider in a transaction
-    const user = await this.entityManager.transaction(
-      async transactionalEntityManager => {
-        // Create user
-        const newUser = transactionalEntityManager.create(User, {
-          email,
-          password: hashedPassword,
-          roles,
-        });
-        const savedUser = await transactionalEntityManager.save(User, newUser);
-
-        // Create local auth provider
-        const authProvider = transactionalEntityManager.create(AuthProvider, {
-          userId: savedUser.id,
-          provider: OAuthProvider.LOCAL,
-          authProviderId: null,
-          passwordHash: hashedPassword,
-        });
-        await transactionalEntityManager.save(AuthProvider, authProvider);
-
-        return savedUser;
-      },
-    );
+    const user = await this.createUserWithLocalAuth(email, hashedPassword, [
+      UserRole.USER,
+    ]);
 
     // Publish user registered event
     await this.eventPublisher.publishEvent(
@@ -97,32 +105,13 @@ export class UsersService {
     }
 
     const hashedPassword = await passwordUtil.hash(password);
-
-    // Create user and auth provider in a transaction
-    const user = await this.entityManager.transaction(
-      async transactionalEntityManager => {
-        // Create user
-        const newUser = transactionalEntityManager.create(User, {
-          email: invite.email,
-          password: hashedPassword,
-          roles: [invite.role],
-        });
-        const savedUser = await transactionalEntityManager.save(User, newUser);
-
-        // Create local auth provider
-        const authProvider = transactionalEntityManager.create(AuthProvider, {
-          userId: savedUser.id,
-          provider: OAuthProvider.LOCAL,
-          authProviderId: null,
-          passwordHash: hashedPassword,
-        });
-        await transactionalEntityManager.save(AuthProvider, authProvider);
-
-        // Update invite status
+    const user = await this.createUserWithLocalAuth(
+      invite.email,
+      hashedPassword,
+      [invite.role],
+      async txManager => {
         invite.status = InviteStatus.ACCEPTED;
-        await transactionalEntityManager.save(invite);
-
-        return savedUser;
+        await txManager.save(invite);
       },
     );
 

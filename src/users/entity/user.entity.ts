@@ -70,6 +70,11 @@ export class User {
   @ApiProperty()
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
+
+  static sanitize(user: User): SanitizedUser {
+    const { password, ...sanitized } = user;
+    return sanitized;
+  }
 }
 
 export class SanitizedUser extends OmitType(User, ['password'] as const) {}

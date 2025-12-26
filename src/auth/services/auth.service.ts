@@ -52,8 +52,7 @@ export class AuthService {
       return null;
     }
 
-    const { password, ...sanitizedUser } = user;
-    return sanitizedUser;
+    return User.sanitize(user);
   }
 
   createAccessToken(
@@ -161,8 +160,7 @@ export class AuthService {
           await this.usersRepository.save(user);
         }
 
-        const { password, ...sanitizedUser } = user;
-        return sanitizedUser;
+        return User.sanitize(user);
       }
 
       // Check if user with this email already exists
@@ -248,8 +246,7 @@ export class AuthService {
         );
       }
 
-      const { password, ...sanitizedUser } = user;
-      return sanitizedUser;
+      return User.sanitize(user);
     } catch (error) {
       this.logger.error(
         `Error in createOrUpdateUserOAuth for ${provider} user ${email}`,

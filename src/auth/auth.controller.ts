@@ -3,13 +3,13 @@ import {
   Controller,
   Get,
   Post,
-  Query,
   Req,
   Res,
   UnauthorizedException,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBody,
   ApiExcludeEndpoint,
@@ -33,10 +33,6 @@ import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
-import { GithubOAuthGuard } from './guards/github-oauth.guard';
-import { GoogleOAuthGuard } from './guards/google-oauth.guard';
-import { LinkedInOAuthGuard } from './guards/linkedin-oauth.guard';
-import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthService } from './services/auth.service';
 
 @ApiTags('auth')
@@ -47,8 +43,23 @@ export class AuthController {
     private usersService: UsersService,
   ) {}
 
+  private handleOAuthCallback(req: Request, res: Response): Response {
+    if (!req.user) {
+      throw new UnauthorizedException(
+        'No user data received from OAuth provider',
+      );
+    }
+    const user = req.user as SanitizedUser;
+    const accessToken = this.authService.createAccessToken(
+      user.id,
+      user.email,
+      user.roles,
+    );
+    return res.json({ accessToken });
+  }
+
   @Post('login')
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(AuthGuard('local'))
   @ApiOperation({ summary: 'Authenticates a user with email and password' })
   @ApiBody({
     type: LoginRequestDto,
@@ -145,7 +156,7 @@ export class AuthController {
     return { accessToken };
   }
 
-  @UseGuards(GoogleOAuthGuard)
+  @UseGuards(AuthGuard('google'))
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth2 login flow' })
   @ApiResponse({
@@ -156,7 +167,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
-  @UseGuards(GoogleOAuthGuard)
+  @UseGuards(AuthGuard('google'))
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth2 callback URL' })
   @ApiResponse({
@@ -165,30 +176,11 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async googleAuthCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Query('state') _state?: string,
-  ) {
-    if (!req.user) {
-      throw new UnauthorizedException(
-        'No user data received from OAuth provider',
-      );
-    }
-
-    const user = req.user as SanitizedUser;
-    const accessToken = this.authService.createAccessToken(
-      user.id,
-      user.email,
-      user.roles,
-    );
-
-    // Redirect to frontend with token in query param or return JSON
-    // For JWT-based auth, we'll return JSON response
-    return res.json({ accessToken });
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleOAuthCallback(req, res);
   }
 
-  @UseGuards(GithubOAuthGuard)
+  @UseGuards(AuthGuard('github'))
   @Get('github')
   @ApiOperation({ summary: 'Initiate GitHub OAuth2 login flow' })
   @ApiResponse({
@@ -199,7 +191,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
-  @UseGuards(GithubOAuthGuard)
+  @UseGuards(AuthGuard('github'))
   @Get('github/callback')
   @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
   @ApiResponse({
@@ -208,28 +200,11 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async githubAuthCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Query('state') _state?: string,
-  ) {
-    if (!req.user) {
-      throw new UnauthorizedException(
-        'No user data received from OAuth provider',
-      );
-    }
-
-    const user = req.user as SanitizedUser;
-    const accessToken = this.authService.createAccessToken(
-      user.id,
-      user.email,
-      user.roles,
-    );
-
-    return res.json({ accessToken });
+  async githubAuthCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleOAuthCallback(req, res);
   }
 
-  @UseGuards(LinkedInOAuthGuard)
+  @UseGuards(AuthGuard('linkedin'))
   @Get('linkedin')
   @ApiOperation({ summary: 'Initiate LinkedIn OAuth2 login flow' })
   @ApiResponse({
@@ -240,7 +215,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
-  @UseGuards(LinkedInOAuthGuard)
+  @UseGuards(AuthGuard('linkedin'))
   @Get('linkedin/callback')
   @ApiOperation({ summary: 'LinkedIn OAuth2 callback URL' })
   @ApiResponse({
@@ -249,24 +224,7 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async linkedInAuthCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Query('state') _state?: string,
-  ) {
-    if (!req.user) {
-      throw new UnauthorizedException(
-        'No user data received from OAuth provider',
-      );
-    }
-
-    const user = req.user as SanitizedUser;
-    const accessToken = this.authService.createAccessToken(
-      user.id,
-      user.email,
-      user.roles,
-    );
-
-    return res.json({ accessToken });
+  async linkedInAuthCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleOAuthCallback(req, res);
   }
 }

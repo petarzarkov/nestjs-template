@@ -8,9 +8,6 @@ import { DatabaseModule } from '@/db/database.module';
 import { UsersModule } from '@/users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthProvider } from './entity/auth-provider.entity';
-import { GithubOAuthGuard } from './guards/github-oauth.guard';
-import { GoogleOAuthGuard } from './guards/google-oauth.guard';
-import { LinkedInOAuthGuard } from './guards/linkedin-oauth.guard';
 import { AuthProvidersRepository } from './repos/auth-providers.repository';
 import { AuthService } from './services/auth.service';
 import { GithubStrategy } from './strategies/github.strategy';
@@ -50,17 +47,17 @@ export class AuthModule {
       process.env.LINKEDIN_OAUTH_CLIENT_SECRET;
 
     if (hasGoogleOAuth) {
-      providers.push(GoogleStrategy, GoogleOAuthGuard);
+      providers.push(GoogleStrategy);
       exports.push(GoogleStrategy);
     }
 
     if (hasGithubOAuth) {
-      providers.push(GithubStrategy, GithubOAuthGuard);
+      providers.push(GithubStrategy);
       exports.push(GithubStrategy);
     }
 
     if (hasLinkedInOAuth) {
-      providers.push(LinkedInStrategy, LinkedInOAuthGuard);
+      providers.push(LinkedInStrategy);
       exports.push(LinkedInStrategy);
     }
 

@@ -11,7 +11,7 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
-import { ApiJwtAuth } from '@/core/decorators';
+import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';

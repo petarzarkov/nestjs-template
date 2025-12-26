@@ -11,13 +11,13 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
-import {
-  ApiJwtAuth,
-  ApiUuidParam,
-  CurrentUser,
-  UuidParam,
-} from '@/core/decorators';
+import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
+import {
+  ApiUuidParam,
+  UuidParam,
+} from '@/core/decorators/uuid-param.decorator';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginatedDto } from '@/core/pagination/dto/paginated.dto';
 import { GetUsersQueryDto, UpdateUserDto } from '@/users/dto/user.dto';
