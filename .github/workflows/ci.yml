@@ -38,5 +38,5 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Run Tests
-        run: bun test
+      - name: Run Tests Coverage
+        run: bun test:cov

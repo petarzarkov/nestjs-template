@@ -17,6 +17,7 @@
     "gen:env:docs": "bun ./scripts/gen-env-docs.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
+    "test:cov": "bun test --coverage",
     "test:e2e": "bun test --env-file=./e2e/.env --preload ./e2e/setup/preload.ts ./e2e/**/*.e2e.spec.ts",
     "email": "email dev --dir src/notifications/email/templates --port 3035",
     "email:export": "email export --dir src/notifications/email/templates",

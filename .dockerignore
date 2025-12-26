@@ -27,7 +27,6 @@ coverage
 
 # Documentation
 *.md
-!README.md
 
 # Logs
 logs

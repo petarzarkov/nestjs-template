@@ -5,3 +5,6 @@
 # Only run tests in src/ directory by default
 # Use `bun run test:e2e` for e2e tests with proper setup
 root = "./src"
+
+# Coverage
+coverageThreshold = { lines = 0.5, functions = 0.5, statements = 0.5 }
