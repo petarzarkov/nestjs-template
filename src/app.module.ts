@@ -27,7 +27,7 @@ import { UsersModule } from './users/users.module';
     PaginationModule,
     LoggerModule,
     HealthModule,
-    AuthModule,
+    AuthModule.forRoot(),
     UsersModule,
     NotificationModule,
   ],

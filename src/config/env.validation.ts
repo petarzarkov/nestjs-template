@@ -3,6 +3,7 @@ import { validateSync } from 'class-validator';
 import pkg from '../../package.json';
 import { ConfigValidationError } from './config-validation.error';
 import { getDbConfig } from './dto/db-vars.dto';
+import { getOAuthConfig } from './dto/oauth-vars.dto';
 import { getRedisConfig } from './dto/redis-vars.dto';
 import { getServiceConfig } from './dto/service-vars.dto';
 import { EnvVars } from './env-vars.dto';
@@ -31,10 +32,12 @@ export const validateConfig = (config: Record<string, unknown>) => {
     );
   }
 
+  const serviceConfig = getServiceConfig(pkg, validatedConfig);
   return {
-    ...getServiceConfig(pkg, validatedConfig),
+    ...serviceConfig,
     ...getDbConfig(validatedConfig),
     redis: getRedisConfig(validatedConfig),
+    oauth: getOAuthConfig(validatedConfig, serviceConfig.app.webUrl),
   } as const;
 };
 

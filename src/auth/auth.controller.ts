@@ -1,11 +1,25 @@
-import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common';
 import {
   ApiBody,
+  ApiExcludeEndpoint,
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { BaseResponseDto } from '@/auth/dto/base-response.dto';
 import { LoginRequestDto } from '@/auth/dto/login-request.dto';
@@ -19,6 +33,9 @@ import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
+import { GithubOAuthGuard } from './guards/github-oauth.guard';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { LinkedInOAuthGuard } from './guards/linkedin-oauth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthService } from './services/auth.service';
 
@@ -126,5 +143,130 @@ export class AuthController {
     );
 
     return { accessToken };
+  }
+
+  @UseGuards(GoogleOAuthGuard)
+  @Get('google')
+  @ApiOperation({ summary: 'Initiate Google OAuth2 login flow' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Google for authentication',
+  })
+  async loginGoogle() {
+    // Passport strategy handles the redirect
+  }
+
+  @UseGuards(GoogleOAuthGuard)
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth2 callback URL' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns JWT token after successful login',
+    type: AuthResponseDto,
+  })
+  @ApiExcludeEndpoint()
+  async googleAuthCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('state') _state?: string,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException(
+        'No user data received from OAuth provider',
+      );
+    }
+
+    const user = req.user as SanitizedUser;
+    const accessToken = this.authService.createAccessToken(
+      user.id,
+      user.email,
+      user.roles,
+    );
+
+    // Redirect to frontend with token in query param or return JSON
+    // For JWT-based auth, we'll return JSON response
+    return res.json({ accessToken });
+  }
+
+  @UseGuards(GithubOAuthGuard)
+  @Get('github')
+  @ApiOperation({ summary: 'Initiate GitHub OAuth2 login flow' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to GitHub for authentication',
+  })
+  async loginGithub() {
+    // Passport strategy handles the redirect
+  }
+
+  @UseGuards(GithubOAuthGuard)
+  @Get('github/callback')
+  @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns JWT token after successful login',
+    type: AuthResponseDto,
+  })
+  @ApiExcludeEndpoint()
+  async githubAuthCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('state') _state?: string,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException(
+        'No user data received from OAuth provider',
+      );
+    }
+
+    const user = req.user as SanitizedUser;
+    const accessToken = this.authService.createAccessToken(
+      user.id,
+      user.email,
+      user.roles,
+    );
+
+    return res.json({ accessToken });
+  }
+
+  @UseGuards(LinkedInOAuthGuard)
+  @Get('linkedin')
+  @ApiOperation({ summary: 'Initiate LinkedIn OAuth2 login flow' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to LinkedIn for authentication',
+  })
+  async loginLinkedIn() {
+    // Passport strategy handles the redirect
+  }
+
+  @UseGuards(LinkedInOAuthGuard)
+  @Get('linkedin/callback')
+  @ApiOperation({ summary: 'LinkedIn OAuth2 callback URL' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns JWT token after successful login',
+    type: AuthResponseDto,
+  })
+  @ApiExcludeEndpoint()
+  async linkedInAuthCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('state') _state?: string,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException(
+        'No user data received from OAuth provider',
+      );
+    }
+
+    const user = req.user as SanitizedUser;
+    const accessToken = this.authService.createAccessToken(
+      user.id,
+      user.email,
+      user.roles,
+    );
+
+    return res.json({ accessToken });
   }
 }

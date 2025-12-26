@@ -1,5 +1,5 @@
 import { ApiProperty, OmitType } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsUUID } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsUUID } from 'class-validator';
 import {
   Column,
   CreateDateColumn,
@@ -25,9 +25,25 @@ export class User {
   @IsEmail()
   email!: string;
 
-  @Column({ select: false })
-  @PasswordDecorator()
-  password!: string;
+  @Column({ select: false, nullable: true })
+  @PasswordDecorator(true)
+  password!: string | null;
+
+  @ApiProperty({
+    description: 'Display name (from OAuth providers)',
+    nullable: true,
+  })
+  @Column({ type: 'text', nullable: true })
+  @IsOptional()
+  displayName!: string | null;
+
+  @ApiProperty({
+    description: 'Profile picture URL (from OAuth providers)',
+    nullable: true,
+  })
+  @Column({ type: 'text', nullable: true })
+  @IsOptional()
+  picture!: string | null;
 
   @Column({
     type: 'enum',

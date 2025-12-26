@@ -4,10 +4,10 @@ export class InitialMig1766559547809 implements MigrationInterface {
   name = 'InitialMig1766559547809';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TYPE "public"."user_roles_enum" AS ENUM('admin', 'user')
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TABLE "user" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4 (),
         "email" character varying NOT NULL,
@@ -20,7 +20,7 @@ export class InitialMig1766559547809 implements MigrationInterface {
         CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TABLE "password_reset_token" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4 (),
         "token" character varying NOT NULL,
@@ -32,13 +32,13 @@ export class InitialMig1766559547809 implements MigrationInterface {
         CONSTRAINT "PK_838af121380dfe3a6330e04f5bb" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TYPE "public"."invite_role_enum" AS ENUM('admin', 'user')
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TYPE "public"."invite_status_enum" AS ENUM('pending', 'accepted', 'expired')
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE TABLE "invite" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4 (),
         "email" character varying NOT NULL,
@@ -52,30 +52,30 @@ export class InitialMig1766559547809 implements MigrationInterface {
         CONSTRAINT "PK_fc9fa190e5a3c5d80604a4f63e1" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       CREATE UNIQUE INDEX "IDX_a25a71ac34ea0c1e2b6dd4329d" ON "invite" ("invite_code")
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       ALTER TABLE "password_reset_token"
       ADD CONSTRAINT "FK_7eabb22ed38459ffc24dc8b415d" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       ALTER TABLE "password_reset_token"
       DROP CONSTRAINT "FK_7eabb22ed38459ffc24dc8b415d"
     `);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`
       DROP INDEX "public"."IDX_a25a71ac34ea0c1e2b6dd4329d"
     `);
-    await queryRunner.query(/* sql */ `DROP TABLE "invite"`);
-    await queryRunner.query(/* sql */ `
+    await queryRunner.query(`DROP TABLE "invite"`);
+    await queryRunner.query(`
       DROP TYPE "public"."invite_status_enum"
     `);
-    await queryRunner.query(/* sql */ `DROP TYPE "public"."invite_role_enum"`);
-    await queryRunner.query(/* sql */ `DROP TABLE "password_reset_token"`);
-    await queryRunner.query(/* sql */ `DROP TABLE "user"`);
-    await queryRunner.query(/* sql */ `DROP TYPE "public"."user_roles_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."invite_role_enum"`);
+    await queryRunner.query(`DROP TABLE "password_reset_token"`);
+    await queryRunner.query(`DROP TABLE "user"`);
+    await queryRunner.query(`DROP TYPE "public"."user_roles_enum"`);
   }
 }
