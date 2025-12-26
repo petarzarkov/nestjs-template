@@ -11,83 +11,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AxiosError, AxiosRequestConfig } from 'axios';
-import Decimal from 'decimal.js';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
-import { ParamsType } from '../types/params.type';
 import { RetryOptions } from '../types/retry-options.type';
+import { UrlHelperAddon } from './url-helper.addon';
 
 @Injectable()
-export class HelpersService {
-  buildUrl(config: {
-    base: string | URL;
-    path?: string;
-    queryParams?: ParamsType;
-    pathParams?: ParamsType;
-  }): URL {
-    const { base, path, queryParams, pathParams } = config;
-    const urlString = typeof base === 'string' ? base : base.href;
-    const baseUrlReplaced = this.interpolate(urlString, pathParams);
-    const pathReplaced = path && this.interpolate(path, pathParams);
-    const baseUrlFinal = this.#buildUrlFromString(
-      baseUrlReplaced,
-      pathReplaced,
-    );
-    return this.#buildUrlWithQuery(baseUrlFinal, queryParams);
-  }
-
-  #buildUrlWithQuery(baseUrl: string | URL, queryParams?: ParamsType): URL {
-    const url =
-      typeof baseUrl === 'string' ? this.#buildUrlFromString(baseUrl) : baseUrl;
-
-    if (queryParams) {
-      Object.keys(queryParams).forEach(key => {
-        const value = queryParams[key];
-        if (value != null) {
-          url.searchParams.set(key, value.toString());
-        }
-      });
-    }
-
-    return url;
-  }
-
-  #buildUrlFromString(baseUrl: string, path?: string): URL {
-    const urlObject = new URL(baseUrl);
-
-    if (path) {
-      // Remove leading slash from path if present
-      const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-
-      // Combine the pathname with the new path
-      const existingPath = urlObject.pathname.endsWith('/')
-        ? urlObject.pathname
-        : `${urlObject.pathname}/`;
-      urlObject.pathname = existingPath + cleanPath;
-    }
-
-    return urlObject;
-  }
-
-  interpolate(template: string, params?: ParamsType): string {
-    if (!params) {
-      return template;
-    }
-
-    let result = template;
-    Object.keys(params).forEach(key => {
-      const value = params[key];
-      if (value != null) {
-        result = result.replace(
-          new RegExp(`\\{${key}\\}`, 'gi'),
-          value.toString(),
-        );
-      }
-    });
-
-    return result;
-  }
-
+export class HelpersService extends UrlHelperAddon {
   createStopwatch(): {
     getElapsedMs: () => number;
   } {
@@ -165,44 +95,22 @@ export class HelpersService {
     throw lastError || new Error('Operation failed after all retries');
   }
 
-  /**
-   * Converts a network ID to an Ethereum network name
-   * Network names are used in Tokeny API
-   * @param networkId Network ID
-   * @returns Ethereum network name
-   */
-  networkIdToEthereumNetwork(networkId: number): string {
-    switch (networkId) {
-      case 84532:
-        return 'BASE_SEPOLIA';
-      case 8453:
-        return 'BASE';
-      default:
-        throw new Error(`Unsupported network ID: ${networkId}`);
-    }
+  private calculateBackoffDelay(
+    attempt: number,
+    baseDelay: number,
+    power = 2,
+    jitter = 1000,
+    maxDelay = 30000,
+  ): number {
+    const exponentialDelay = baseDelay * power ** attempt;
+    const randomJitter = Math.random() * jitter;
+    return Math.min(exponentialDelay + randomJitter, maxDelay);
   }
 
-  convertToDecimals(input: string, decimals: number = 18): string {
-    const decimal = new Decimal(input);
-    return decimal.toFixed(decimals);
-  }
-
-  isValidDecimal(value: Decimal): boolean {
-    return value.isFinite() && !value.isNaN();
-  }
-
-  private calculateBackoffDelay(attempt: number, baseDelay: number): number {
-    // Exponential backoff with jitter: baseDelay * (2^attempt) + random(0, 1000)
-    const exponentialDelay = baseDelay * 2 ** attempt;
-    const jitter = Math.random() * 1000;
-    return Math.min(exponentialDelay + jitter, 30000); // Cap at 30 seconds
-  }
-
-  defaultErrorHandler(error: AxiosError): Error {
+  defaultErrorHandler(error: AxiosError) {
     const status = error.response?.status;
     const responseData = error.response?.data;
 
-    // Extract meaningful error message from API response
     let message = error.message;
     if (responseData) {
       if (typeof responseData === 'object' && 'message' in responseData) {
@@ -368,5 +276,27 @@ export class HelpersService {
     } catch (_error) {
       return new Date();
     }
+  }
+
+  safeStringify(obj: Record<string, unknown>): string {
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (_, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular]';
+        }
+        seen.add(value);
+      }
+      return value;
+    });
+  }
+
+  isPlainObject(obj: unknown): obj is Record<string, unknown> {
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      !Array.isArray(obj) &&
+      !(obj instanceof Error)
+    );
   }
 }

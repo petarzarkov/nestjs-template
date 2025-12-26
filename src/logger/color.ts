@@ -1,3 +1,5 @@
+import { LogLevel } from './enum/log-level.enum';
+
 // ANSI color codes for terminal output
 const colors = {
   reset: '\x1b[0m',
@@ -46,6 +48,8 @@ const colors = {
   bgBrightCyan: '\x1b[106m',
   bgBrightWhite: '\x1b[107m',
 } as const;
+
+export type ColorFn = (text: string) => string;
 
 export class Color {
   static black(text: string): string {
@@ -169,5 +173,28 @@ export class Color {
 
   static bgWhiteBlack(text: string): string {
     return `${colors.bgWhite}${colors.black}${text}${colors.reset}`;
+  }
+
+  static getValueColor(value: string): ColorFn {
+    if (value === 'true' || value === 'false' || !Number.isNaN(Number(value))) {
+      return Color.yellow;
+    }
+    if (value === 'null') {
+      return Color.gray;
+    }
+    return Color.white;
+  }
+
+  static getLevelColor(level: LogLevel): ColorFn {
+    const levelColorMap: Record<LogLevel, ColorFn> = {
+      [LogLevel.FATAL]: Color.bgRedWhite,
+      [LogLevel.ERROR]: Color.red,
+      [LogLevel.WARN]: Color.yellow,
+      [LogLevel.LOG]: Color.bgGreenBlack,
+      [LogLevel.DEBUG]: Color.blue,
+      [LogLevel.VERBOSE]: Color.gray,
+    };
+
+    return levelColorMap[level] || Color.white;
   }
 }

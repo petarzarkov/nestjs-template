@@ -1,27 +1,16 @@
 import { Injectable, LoggerService } from '@nestjs/common';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
-import { AppEnv } from '@/config/enum/app-env.enum';
 import { PackageJson } from '@/config/PackageJson';
 import { AppConfigService } from '@/config/services/app.config.service';
+import { LOGGER } from '@/constants';
+import { HelpersService } from '@/helpers/services/helpers.service';
 import { Color } from '../color';
-import { LogLevel } from '../log-level.enum';
+import { LogLevel } from '../enum/log-level.enum';
 import { ContextService } from './context.service';
-
-const defaultMaskFields = [
-  'token',
-  'jwt',
-  'password',
-  'secret',
-  'apiPass',
-  'apiKey',
-  'apiSecret',
-];
 
 type LogEntry = Record<string, unknown> & {
   error?: Error;
 };
-
-type ColorFn = (text: string) => string;
 
 const LOG_LEVELS: LogLevel[] = [
   LogLevel.VERBOSE,
@@ -44,6 +33,7 @@ export class ContextLogger implements LoggerService {
   constructor(
     private readonly configService: AppConfigService<ValidatedServiceConfig>,
     private readonly contextService: ContextService,
+    private readonly helpersService: HelpersService,
   ) {
     this.appConfig = this.configService.getOrThrow('app');
     this.logConfig = this.configService.getOrThrow('log');
@@ -52,9 +42,12 @@ export class ContextLogger implements LoggerService {
     this.maskFields =
       this.logConfig.maskFields && this.logConfig.maskFields?.length > 0
         ? Array.from(
-            new Set([...defaultMaskFields, ...this.logConfig.maskFields]),
+            new Set([
+              ...(LOGGER.defaultMaskFields as unknown as string[]),
+              ...this.logConfig.maskFields,
+            ]),
           )
-        : defaultMaskFields;
+        : (LOGGER.defaultMaskFields as unknown as string[]);
 
     this.maxArrayLength = this.logConfig.maxArrayLength || 1;
   }
@@ -147,7 +140,7 @@ export class ContextLogger implements LoggerService {
 
     const output = this.isDevelopment
       ? this.#formatColoredJson(sanitizedLogEntry, level)
-      : this.#safeStringify(sanitizedLogEntry);
+      : this.helpersService.safeStringify(sanitizedLogEntry);
 
     console.log(output);
   }
@@ -171,7 +164,7 @@ export class ContextLogger implements LoggerService {
       };
     }
 
-    if (this.#isPlainObject(message)) {
+    if (this.helpersService.isPlainObject(message)) {
       const foundError = this.#findNestedError(message);
       if (foundError) {
         return {
@@ -190,13 +183,13 @@ export class ContextLogger implements LoggerService {
     const preparedMessage =
       message === null || message === undefined
         ? `[${String(message)}]`
-        : `[OBJECT]: ${this.#safeStringify(message as LogEntry)}`;
+        : `[OBJECT]: ${this.helpersService.safeStringify(message as LogEntry)}`;
 
     const invalidMessageInfo = {
       invalidMessageWarning: 'Logger called with non-string message parameter',
       invalidMessageCallstack: stack,
       originalMessageType: typeof message,
-      originalMessage: this.#safeStringify(message as LogEntry),
+      originalMessage: this.helpersService.safeStringify(message as LogEntry),
     };
 
     return { preparedMessage, invalidMessageInfo };
@@ -225,7 +218,7 @@ export class ContextLogger implements LoggerService {
         } else {
           extra.context = param;
         }
-      } else if (this.#isPlainObject(param)) {
+      } else if (this.helpersService.isPlainObject(param)) {
         if (param.err instanceof Error) {
           error = param.err;
 
@@ -303,7 +296,7 @@ export class ContextLogger implements LoggerService {
         if (safeValue !== undefined) {
           if (Array.isArray(safeValue)) {
             cleaned[key] = this.#sanitizeArray(safeValue, visited);
-          } else if (this.#isPlainObject(safeValue)) {
+          } else if (this.helpersService.isPlainObject(safeValue)) {
             cleaned[key] = this.#sanitizeLogEntry(safeValue, visited);
           } else {
             cleaned[key] = safeValue;
@@ -316,7 +309,7 @@ export class ContextLogger implements LoggerService {
 
   #sanitizeArray(array: unknown[], visited: WeakSet<object>): unknown[] {
     return array.map(item => {
-      if (this.#isPlainObject(item)) {
+      if (this.helpersService.isPlainObject(item)) {
         return this.#sanitizeLogEntry(item, visited);
       } else if (Array.isArray(item)) {
         return this.#sanitizeArray(item, visited);
@@ -327,11 +320,10 @@ export class ContextLogger implements LoggerService {
   }
 
   #formatColoredJson(obj: LogEntry, level: LogLevel): string {
-    const jsonString = this.#safeStringify(obj);
-    const levelColor = this.#getLevelColor(level);
+    const jsonString = this.helpersService.safeStringify(obj);
 
-    const colorMap: Record<string, ColorFn> = {
-      level: levelColor,
+    const colorMap = {
+      level: Color.getLevelColor(level),
       message: Color.green,
       timestamp: Color.magenta,
       requestId: Color.brightGreen,
@@ -346,35 +338,14 @@ export class ContextLogger implements LoggerService {
 
     return jsonString.replace(
       /(".*?":\s*)(.*?)(?=,|\n|$)/g,
-      (_, key, value) => {
+      (_, key: string, value: string) => {
         const keyWithoutQuotes = key.replace(/"/g, '').slice(0, -1);
         const colorizer =
-          colorMap[keyWithoutQuotes] || this.#getValueColor(value);
+          colorMap[keyWithoutQuotes as keyof typeof colorMap] ||
+          Color.getValueColor(value);
         return `${Color.cyan(key)}${colorizer(value)}`;
       },
     );
-  }
-
-  #getValueColor(value: string): ColorFn {
-    if (value === 'true' || value === 'false' || !Number.isNaN(Number(value))) {
-      return Color.yellow;
-    }
-    if (value === 'null') {
-      return Color.gray;
-    }
-    return Color.white;
-  }
-
-  #getLevelColor(level: LogLevel): ColorFn {
-    const levelColorMap: Record<LogLevel, ColorFn> = {
-      [LogLevel.FATAL]: Color.bgRedWhite,
-      [LogLevel.ERROR]: Color.red,
-      [LogLevel.WARN]: Color.yellow,
-      [LogLevel.LOG]: Color.bgGreenBlack,
-      [LogLevel.DEBUG]: Color.blue,
-      [LogLevel.VERBOSE]: Color.gray,
-    };
-    return levelColorMap[level] || Color.white;
   }
 
   #shouldLog(level: LogLevel): boolean {
@@ -398,28 +369,6 @@ export class ContextLogger implements LoggerService {
     return true;
   }
 
-  #safeStringify(obj: LogEntry): string {
-    const seen = new WeakSet();
-    return JSON.stringify(obj, (_, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (seen.has(value)) {
-          return '[Circular]';
-        }
-        seen.add(value);
-      }
-      return value;
-    });
-  }
-
-  #isPlainObject(obj: unknown): obj is Record<string, unknown> {
-    return (
-      typeof obj === 'object' &&
-      obj !== null &&
-      !Array.isArray(obj) &&
-      !(obj instanceof Error)
-    );
-  }
-
   #findNestedError(
     obj: Record<string, unknown>,
     visited = new WeakSet(),
@@ -437,7 +386,7 @@ export class ContextLogger implements LoggerService {
       if (value instanceof Error) {
         return value;
       }
-      if (this.#isPlainObject(value)) {
+      if (this.helpersService.isPlainObject(value)) {
         const nestedError = this.#findNestedError(value, visited);
         if (nestedError) {
           return nestedError;
@@ -448,7 +397,7 @@ export class ContextLogger implements LoggerService {
           if (item instanceof Error) {
             return item;
           }
-          if (this.#isPlainObject(item)) {
+          if (this.helpersService.isPlainObject(item)) {
             const nestedError = this.#findNestedError(item, visited);
             if (nestedError) {
               return nestedError;
@@ -549,7 +498,7 @@ export class ContextLogger implements LoggerService {
       return this.#sliceArray(value);
     }
 
-    if (this.#isPlainObject(value)) {
+    if (this.helpersService.isPlainObject(value)) {
       return value;
     }
 
@@ -588,8 +537,8 @@ export const bootstrapLogger = (pkg: PackageJson) => {
           return {
             name: pkg.name,
             version: pkg.version,
-            nodeEnv: process.env.NODE_ENV || 'development',
-            env: process.env.APP_ENV || AppEnv.LOCAL,
+            nodeEnv: process.env.NODE_ENV,
+            env: process.env.APP_ENV,
           };
         }
         if (key === 'log') {
@@ -602,5 +551,6 @@ export const bootstrapLogger = (pkg: PackageJson) => {
       },
     } as unknown as AppConfigService<ValidatedServiceConfig>,
     new ContextService(),
+    new HelpersService(),
   );
 };

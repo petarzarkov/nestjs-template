@@ -9,21 +9,34 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { LogLevel } from '@/logger/log-level.enum';
+import { LogLevel } from '@/logger/enum/log-level.enum';
 import { LOGGER } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';
 import { WsVars } from './ws-vars.dto';
 
 export class ServiceVars extends WsVars {
+  /**
+   * @default "local"
+   */
   @IsEnum(AppEnv)
   @IsOptional()
   APP_ENV: AppEnv = AppEnv.LOCAL;
 
+  /**
+   * This should determine the behavior of the application
+   * @default "development"
+   * - expected to be 'production' on all deployed environments (dev, stage, prod)
+   * - expected to be 'testing' on testing environment
+   * - expected to be 'development' on local development environment
+   */
   @IsString()
   @IsOptional()
   NODE_ENV: 'development' | 'testing' | 'production' = 'development';
 
+  /**
+   * @default "debug"
+   */
   @IsEnum(LogLevel)
   @IsOptional()
   LOG_LEVEL: LogLevel = LogLevel.DEBUG;
@@ -172,26 +185,21 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       /**
        * This should determine business logic and running environment.
        * @default "local"
-       * - expected to be 'local' on local development environment
-       * - expected to be 'dev' on dev environment
-       * - expected to be 'stage' on stage environment
-       * - expected to be 'prod' on prod environment
+       *
+       * expected to be 'local' on local development environment
+       * expected to be 'dev' on dev environment
+       * expected to be 'stage' on stage environment
+       * expected to be 'prod' on prod environment
        */
       env: config.APP_ENV,
-      /**
-       * This should determine the behavior of the application
-       * @default "development"
-       * - expected to be 'production' on all deployed environments (dev, stage, prod)
-       * - expected to be 'testing' on testing environment
-       * - expected to be 'development' on local development environment
-       */
       nodeEnv: config.NODE_ENV,
       version: pkg.version,
       port: config.API_PORT,
       swaggerToken: config.SWAGGER_TOKEN,
       /**
        * @default "UTC"
-       * - expected to be a valid timezone string
+       *
+       * expected to be a valid timezone string
        */
       timezone: config.TZ,
     },
@@ -247,9 +255,6 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
     },
     slack: {
       botToken: config.SLACK_BOT_TOKEN,
-      /**
-       * @default "C0948FPCD8W" // iiso-cicd
-       */
       channel: config.SLACK_CHANNEL,
     },
     jwt: {
