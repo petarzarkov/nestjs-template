@@ -8,7 +8,10 @@ import { OAuthProvider } from '../enum/oauth-provider.enum';
 import { AuthService } from '../services/auth.service';
 
 @Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+export class GoogleStrategy extends PassportStrategy(
+  Strategy,
+  OAuthProvider.GOOGLE,
+) {
   constructor(
     readonly configService: AppConfigService<ValidatedConfig>,
     private readonly authService: AuthService,

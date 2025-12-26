@@ -1,6 +1,6 @@
 import { ParamsType } from '../types/params.type';
 
-export class UrlHelperAddon {
+export class UrlHelper {
   buildUrl(config: {
     base: string | URL;
     path?: string;

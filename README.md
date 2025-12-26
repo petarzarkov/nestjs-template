@@ -1,13 +1,13 @@
 # NestJS Template
 
-A production-ready NestJS monolith template with TypeScript, TypeORM, and modern tooling.
+A production-ready NestJS monolith template with Bun, Biome, TypeScript, TypeORM, and modern tooling.
 
 ## Architecture
 
 - **Modular Monolith**: Clean module boundaries without microservices complexity
 - **Type Safety**: End-to-end type safety from DB schema to API
 - **Recovery-Oriented**: Database-first design with PostgreSQL persistence
-- **Modern Stack**: Bun runtime, NestJS 11, TypeORM, TypeScript
+- **Modern Stack**: Bun, NestJS, TypeORM, TypeScript, Biome, React Emails
 
 ## Prerequisites
 
@@ -26,6 +26,7 @@ docker compose up -d
 # Configure environment
 cp .env.example .env
 # Edit .env with your configuration
+# See env-vars.md for detailed configuration options
 
 # Run database migrations
 bun run migration:run
@@ -51,22 +52,35 @@ bun run migration:gen $Name # Generate migration
 bun run migration:run       # Run migrations
 bun run migration:revert    # Revert last migration
 bun run db:drop             # Drop db schema
+bun run create:admin        # Create a new admin user
 ```
 
 ## Core Features
 
 - **Database**: TypeORM with PostgreSQL
-- **Authentication**: JWT-based auth with Passport strategies
+- **Authentication**:
+  - JWT-based auth
+  - Strategies: Local, Google, GitHub, LinkedIn
+  - OAuth account linking
 - **Authorization**: Role-based access control (RBAC)
 - **Logging**: Structured JSON logging with context
-- **Config**: Type-safe environment configuration
+- **Config**: Type-safe environment configuration (validated via class-validator)
 - **Validation**: Class-validator with custom decorators
 - **Pagination**: Reusable pagination factory
 - **API Docs**: Swagger/OpenAPI integration
 - **Health Checks**: Terminus health monitoring
+  - db health check
+  - redis health check
+  - memory health check
+- **Redis**: Optional Redis integration for caching, throttling, and pub/sub
 - **Testing**: Bun's built-in test runner with TypeScript support
 - **WebSockets**: Socket.io gateway with authentication
 - **Email**: React Email templates with Resend
+- **Integrations**:
+  - **Slack**: Global service for sending structured notifications/alerts
+- **Helpers**:
+  - Resilient external API caller with retries, backoff & jitter
+  - URL building and manipulation utilities
 
 ## Redis Features (Optional)
 
@@ -96,14 +110,16 @@ Events are handled by `NotificationHandler` using `@EventPattern` decorators, wh
 
 ```bash
 src/
-├── auth/            # Authentication & authorization
+├── auth/            # Authentication (Stratgies, Guards) & authorization
 ├── config/          # Environment configuration
 ├── core/            # Shared decorators, filters, interceptors, pagination
 ├── db/              # TypeORM data source and migrations
 ├── health/          # Health check endpoints
+├── helpers/         # Utility services (External APIs, URLs, etc.)
 ├── logger/          # Logging service
 ├── notifications/   # Email, WebSocket gateway, event handlers
 ├── redis/           # Redis module (caching, throttling, pub/sub)
+├── slack/           # Slack integration module
 ├── swagger/         # API documentation setup
 └── users/           # User management and invites
 ```
@@ -113,3 +129,7 @@ src/
 - `GET /api/service/health` - Full health check (DB, memory, Redis if configured)
 - `GET /api/service/up` - Simple uptime check
 - `GET /api/service/config` - Service configuration and Redis feature status
+
+## Documentation
+
+For a detailed list of all environment variables and their descriptions, please refer to [env-vars.md](./env-vars.md).

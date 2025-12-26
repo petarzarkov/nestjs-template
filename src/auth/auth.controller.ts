@@ -33,6 +33,7 @@ import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
+import { OAuthProvider } from './enum/oauth-provider.enum';
 import { AuthService } from './services/auth.service';
 
 @ApiTags('auth')
@@ -59,7 +60,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(AuthGuard('local'))
+  @UseGuards(AuthGuard(OAuthProvider.LOCAL))
   @ApiOperation({ summary: 'Authenticates a user with email and password' })
   @ApiBody({
     type: LoginRequestDto,
@@ -156,7 +157,7 @@ export class AuthController {
     return { accessToken };
   }
 
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGuard(OAuthProvider.GOOGLE))
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth2 login flow' })
   @ApiResponse({
@@ -180,7 +181,7 @@ export class AuthController {
     return this.handleOAuthCallback(req);
   }
 
-  @UseGuards(AuthGuard('github'))
+  @UseGuards(AuthGuard(OAuthProvider.GITHUB))
   @Get('github')
   @ApiOperation({ summary: 'Initiate GitHub OAuth2 login flow' })
   @ApiResponse({
@@ -191,7 +192,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
-  @UseGuards(AuthGuard('github'))
+  @UseGuards(AuthGuard(OAuthProvider.GITHUB))
   @Get('github/callback')
   @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
   @ApiResponse({
@@ -204,7 +205,7 @@ export class AuthController {
     return this.handleOAuthCallback(req);
   }
 
-  @UseGuards(AuthGuard('linkedin'))
+  @UseGuards(AuthGuard(OAuthProvider.LINKEDIN))
   @Get('linkedin')
   @ApiOperation({ summary: 'Initiate LinkedIn OAuth2 login flow' })
   @ApiResponse({
@@ -215,7 +216,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
-  @UseGuards(AuthGuard('linkedin'))
+  @UseGuards(AuthGuard(OAuthProvider.LINKEDIN))
   @Get('linkedin/callback')
   @ApiOperation({ summary: 'LinkedIn OAuth2 callback URL' })
   @ApiResponse({

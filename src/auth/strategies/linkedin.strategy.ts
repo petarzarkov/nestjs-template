@@ -14,7 +14,7 @@ import {
 @Injectable()
 export class LinkedInStrategy extends PassportStrategy(
   LinkedInLocalStrategy,
-  'linkedin',
+  OAuthProvider.LINKEDIN,
 ) {
   constructor(
     readonly configService: AppConfigService<ValidatedConfig>,

@@ -14,10 +14,10 @@ import { AxiosError, AxiosRequestConfig } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
-import { UrlHelperAddon } from './url-helper.addon';
+import { UrlHelper } from './url.helper';
 
 @Injectable()
-export class HelpersService extends UrlHelperAddon {
+export class HelpersService extends UrlHelper {
   createStopwatch(): {
     getElapsedMs: () => number;
   } {

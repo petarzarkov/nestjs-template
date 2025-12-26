@@ -9,7 +9,10 @@ import { OAuthProvider } from '../enum/oauth-provider.enum';
 import { AuthService } from '../services/auth.service';
 
 @Injectable()
-export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
+export class GithubStrategy extends PassportStrategy(
+  Strategy,
+  OAuthProvider.GITHUB,
+) {
   constructor(
     readonly configService: AppConfigService<ValidatedConfig>,
     private readonly authService: AuthService,
