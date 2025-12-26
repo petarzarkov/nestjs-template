@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import { GLOBAL_PREFIX } from '@/constants';
 import pkg from '../../package.json';
 import { ConfigValidationError } from './config-validation.error';
 import { getDbConfig } from './dto/db-vars.dto';
@@ -37,7 +38,11 @@ export const validateConfig = (config: Record<string, unknown>) => {
     ...serviceConfig,
     ...getDbConfig(validatedConfig),
     redis: getRedisConfig(validatedConfig),
-    oauth: getOAuthConfig(validatedConfig, serviceConfig.app.webUrl),
+    oauth: getOAuthConfig(
+      validatedConfig,
+      serviceConfig.app.webUrl,
+      GLOBAL_PREFIX,
+    ),
   } as const;
 };
 

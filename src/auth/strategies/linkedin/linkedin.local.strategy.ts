@@ -52,36 +52,14 @@ export class LinkedInLocalStrategy extends OAuth2Strategy {
     this.name = 'linkedin';
     this.profileUrl = opts.profileURL || 'https://api.linkedin.com/v2/userinfo';
 
-    // Access protected _oauth2 property from parent class
-    (
-      this as unknown as {
-        _oauth2: { setAccessTokenName: (name: string) => void };
-      }
-    )._oauth2.setAccessTokenName('oauth2_access_token');
+    this._oauth2.setAccessTokenName('oauth2_access_token');
   }
 
   public userProfile(
     accessToken: string,
     done: (err?: Error | null, profile?: LinkedInOidcProfile) => void,
   ): void {
-    // Access protected _oauth2 property from parent class
-    const oauth2 = (
-      this as unknown as {
-        _oauth2: {
-          get: (
-            url: string,
-            token: string,
-            callback: (
-              err: unknown,
-              body?: string | Buffer,
-              res?: unknown,
-            ) => void,
-          ) => void;
-        };
-      }
-    )._oauth2;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    oauth2.get(
+    this._oauth2.get(
       this.profileUrl,
       accessToken,
       (err: unknown, body?: string | Buffer, _res?: unknown) => {
@@ -100,9 +78,9 @@ export class LinkedInLocalStrategy extends OAuth2Strategy {
           );
         }
 
-        let profile: LinkedInOidcProfile;
         try {
-          profile = JSON.parse(body.toString()) as LinkedInOidcProfile;
+          const profile = JSON.parse(body.toString()) as LinkedInOidcProfile;
+          done(null, profile);
         } catch (ex: unknown) {
           return done(
             new InternalOAuthError(
@@ -111,8 +89,6 @@ export class LinkedInLocalStrategy extends OAuth2Strategy {
             ),
           );
         }
-
-        done(null, profile);
       },
     );
   }

@@ -2,9 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Post,
   Req,
-  Res,
   UnauthorizedException,
   UseGuards,
   UsePipes,
@@ -19,7 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { BaseResponseDto } from '@/auth/dto/base-response.dto';
 import { LoginRequestDto } from '@/auth/dto/login-request.dto';
@@ -43,19 +43,19 @@ export class AuthController {
     private usersService: UsersService,
   ) {}
 
-  private handleOAuthCallback(req: Request, res: Response): Response {
+  private handleOAuthCallback(req: Request): AuthResponseDto {
     if (!req.user) {
       throw new UnauthorizedException(
         'No user data received from OAuth provider',
       );
     }
-    const user = req.user as SanitizedUser;
+    const user = req.user;
     const accessToken = this.authService.createAccessToken(
       user.id,
       user.email,
       user.roles,
     );
-    return res.json({ accessToken });
+    return { accessToken };
   }
 
   @Post('login')
@@ -160,7 +160,7 @@ export class AuthController {
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth2 login flow' })
   @ApiResponse({
-    status: 302,
+    status: HttpStatus.FOUND,
     description: 'Redirects to Google for authentication',
   })
   async loginGoogle() {
@@ -171,20 +171,20 @@ export class AuthController {
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth2 callback URL' })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Returns JWT token after successful login',
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleOAuthCallback(req, res);
+  async googleAuthCallback(@Req() req: Request) {
+    return this.handleOAuthCallback(req);
   }
 
   @UseGuards(AuthGuard('github'))
   @Get('github')
   @ApiOperation({ summary: 'Initiate GitHub OAuth2 login flow' })
   @ApiResponse({
-    status: 302,
+    status: HttpStatus.FOUND,
     description: 'Redirects to GitHub for authentication',
   })
   async loginGithub() {
@@ -195,20 +195,20 @@ export class AuthController {
   @Get('github/callback')
   @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Returns JWT token after successful login',
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async githubAuthCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleOAuthCallback(req, res);
+  async githubAuthCallback(@Req() req: Request) {
+    return this.handleOAuthCallback(req);
   }
 
   @UseGuards(AuthGuard('linkedin'))
   @Get('linkedin')
   @ApiOperation({ summary: 'Initiate LinkedIn OAuth2 login flow' })
   @ApiResponse({
-    status: 302,
+    status: HttpStatus.FOUND,
     description: 'Redirects to LinkedIn for authentication',
   })
   async loginLinkedIn() {
@@ -219,12 +219,12 @@ export class AuthController {
   @Get('linkedin/callback')
   @ApiOperation({ summary: 'LinkedIn OAuth2 callback URL' })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Returns JWT token after successful login',
     type: AuthResponseDto,
   })
   @ApiExcludeEndpoint()
-  async linkedInAuthCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleOAuthCallback(req, res);
+  async linkedInAuthCallback(@Req() req: Request) {
+    return this.handleOAuthCallback(req);
   }
 }

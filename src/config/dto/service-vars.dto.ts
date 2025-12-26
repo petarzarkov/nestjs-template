@@ -17,6 +17,7 @@ import { WsVars } from './ws-vars.dto';
 
 export class ServiceVars extends WsVars {
   @IsEnum(AppEnv)
+  @IsOptional()
   APP_ENV: AppEnv = AppEnv.LOCAL;
 
   @IsString()
@@ -166,7 +167,7 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
   return {
     isProd: config.APP_ENV === AppEnv.PRD,
     app: {
-      webUrl: config.WEB_URL || 'http://localhost:3000',
+      webUrl: config.WEB_URL || `http://localhost:${config.API_PORT}`,
       name: pkg.name,
       /**
        * This should determine business logic and running environment.

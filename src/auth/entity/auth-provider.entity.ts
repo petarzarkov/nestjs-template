@@ -57,6 +57,6 @@ export class AuthProvider {
   updatedAt!: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id', referencedColumnName: 'id' })
   user!: User;
 }

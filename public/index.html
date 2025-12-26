@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth2 Local Test</title>
+    <style>
+        body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f5; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .btn { display: inline-block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px; }
+        .btn-github { background-color: #333; }
+        .btn-google { background-color: #DB4437; }
+        .btn-linkedin { background-color: #0077b5; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Test OAuth Flow</h2>
+        
+        <a href="http://localhost:2999/api/auth/github" class="btn btn-github">
+            Login with GitHub
+        </a>
+
+        <a href="http://localhost:2999/api/auth/google" class="btn btn-google">
+            Login with Google
+        </a>
+
+        <a href="http://localhost:2999/api/auth/linkedin" class="btn btn-linkedin">
+            Login with LinkedIn
+        </a>
+    </div>
+
+</body>
+</html>

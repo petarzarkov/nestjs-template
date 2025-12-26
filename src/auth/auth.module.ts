@@ -19,14 +19,14 @@ import { LocalStrategy } from './strategies/local.strategy';
 @Module({})
 export class AuthModule {
   static forRoot(): DynamicModule {
-    const providers: Provider[] = [
+    const baseProviders: Provider[] = [
       AuthService,
       LocalStrategy,
       JwtStrategy,
       AuthProvidersRepository,
     ];
 
-    const exports: (string | symbol | Provider)[] = [
+    const baseExports: (string | symbol | Provider)[] = [
       AuthService,
       JwtModule,
       LocalStrategy,
@@ -34,8 +34,11 @@ export class AuthModule {
       AuthProvidersRepository,
     ];
 
-    // Conditionally register OAuth strategies based on environment variables
-    // Check each provider individually - only register if both client ID and secret are present
+    // Conditionally add OAuth strategies based on env vars
+    // Note: We must check process.env here because forRoot() is static
+    // and runs before the DI container is ready (ConfigService not available yet)
+    const conditionalProviders: Provider[] = [];
+
     const hasGoogleOAuth =
       process.env.GOOGLE_OAUTH_CLIENT_ID &&
       process.env.GOOGLE_OAUTH_CLIENT_SECRET;
@@ -47,18 +50,13 @@ export class AuthModule {
       process.env.LINKEDIN_OAUTH_CLIENT_SECRET;
 
     if (hasGoogleOAuth) {
-      providers.push(GoogleStrategy);
-      exports.push(GoogleStrategy);
+      conditionalProviders.push(GoogleStrategy);
     }
-
     if (hasGithubOAuth) {
-      providers.push(GithubStrategy);
-      exports.push(GithubStrategy);
+      conditionalProviders.push(GithubStrategy);
     }
-
     if (hasLinkedInOAuth) {
-      providers.push(LinkedInStrategy);
-      exports.push(LinkedInStrategy);
+      conditionalProviders.push(LinkedInStrategy);
     }
 
     return {
@@ -67,6 +65,7 @@ export class AuthModule {
         forwardRef(() => UsersModule),
         DatabaseModule.forFeature([AuthProvider]),
         PassportModule,
+        AppConfigModule,
         JwtModule.registerAsync({
           imports: [AppConfigModule],
           useFactory: async (
@@ -80,9 +79,9 @@ export class AuthModule {
           inject: [AppConfigService],
         }),
       ],
-      providers,
+      providers: [...baseProviders, ...conditionalProviders],
       controllers: [AuthController],
-      exports,
+      exports: baseExports,
     };
   }
 }

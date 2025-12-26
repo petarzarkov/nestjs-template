@@ -5,7 +5,7 @@ import * as glob from 'glob';
 /**
  * Configuration for grouping environment variables.
  * The key is the title that will appear in the Markdown file.
- * The value can be a single prefix string or an array of prefixes.
+ * The value can be a single affix string or an array of affixes.
  * The order of this object determines the order of sections in the output file.
  */
 const groupConfig: Record<string, string | string[]> = {
@@ -17,6 +17,7 @@ const groupConfig: Record<string, string | string[]> = {
   'Security & JWT': 'JWT_',
   WebSocket: 'WS_',
   'HTTP Client': 'HTTP_REQ_',
+  OAuth: 'OAUTH_',
   General: '',
 };
 
@@ -108,7 +109,7 @@ function parseEnvFile(
 }
 
 /**
- * Groups the parsed variables based on the groupConfig prefixes.
+ * Groups the parsed variables based on the groupConfig affixes.
  */
 function groupVariables(
   vars: ParsedVariable[],

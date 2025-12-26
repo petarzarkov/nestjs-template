@@ -40,19 +40,20 @@ export class OAuthVars extends IntersectionType(
 export const getOAuthConfig = (
   config: OAuthVars,
   webUrl: string,
+  apiPath: string,
 ): {
   google?: { clientId: string; clientSecret: string; callbackUrl: string };
   github?: { clientId: string; clientSecret: string; callbackUrl: string };
   linkedin?: { clientId: string; clientSecret: string; callbackUrl: string };
 } => {
-  const baseUrl = webUrl || 'http://localhost:3000';
+  const baseUrl = webUrl;
   const oauth: ReturnType<typeof getOAuthConfig> = {};
 
   if (config.GOOGLE_OAUTH_CLIENT_ID && config.GOOGLE_OAUTH_CLIENT_SECRET) {
     oauth.google = {
       clientId: config.GOOGLE_OAUTH_CLIENT_ID,
       clientSecret: config.GOOGLE_OAUTH_CLIENT_SECRET,
-      callbackUrl: `${baseUrl}/api/auth/google/callback`,
+      callbackUrl: `${baseUrl}/${apiPath}/auth/google/callback`,
     };
   }
 
@@ -60,7 +61,7 @@ export const getOAuthConfig = (
     oauth.github = {
       clientId: config.GITHUB_OAUTH_CLIENT_ID,
       clientSecret: config.GITHUB_OAUTH_CLIENT_SECRET,
-      callbackUrl: `${baseUrl}/api/auth/github/callback`,
+      callbackUrl: `${baseUrl}/${apiPath}/auth/github/callback`,
     };
   }
 
@@ -68,7 +69,7 @@ export const getOAuthConfig = (
     oauth.linkedin = {
       clientId: config.LINKEDIN_OAUTH_CLIENT_ID,
       clientSecret: config.LINKEDIN_OAUTH_CLIENT_SECRET,
-      callbackUrl: `${baseUrl}/api/auth/linkedin/callback`,
+      callbackUrl: `${baseUrl}/${apiPath}/auth/linkedin/callback`,
     };
   }
 

@@ -37,6 +37,7 @@ export class UsersService {
       const user = txManager.create(User, {
         email,
         password: hashedPassword,
+        displayName: email.split('@')[0],
         roles,
       });
       const savedUser = await txManager.save(User, user);
@@ -78,7 +79,7 @@ export class UsersService {
       EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
-        name: user.email.split('@')[0],
+        name: user.displayName || user.email.split('@')[0],
         type: 'direct',
       },
       { emitToAdmins: true },
@@ -120,7 +121,7 @@ export class UsersService {
       EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
-        name: user.email.split('@')[0],
+        name: user.displayName || user.email.split('@')[0],
         type: 'invite',
       },
       { emitToAdmins: true },

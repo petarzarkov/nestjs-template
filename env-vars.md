@@ -69,6 +69,17 @@ This document outlines the environment variables required for the project. These
 | `HTTP_REQ_TIMEOUT` | The timeout for outgoing HTTP requests, in milliseconds. | `10000` | .env.example |
 | `HTTP_REQ_MAX_REDIRECTS` | The maximum number of redirects to follow for an HTTP request. | `5` | .env.example |
 
+### OAuth
+
+| Variable | Description | Default Value | Source |
+|---|---|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` | Your Google OAuth client ID. | `your_google_client_id` | .env.example |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Your Google OAuth client secret. | `your_google_client_secret` | .env.example |
+| `GITHUB_OAUTH_CLIENT_ID` | Your GitHub OAuth client ID. | `your_github_client_id` | .env.example |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Your GitHub OAuth client secret. | `your_github_client_secret` | .env.example |
+| `LINKEDIN_OAUTH_CLIENT_ID` | Your LinkedIn OAuth client ID. | `your_linkedin_client_id` | .env.example |
+| `LINKEDIN_OAUTH_CLIENT_SECRET` | Your LinkedIn OAuth client secret | `your_linkedin_client_secret` | .env.example |
+
 ### General
 
 | Variable | Description | Default Value | Source |
