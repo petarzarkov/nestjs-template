@@ -12,7 +12,7 @@ import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { StreamPublisherService } from '@/redis/streams/stream-publisher.service';
+import { NotificationPublisherService } from '@/notifications/services/notification-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -27,7 +27,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly passwordResetTokensRepository: PasswordResetTokensRepository,
     private readonly authProvidersRepository: AuthProvidersRepository,
-    private readonly eventPublisher: StreamPublisherService,
+    private readonly eventPublisher: NotificationPublisherService,
     private readonly jwtService: JwtService,
     @InjectEntityManager() private readonly entityManager: EntityManager,
     private readonly logger: ContextLogger,
@@ -87,7 +87,7 @@ export class AuthService {
       {
         userId: user.id,
         email: user.email,
-        name: user.email.split('@')[0],
+        name: user.displayName || user.email.split('@')[0],
         resetToken: passwordResetToken,
       },
     );

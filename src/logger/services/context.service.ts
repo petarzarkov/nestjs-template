@@ -7,7 +7,7 @@ export interface AsyncContext {
   method?: string;
   event?: string;
   context?: string;
-  flow?: 'http' | 'rpc' | 'rmq' | 'http-external' | 'ws' | 'stream';
+  flow?: 'http' | 'rpc' | 'rmq' | 'http-external' | 'ws' | 'queue';
   [key: string]: unknown;
 }
 

@@ -84,7 +84,7 @@ export class HealthController {
             cacheEnabled: redisConfig.cache.enabled,
             throttleEnabled: redisConfig.throttle.enabled,
             wsAdapterEnabled: redisConfig.wsAdapterEnabled,
-            streamsEnabled: redisConfig.streams.enabled,
+            queuesEnabled: redisConfig.queues.enabled,
           }
         : { enabled: false },
       versions: process.versions,

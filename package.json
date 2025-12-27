@@ -52,7 +52,7 @@
     "@react-email/components": "1.0.2",
     "@socket.io/redis-adapter": "8.3.0",
     "axios": "1.13.2",
-    "bullmq": "5.66.2",
+    "bullmq": "^5.66.3",
     "cache-manager": "7.2.7",
     "cache-manager-ioredis-yet": "2.1.2",
     "class-transformer": "0.5.1",

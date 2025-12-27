@@ -111,7 +111,7 @@ describe('Auth (e2e)', () => {
           cacheEnabled?: boolean;
           throttleEnabled?: boolean;
           wsAdapterEnabled?: boolean;
-          streamsEnabled?: boolean;
+          queuesEnabled?: boolean;
         };
       }>('/api/service/config');
 
@@ -120,9 +120,9 @@ describe('Auth (e2e)', () => {
 
       if (
         !configResponse.data.redis.enabled ||
-        !configResponse.data.redis.streamsEnabled
+        !configResponse.data.redis.queuesEnabled
       ) {
-        console.log('⚠️  Redis Streams not enabled, skipping event flow test');
+        console.log('⚠️  Redis queues not enabled, skipping event flow test');
         return;
       }
 
@@ -131,7 +131,7 @@ describe('Auth (e2e)', () => {
       ctx.ws.connect(accessToken, E2E.API_URL);
       await ctx.ws.waitForConnected(10000);
 
-      // Register a new user - this should trigger Redis Streams event
+      // Register a new user - this should trigger Redis queues event
       const testEmail = `test-streams-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 

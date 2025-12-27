@@ -6,7 +6,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { StreamsModule } from './streams/streams.module';
 
 /**
  * Redis module that conditionally enables Redis features based on environment variables.
@@ -14,7 +13,7 @@ import { StreamsModule } from './streams/streams.module';
  * - REDIS_CACHE_ENABLED: Cache interceptor with Redis store (no fallback)
  * - REDIS_THROTTLE_ENABLED: Rate limiting via Redis (no fallback)
  * - REDIS_WS_ADAPTER_ENABLED: Socket.io Redis adapter (configured in socket.adapter.ts)
- * - REDIS_STREAMS_ENABLED: Event streaming with guaranteed delivery and retries
+ * - REDIS_QUEUES_ENABLED: BullMQ queues for job processing (configured in NotificationQueueModule)
  */
 @Module({})
 export class RedisModule {
@@ -25,8 +24,6 @@ export class RedisModule {
       Boolean(redisHost) && process.env.REDIS_THROTTLE_ENABLED === 'true';
     const cacheEnabled =
       Boolean(redisHost) && process.env.REDIS_CACHE_ENABLED === 'true';
-    const streamsEnabled =
-      Boolean(redisHost) && process.env.REDIS_STREAMS_ENABLED === 'true';
 
     const imports: DynamicModule['imports'] = [];
     const providers: Provider[] = [];
@@ -88,11 +85,6 @@ export class RedisModule {
         useClass: CacheInterceptor,
       });
       exports.push(CacheModule);
-    }
-
-    if (streamsEnabled) {
-      imports.push(StreamsModule.forRootAsync());
-      exports.push(StreamsModule);
     }
 
     return {

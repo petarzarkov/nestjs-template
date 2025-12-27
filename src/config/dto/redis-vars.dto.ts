@@ -54,8 +54,8 @@ export class RedisVars {
   @IsNumber()
   @Min(1000)
   @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 60000))
-  REDIS_THROTTLE_TTL: number = 60000; // 60 seconds in ms
+  @Transform(({ value }) => (value ? parseInt(value, 10) : MINUTE))
+  REDIS_THROTTLE_TTL: number = MINUTE;
 
   @IsNumber()
   @Min(1)
@@ -71,46 +71,45 @@ export class RedisVars {
   @IsBoolean()
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
-  REDIS_STREAMS_ENABLED: boolean = true;
+  REDIS_QUEUES_ENABLED: boolean = true;
 
   @IsNumber()
   @Min(1)
   @Max(10)
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : 3))
-  REDIS_STREAMS_MAX_RETRIES: number = 3;
+  REDIS_QUEUES_MAX_RETRIES: number = 3;
 
   @IsNumber()
   @Min(100)
   @Max(60000)
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : 5000))
-  REDIS_STREAMS_RETRY_DELAY_MS: number = 5000; // 5 seconds
-
-  @IsNumber()
-  @Min(0)
-  @Max(10000)
-  @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 100))
-  REDIS_STREAMS_BLOCK_TIME_MS: number = 100; // 100ms for low latency
+  REDIS_QUEUES_RETRY_DELAY_MS: number = 5000;
 
   @IsNumber()
   @Min(1)
   @Max(100)
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : 10))
-  REDIS_STREAMS_BATCH_SIZE: number = 10; // Process 10 messages at a time
+  REDIS_QUEUES_CONCURRENCY: number = 10;
 
   @IsNumber()
-  @Min(1000)
-  @Max(300000)
+  @Min(1)
+  @Max(1000)
   @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 30000))
-  REDIS_STREAMS_AUTO_CLAIM_IDLE_MS: number = 30000; // 30 seconds
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 100))
+  REDIS_QUEUES_RATE_LIMIT_MAX: number = 100;
+
+  @IsNumber()
+  @Min(100)
+  @Max(60000)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : SECOND))
+  REDIS_QUEUES_RATE_LIMIT_DURATION: number = SECOND;
 }
 
 export const getRedisConfig = (config: RedisVars) => {
-  // Only return config if REDIS_HOST is defined
   if (!config.REDIS_HOST) {
     return undefined;
   }
@@ -130,13 +129,13 @@ export const getRedisConfig = (config: RedisVars) => {
       limit: config.REDIS_THROTTLE_LIMIT,
     },
     wsAdapterEnabled: config.REDIS_WS_ADAPTER_ENABLED,
-    streams: {
-      enabled: config.REDIS_STREAMS_ENABLED,
-      maxRetries: config.REDIS_STREAMS_MAX_RETRIES,
-      retryDelayMs: config.REDIS_STREAMS_RETRY_DELAY_MS,
-      blockTimeMs: config.REDIS_STREAMS_BLOCK_TIME_MS,
-      batchSize: config.REDIS_STREAMS_BATCH_SIZE,
-      autoClaimIdleMs: config.REDIS_STREAMS_AUTO_CLAIM_IDLE_MS,
+    queues: {
+      enabled: config.REDIS_QUEUES_ENABLED,
+      maxRetries: config.REDIS_QUEUES_MAX_RETRIES,
+      retryDelayMs: config.REDIS_QUEUES_RETRY_DELAY_MS,
+      concurrency: config.REDIS_QUEUES_CONCURRENCY,
+      rateLimitMax: config.REDIS_QUEUES_RATE_LIMIT_MAX,
+      rateLimitDuration: config.REDIS_QUEUES_RATE_LIMIT_DURATION,
     },
   };
 };

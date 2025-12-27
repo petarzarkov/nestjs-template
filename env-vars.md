@@ -28,12 +28,12 @@ This document outlines the environment variables required for the project. These
 | `REDIS_THROTTLE_TTL` | Throttle time window in ms (default: 60000 = 60s) | `60000` | .env.example |
 | `REDIS_THROTTLE_LIMIT` | Max requests per TTL (default: 100) | `100` | .env.example |
 | `REDIS_WS_ADAPTER_ENABLED` | Enable Redis adapter for Socket.io (multi-instance support) | `true` | .env.example |
-| `REDIS_STREAMS_ENABLED` | Enable Redis Streams for event processing | `true` | .env.example |
-| `REDIS_STREAMS_MAX_RETRIES` | Max retry attempts for failed events (1-10) | `3` | .env.example |
-| `REDIS_STREAMS_RETRY_DELAY_MS` | Delay between retries in ms (100-60000) | `5000` | .env.example |
-| `REDIS_STREAMS_BLOCK_TIME_MS` | Consumer block time in ms (0-10000, lower = lower latency) | `100` | .env.example |
-| `REDIS_STREAMS_BATCH_SIZE` | Messages to process per batch (1-100) | `10` | .env.example |
-| `REDIS_STREAMS_AUTO_CLAIM_IDLE_MS` | Auto-claim messages idle for ms (1000-300000) | `30000` | .env.example |
+| `REDIS_QUEUES_ENABLED` | Enable BullMQ queues for event processing | `true` | .env.example |
+| `REDIS_QUEUES_MAX_RETRIES` | Max retry attempts for failed jobs (1-10) | `3` | .env.example |
+| `REDIS_QUEUES_RETRY_DELAY_MS` | Initial delay between retries in ms (100-60000, uses exponential backoff) | `5000` | .env.example |
+| `REDIS_QUEUES_CONCURRENCY` | Process N jobs concurrently (1-100) | `10` | .env.example |
+| `REDIS_QUEUES_RATE_LIMIT_MAX` | Max jobs per duration (1-1000) | `100` | .env.example |
+| `REDIS_QUEUES_RATE_LIMIT_DURATION` | Rate limit duration in ms (100-60000) | `1000` | .env.example |
 
 ### Email
 

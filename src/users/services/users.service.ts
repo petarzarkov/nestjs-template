@@ -10,7 +10,7 @@ import { OAuthProvider } from '@/auth/enum/oauth-provider.enum';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { StreamPublisherService } from '@/redis/streams/stream-publisher.service';
+import { NotificationPublisherService } from '@/notifications/services/notification-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -23,7 +23,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly invitesRepository: InvitesRepository,
-    private readonly eventPublisher: StreamPublisherService,
+    private readonly eventPublisher: NotificationPublisherService,
     @InjectEntityManager() readonly entityManager: EntityManager,
   ) {}
 
@@ -116,7 +116,6 @@ export class UsersService {
       },
     );
 
-    // Publish user registered event (from invite)
     await this.eventPublisher.publishEvent(
       EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
       {

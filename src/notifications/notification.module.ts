@@ -1,13 +1,9 @@
-import { forwardRef, Module } from '@nestjs/common';
-import { UsersModule } from '@/users/users.module';
-import { EmailModule } from './email/email.module';
-import { EventsModule } from './events/events.module';
-import { NotificationHandler } from './notification.handler';
+import { Global, Module } from '@nestjs/common';
+import { NotificationQueueModule } from './notification-queue.module';
 
+@Global()
 @Module({
-  imports: [EmailModule, EventsModule.forRoot(), forwardRef(() => UsersModule)],
-  controllers: [],
-  providers: [NotificationHandler],
-  exports: [NotificationHandler],
+  imports: [NotificationQueueModule],
+  exports: [NotificationQueueModule],
 })
 export class NotificationModule {}
