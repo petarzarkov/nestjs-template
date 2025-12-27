@@ -1,7 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import type { MicroserviceOptions } from '@nestjs/microservices';
-import { Transport } from '@nestjs/microservices';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import 'reflect-metadata';
 import pkgJson from '../package.json';
@@ -40,23 +38,6 @@ async function bootstrap() {
     const error = reason instanceof Error ? reason : new Error(String(reason));
     logger.error('Unhandled Rejection', { err: error });
   });
-
-  // Connect Redis microservice for pub/sub if enabled
-  const redisConfig = configService.get('redis');
-  if (redisConfig?.pubsubEnabled) {
-    app.connectMicroservice<MicroserviceOptions>({
-      transport: Transport.REDIS,
-      options: {
-        host: redisConfig.host,
-        port: redisConfig.port,
-        password: redisConfig.password,
-      },
-    });
-    logger.log('Redis pub/sub microservice connected', {
-      host: redisConfig.host,
-      port: redisConfig.port,
-    });
-  }
 
   app.useLogger(logger);
   const httpLoggingInterceptor = app.get(HttpLoggingInterceptor);
@@ -98,8 +79,17 @@ async function bootstrap() {
   const eventsGateway = app.get(EventsGateway);
   const wsConfig = configService.get('ws');
   const appUrl = await app.getUrl();
+
+  const redisConfig = configService.get('redis');
+  if (redisConfig) {
+    logger.log('Redis config', {
+      redisConfig,
+    });
+  }
+
   logger.log(`API ${title} service started at ${appUrl}`, {
-    versions: process.versions,
+    bunVersion: process.versions.bun,
+    nodeVersion: process.versions.node,
   });
   logger.verbose(`API Docs at ${appUrl}${swaggerPath}`);
 

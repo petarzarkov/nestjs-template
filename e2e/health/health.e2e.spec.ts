@@ -72,7 +72,7 @@ describe('Health Endpoints (e2e)', () => {
         expect(response.data.redis).toHaveProperty('cacheEnabled');
         expect(response.data.redis).toHaveProperty('throttleEnabled');
         expect(response.data.redis).toHaveProperty('wsAdapterEnabled');
-        expect(response.data.redis).toHaveProperty('pubsubEnabled');
+        expect(response.data.redis).toHaveProperty('streamsEnabled');
       }
     });
   });

@@ -32,7 +32,7 @@ export class DatabaseModule {
 
         // Configure Redis cache if enabled
         const cacheConfig: DataSourceOptions['cache'] =
-          redisConfig?.cacheEnabled && redisConfig.host
+          redisConfig?.cache.enabled && redisConfig.host
             ? {
                 type: 'ioredis' as const,
                 options: {
@@ -41,16 +41,9 @@ export class DatabaseModule {
                   password: redisConfig.password,
                   db: redisConfig.db,
                 },
-                duration: 30000, // 30 seconds default TTL
+                duration: redisConfig.cache.ttl,
               }
             : {};
-
-        if (redisConfig?.cacheEnabled) {
-          logger.log('TypeORM Redis cache enabled', {
-            host: redisConfig.host,
-            port: redisConfig.port,
-          });
-        }
 
         return {
           type: 'postgres',

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AxiosError, AxiosRequestConfig } from 'axios';
 import { firstValueFrom } from 'rxjs';
+import { SECOND } from '@/constants';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
 import { UrlHelper } from './url.helper';
@@ -37,7 +38,7 @@ export class HelpersService extends UrlHelper {
   ): Promise<T> {
     const {
       maxRetries = 3,
-      retryDelay = 1000,
+      retryDelay = SECOND,
       shouldRetryOnStatus = (status: number) => {
         // Retry 5xx server errors and other retryable status codes
         return (

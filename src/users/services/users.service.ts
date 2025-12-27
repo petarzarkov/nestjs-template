@@ -10,7 +10,7 @@ import { OAuthProvider } from '@/auth/enum/oauth-provider.enum';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { EventPublisherService } from '@/redis/pubsub/event-publisher.service';
+import { StreamPublisherService } from '@/redis/streams/stream-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -23,7 +23,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly invitesRepository: InvitesRepository,
-    private readonly eventPublisher: EventPublisherService,
+    private readonly eventPublisher: StreamPublisherService,
     @InjectEntityManager() readonly entityManager: EntityManager,
   ) {}
 

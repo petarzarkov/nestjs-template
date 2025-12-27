@@ -2,15 +2,11 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/logger/services/context-logger.service';
-import { EventLoggingInterceptor } from './pubsub/event-logging.interceptor';
-import { EventPublisherService } from './pubsub/event-publisher.service';
-import { REDIS_EVENT_CLIENT } from './redis.constants';
+import { StreamsModule } from './streams/streams.module';
 
 /**
  * Redis module that conditionally enables Redis features based on environment variables.
@@ -18,7 +14,7 @@ import { REDIS_EVENT_CLIENT } from './redis.constants';
  * - REDIS_CACHE_ENABLED: Cache interceptor with Redis store (no fallback)
  * - REDIS_THROTTLE_ENABLED: Rate limiting via Redis (no fallback)
  * - REDIS_WS_ADAPTER_ENABLED: Socket.io Redis adapter (configured in socket.adapter.ts)
- * - REDIS_PUBSUB_ENABLED: Event pub/sub via NestJS microservices
+ * - REDIS_STREAMS_ENABLED: Event streaming with guaranteed delivery and retries
  */
 @Module({})
 export class RedisModule {
@@ -26,23 +22,16 @@ export class RedisModule {
     // Read config at module registration time to determine what to include
     const redisHost = process.env.REDIS_HOST;
     const throttleEnabled =
-      redisHost && process.env.REDIS_THROTTLE_ENABLED === 'true';
+      Boolean(redisHost) && process.env.REDIS_THROTTLE_ENABLED === 'true';
     const cacheEnabled =
-      redisHost && process.env.REDIS_CACHE_ENABLED === 'true';
-    const pubsubEnabled =
-      redisHost && process.env.REDIS_PUBSUB_ENABLED === 'true';
+      Boolean(redisHost) && process.env.REDIS_CACHE_ENABLED === 'true';
+    const streamsEnabled =
+      Boolean(redisHost) && process.env.REDIS_STREAMS_ENABLED === 'true';
 
     const imports: DynamicModule['imports'] = [];
-    const providers: Provider[] = [
-      EventPublisherService,
-      EventLoggingInterceptor,
-    ];
-    const exports: (string | symbol | Type)[] = [
-      EventPublisherService,
-      EventLoggingInterceptor,
-    ];
+    const providers: Provider[] = [];
+    const exports: (string | symbol | Type)[] = [];
 
-    // Throttler module - only add Redis storage when enabled
     if (throttleEnabled) {
       imports.push(
         ThrottlerModule.forRootAsync({
@@ -52,8 +41,8 @@ export class RedisModule {
             return {
               throttlers: [
                 {
-                  ttl: redisConfig.throttleTtl,
-                  limit: redisConfig.throttleLimit,
+                  ttl: redisConfig.throttle.ttl,
+                  limit: redisConfig.throttle.limit,
                 },
               ],
               storage: new ThrottlerStorageRedisService({
@@ -73,7 +62,6 @@ export class RedisModule {
       exports.push(ThrottlerModule);
     }
 
-    // Cache module - only register when Redis cache is enabled (no in-memory fallback)
     if (cacheEnabled) {
       imports.push(
         CacheModule.registerAsync({
@@ -89,7 +77,7 @@ export class RedisModule {
                 port: redisConfig.port,
                 password: redisConfig.password,
                 db: redisConfig.db,
-                ttl: 30000, // 30 seconds default
+                ttl: redisConfig.cache.ttl,
               }),
             };
           },
@@ -102,37 +90,9 @@ export class RedisModule {
       exports.push(CacheModule);
     }
 
-    // Pub/sub client module - only register when enabled
-    if (pubsubEnabled) {
-      imports.push(
-        ClientsModule.registerAsync([
-          {
-            name: REDIS_EVENT_CLIENT,
-            inject: [AppConfigService, ContextLogger],
-            useFactory: (
-              configService: AppConfigService<ValidatedConfig>,
-              logger: ContextLogger,
-            ) => {
-              const redisConfig = configService.getOrThrow('redis');
-              logger.log('Redis pub/sub enabled', {
-                host: redisConfig.host,
-                port: redisConfig.port,
-              });
-
-              return {
-                transport: Transport.REDIS,
-                options: {
-                  host: redisConfig.host,
-                  port: redisConfig.port,
-                  password: redisConfig.password,
-                  db: redisConfig.db,
-                },
-              };
-            },
-          },
-        ]),
-      );
-      exports.push(ClientsModule);
+    if (streamsEnabled) {
+      imports.push(StreamsModule.forRootAsync());
+      exports.push(StreamsModule);
     }
 
     return {

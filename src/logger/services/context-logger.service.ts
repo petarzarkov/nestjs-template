@@ -241,6 +241,10 @@ export class ContextLogger implements LoggerService {
     return { error, extra };
   }
 
+  get appId(): string {
+    return `${this.appConfig.name}-${this.appConfig.version}-${this.appConfig.env}`;
+  }
+
   #createLogEntry(
     level: LogLevel,
     message: string,
@@ -256,7 +260,7 @@ export class ContextLogger implements LoggerService {
       tz: this.appConfig.timezone,
       timestamp: new Date().toISOString(),
       message,
-      appId: `${this.appConfig.name}-${this.appConfig.version}-${this.appConfig.env}`,
+      appId: this.appId,
       ...context,
       ...extra,
       ...(invalidMessageInfo || {}),

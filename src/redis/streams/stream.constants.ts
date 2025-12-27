@@ -1,0 +1,1 @@
+export const REDIS_STREAMS_CLIENT = Symbol('REDIS_STREAMS_CLIENT');

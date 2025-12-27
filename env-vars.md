@@ -8,7 +8,7 @@ This document outlines the environment variables required for the project. These
 
 | Variable | Description | Default Value | Source |
 |---|---|---|---|
-| `POSTGRES_DATA_DIR` | No description provided. | `.tmp/postgres_data` | .env.example |
+| `POSTGRES_DATA_DIR` | (optional) Path to the directory where the PostgreSQL data docker volume is mounted. | `.tmp/postgres_data` | .env.example |
 | `POSTGRES_HOST` | No description provided. | `localhost` | .env.example |
 | `POSTGRES_PORT` | No description provided. | `5438` | .env.example |
 | `POSTGRES_USER` | No description provided. | `postgres` | .env.example |
@@ -23,11 +23,17 @@ This document outlines the environment variables required for the project. These
 | `REDIS_HOST` | No description provided. | `localhost` | .env.example |
 | `REDIS_PORT` | No description provided. | `6383` | .env.example |
 | `REDIS_CACHE_ENABLED` | Enable Redis-backed caching (CacheInterceptor) | `true` | .env.example |
+| `REDIS_CACHE_TTL` | Cache time window in ms (default: 30000 = 30s) | `30000` | .env.example |
 | `REDIS_THROTTLE_ENABLED` | Enable Redis-backed rate limiting (ThrottlerGuard) | `true` | .env.example |
 | `REDIS_THROTTLE_TTL` | Throttle time window in ms (default: 60000 = 60s) | `60000` | .env.example |
 | `REDIS_THROTTLE_LIMIT` | Max requests per TTL (default: 100) | `100` | .env.example |
 | `REDIS_WS_ADAPTER_ENABLED` | Enable Redis adapter for Socket.io (multi-instance support) | `true` | .env.example |
-| `REDIS_PUBSUB_ENABLED` | Enable Redis pub/sub for event system | `true` | .env.example |
+| `REDIS_STREAMS_ENABLED` | Enable Redis Streams for event processing | `true` | .env.example |
+| `REDIS_STREAMS_MAX_RETRIES` | Max retry attempts for failed events (1-10) | `3` | .env.example |
+| `REDIS_STREAMS_RETRY_DELAY_MS` | Delay between retries in ms (100-60000) | `5000` | .env.example |
+| `REDIS_STREAMS_BLOCK_TIME_MS` | Consumer block time in ms (0-10000, lower = lower latency) | `100` | .env.example |
+| `REDIS_STREAMS_BATCH_SIZE` | Messages to process per batch (1-100) | `10` | .env.example |
+| `REDIS_STREAMS_AUTO_CLAIM_IDLE_MS` | Auto-claim messages idle for ms (1000-300000) | `30000` | .env.example |
 
 ### Email
 
@@ -84,7 +90,7 @@ This document outlines the environment variables required for the project. These
 
 | Variable | Description | Default Value | Source |
 |---|---|---|---|
-| `NODE_ENV` | # The current service environment (e.g., development, staging, production). | `development` | .env.example |
+| `NODE_ENV` | The current service environment (e.g., development, staging, production). | `development` | .env.example |
 | `CORS_ORIGIN` | wildcard for dev | `'*'` | .env.example |
 | `TZ` | No description provided. | `UTC` | .env.example |
 

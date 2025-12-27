@@ -26,7 +26,7 @@ export const LOGGER = {
 } as const;
 
 // Time constants (** in milliseconds **)
-export const MILLISECOND = 1;
+export const MILLISECOND = 1 as const;
 export const SECOND = 1000 * MILLISECOND;
 export const MINUTE = 60 * SECOND;
 export const HOUR = 60 * MINUTE;

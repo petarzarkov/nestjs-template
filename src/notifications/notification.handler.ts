@@ -1,14 +1,12 @@
-import { Controller, Injectable, UseInterceptors } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
+import { Payload } from '@nestjs/microservices';
 import { ContextLogger } from '@/logger/services/context-logger.service';
-import type { BaseEvent } from '@/redis/pubsub/base-event.dto';
-import { EventLoggingInterceptor } from '@/redis/pubsub/event-logging.interceptor';
+import type { BaseEvent } from '@/notifications/events/base-event.dto';
+import { StreamEvent } from '@/redis/streams/stream-event.decorator';
 import { EmailService } from './email/services/email.service';
 import { EVENT_CONSTANTS } from './events/events';
 import { EventsGateway } from './events/events.gateway';
 
-@Controller()
-@UseInterceptors(EventLoggingInterceptor)
 @Injectable()
 export class NotificationHandler {
   constructor(
@@ -17,7 +15,7 @@ export class NotificationHandler {
     readonly _logger: ContextLogger,
   ) {}
 
-  @EventPattern(EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED)
+  @StreamEvent(EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED)
   async handleUserRegistered(
     @Payload()
     event: BaseEvent<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED>,
@@ -31,7 +29,7 @@ export class NotificationHandler {
     });
   }
 
-  @EventPattern(EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED)
+  @StreamEvent(EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED)
   async handleUserInvited(
     @Payload()
     event: BaseEvent<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED>,
@@ -44,7 +42,7 @@ export class NotificationHandler {
     });
   }
 
-  @EventPattern(EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET)
+  @StreamEvent(EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET)
   async handlePasswordReset(
     @Payload()
     event: BaseEvent<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET>,

@@ -9,6 +9,7 @@ import {
   ValidationError,
   validateSync,
 } from 'class-validator';
+import { MINUTE, SECOND } from '@/constants';
 import { ConfigValidationError } from '../config-validation.error';
 
 export class RedisVars {
@@ -38,6 +39,13 @@ export class RedisVars {
   @Transform(({ value }) => value === 'true' || value === true)
   REDIS_CACHE_ENABLED: boolean = false;
 
+  @IsNumber()
+  @Min(SECOND)
+  @Max(MINUTE)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 30000))
+  REDIS_CACHE_TTL: number = 30000; // 30 seconds in ms
+
   @IsBoolean()
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
@@ -58,12 +66,47 @@ export class RedisVars {
   @IsBoolean()
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
-  REDIS_WS_ADAPTER_ENABLED: boolean = false;
+  REDIS_WS_ADAPTER_ENABLED: boolean = true;
 
   @IsBoolean()
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
-  REDIS_PUBSUB_ENABLED: boolean = false;
+  REDIS_STREAMS_ENABLED: boolean = true;
+
+  @IsNumber()
+  @Min(1)
+  @Max(10)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 3))
+  REDIS_STREAMS_MAX_RETRIES: number = 3;
+
+  @IsNumber()
+  @Min(100)
+  @Max(60000)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 5000))
+  REDIS_STREAMS_RETRY_DELAY_MS: number = 5000; // 5 seconds
+
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 100))
+  REDIS_STREAMS_BLOCK_TIME_MS: number = 100; // 100ms for low latency
+
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 10))
+  REDIS_STREAMS_BATCH_SIZE: number = 10; // Process 10 messages at a time
+
+  @IsNumber()
+  @Min(1000)
+  @Max(300000)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 30000))
+  REDIS_STREAMS_AUTO_CLAIM_IDLE_MS: number = 30000; // 30 seconds
 }
 
 export const getRedisConfig = (config: RedisVars) => {
@@ -77,12 +120,24 @@ export const getRedisConfig = (config: RedisVars) => {
     port: config.REDIS_PORT,
     password: config.REDIS_PASSWORD,
     db: config.REDIS_DB,
-    cacheEnabled: config.REDIS_CACHE_ENABLED,
-    throttleEnabled: config.REDIS_THROTTLE_ENABLED,
-    throttleTtl: config.REDIS_THROTTLE_TTL,
-    throttleLimit: config.REDIS_THROTTLE_LIMIT,
+    cache: {
+      enabled: config.REDIS_CACHE_ENABLED,
+      ttl: config.REDIS_CACHE_TTL,
+    },
+    throttle: {
+      enabled: config.REDIS_THROTTLE_ENABLED,
+      ttl: config.REDIS_THROTTLE_TTL,
+      limit: config.REDIS_THROTTLE_LIMIT,
+    },
     wsAdapterEnabled: config.REDIS_WS_ADAPTER_ENABLED,
-    pubsubEnabled: config.REDIS_PUBSUB_ENABLED,
+    streams: {
+      enabled: config.REDIS_STREAMS_ENABLED,
+      maxRetries: config.REDIS_STREAMS_MAX_RETRIES,
+      retryDelayMs: config.REDIS_STREAMS_RETRY_DELAY_MS,
+      blockTimeMs: config.REDIS_STREAMS_BLOCK_TIME_MS,
+      batchSize: config.REDIS_STREAMS_BATCH_SIZE,
+      autoClaimIdleMs: config.REDIS_STREAMS_AUTO_CLAIM_IDLE_MS,
+    },
   };
 };
 

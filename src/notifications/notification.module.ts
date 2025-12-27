@@ -6,7 +6,7 @@ import { NotificationHandler } from './notification.handler';
 
 @Module({
   imports: [EmailModule, EventsModule.forRoot(), forwardRef(() => UsersModule)],
-  controllers: [NotificationHandler],
+  controllers: [],
   providers: [NotificationHandler],
   exports: [NotificationHandler],
 })

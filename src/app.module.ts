@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/app.config.module';
 import { validateConfig } from './config/env.validation';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
       validate: validateConfig,
     }),
+    ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
     RedisModule.forRootAsync(),

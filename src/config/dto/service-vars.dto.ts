@@ -10,7 +10,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { LogLevel } from '@/logger/enum/log-level.enum';
-import { LOGGER } from '../../constants';
+import { LOGGER, SECOND } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';
 import { WsVars } from './ws-vars.dto';
@@ -100,7 +100,7 @@ export class ServiceVars extends WsVars {
 
   @IsNumber()
   @IsOptional()
-  HTTP_REQ_RETRY_DELAY: number = 1000;
+  HTTP_REQ_RETRY_DELAY: number = SECOND;
 
   // --- Service Config ---
   @IsString()

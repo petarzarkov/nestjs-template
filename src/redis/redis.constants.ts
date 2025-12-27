@@ -1,1 +1,0 @@
-export const REDIS_EVENT_CLIENT = 'REDIS_EVENT_CLIENT';
