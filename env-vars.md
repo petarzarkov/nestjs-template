@@ -22,13 +22,9 @@ This document outlines the environment variables required for the project. These
 |---|---|---|---|
 | `REDIS_HOST` | No description provided. | `localhost` | .env.example |
 | `REDIS_PORT` | No description provided. | `6383` | .env.example |
-| `REDIS_CACHE_ENABLED` | Enable Redis-backed caching (CacheInterceptor) | `true` | .env.example |
 | `REDIS_CACHE_TTL` | Cache time window in ms (default: 30000 = 30s) | `30000` | .env.example |
-| `REDIS_THROTTLE_ENABLED` | Enable Redis-backed rate limiting (ThrottlerGuard) | `true` | .env.example |
 | `REDIS_THROTTLE_TTL` | Throttle time window in ms (default: 60000 = 60s) | `60000` | .env.example |
 | `REDIS_THROTTLE_LIMIT` | Max requests per TTL (default: 100) | `100` | .env.example |
-| `REDIS_WS_ADAPTER_ENABLED` | Enable Redis adapter for Socket.io (multi-instance support) | `true` | .env.example |
-| `REDIS_QUEUES_ENABLED` | Enable BullMQ queues for event processing | `true` | .env.example |
 | `REDIS_QUEUES_MAX_RETRIES` | Max retry attempts for failed jobs (1-10) | `3` | .env.example |
 | `REDIS_QUEUES_RETRY_DELAY_MS` | Initial delay between retries in ms (100-60000, uses exponential backoff) | `5000` | .env.example |
 | `REDIS_QUEUES_CONCURRENCY` | Process N jobs concurrently (1-100) | `10` | .env.example |

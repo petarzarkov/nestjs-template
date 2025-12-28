@@ -4,16 +4,12 @@ import { cwd } from 'node:process';
 import { DynamicModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { DataSource } from 'typeorm';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { ContextLogger } from '@/logger/services/context-logger.service';
 import { SnakeNamingStrategy } from './strategies/snake-case.strategy';
 
-/**
- * Database module for initializing database connections.
- * Supports optional Redis caching when REDIS_HOST and REDIS_CACHE_ENABLED are set.
- */
 @Module({})
 export class DatabaseModule {
   static logger?: ContextLogger;
@@ -29,21 +25,6 @@ export class DatabaseModule {
         const appConfig = configService.getOrThrow('app');
         const redisConfig = configService.get('redis');
         DatabaseModule.logger = logger;
-
-        // Configure Redis cache if enabled
-        const cacheConfig: DataSourceOptions['cache'] =
-          redisConfig?.cache.enabled && redisConfig.host
-            ? {
-                type: 'ioredis' as const,
-                options: {
-                  host: redisConfig.host,
-                  port: redisConfig.port,
-                  password: redisConfig.password,
-                  db: redisConfig.db,
-                },
-                duration: redisConfig.cache.ttl,
-              }
-            : {};
 
         return {
           type: 'postgres',
@@ -72,9 +53,16 @@ export class DatabaseModule {
             return true;
           },
           verboseRetryLog: true,
-          ...(cacheConfig && {
-            cache: cacheConfig,
-          }),
+          cache: {
+            type: 'ioredis',
+            options: {
+              host: redisConfig.host,
+              port: redisConfig.port,
+              password: redisConfig.password,
+              db: redisConfig.db,
+            },
+            duration: redisConfig.cache.ttl,
+          },
         };
       },
       dataSourceFactory: async options => {

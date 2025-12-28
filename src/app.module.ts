@@ -24,7 +24,7 @@ import { UsersModule } from './users/users.module';
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
-    RedisModule.forRootAsync(),
+    RedisModule,
     PaginationModule,
     LoggerModule,
     HealthModule,

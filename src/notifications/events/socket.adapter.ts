@@ -39,18 +39,16 @@ export class SocketConfigAdapter extends IoAdapter {
     // Create the server with the specific port and options
     const server = super.createIOServer(serverPort, serverOptions);
 
-    // Apply Redis adapter if enabled
-    if (redisConfig?.wsAdapterEnabled) {
-      this.pubClient = new Redis({
-        host: redisConfig.host,
-        port: redisConfig.port,
-        password: redisConfig.password,
-        db: redisConfig.db,
-      });
-      this.subClient = this.pubClient.duplicate();
+    // Apply Redis adapter
+    this.pubClient = new Redis({
+      host: redisConfig.host,
+      port: redisConfig.port,
+      password: redisConfig.password,
+      db: redisConfig.db,
+    });
+    this.subClient = this.pubClient.duplicate();
 
-      server.adapter(createAdapter(this.pubClient, this.subClient));
-    }
+    server.adapter(createAdapter(this.pubClient, this.subClient));
 
     return server;
   }

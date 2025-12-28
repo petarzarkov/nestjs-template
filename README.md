@@ -72,7 +72,7 @@ bun run create:admin        # Create a new admin user
   - db health check
   - redis health check
   - memory health check
-- **Redis**: Optional Redis integration for caching, throttling, and pub/sub
+- **Redis**: Redis integration for caching, throttling, and job queues
 - **Testing**: Bun's built-in test runner with TypeScript support
 - **WebSockets**: Socket.io gateway with authentication
 - **Email**: React Email templates with Resend
@@ -82,20 +82,20 @@ bun run create:admin        # Create a new admin user
   - Resilient external API caller with retries, backoff & jitter
   - URL building and manipulation utilities
 
-## Redis Features (Optional)
+## Redis Features
 
-All Redis features are optional and activated via environment variables. Requires `REDIS_HOST` to be set.
+Redis is required for the application to run and provides the following features:
 
-| Feature               | Env Variable                    | Description                                        |
-| --------------------- | ------------------------------- | -------------------------------------------------- |
-| **Caching**           | `REDIS_CACHE_ENABLED=true`      | Global `CacheInterceptor` with Redis store         |
-| **Throttling**        | `REDIS_THROTTLE_ENABLED=true`   | Global `ThrottlerGuard` with Redis storage         |
-| **WebSocket Adapter** | `REDIS_WS_ADAPTER_ENABLED=true` | Socket.io Redis adapter for multi-instance support |
-| **Job Queues**        | `REDIS_QUEUES_ENABLED=true`     | BullMQ queues for background job processing        |
+| Feature               | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| **Caching**           | Global `CacheInterceptor` with Redis store         |
+| **Throttling**        | Global `ThrottlerGuard` with Redis storage         |
+| **WebSocket Adapter** | Socket.io Redis adapter for multi-instance support |
+| **Job Queues**        | BullMQ queues for background job processing        |
 
 ### Job Queue System
 
-When `REDIS_QUEUES_ENABLED=true`, background jobs are processed via BullMQ queues:
+Background jobs are processed via BullMQ queues using `@nestjs/bullmq`:
 
 **Published Events:**
 - `user.registered` - When a new user registers (direct or via invite)

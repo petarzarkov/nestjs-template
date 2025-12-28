@@ -14,9 +14,6 @@ import { NotificationPublisherService } from './services/notification-publisher.
       name: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
       useFactory: (configService: AppConfigService<ValidatedConfig>) => {
         const redisConfig = configService.get('redis');
-        if (!redisConfig?.queues.enabled) {
-          return {};
-        }
         return {
           defaultJobOptions: {
             attempts: redisConfig.queues.maxRetries,
