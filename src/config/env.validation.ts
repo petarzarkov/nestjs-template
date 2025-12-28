@@ -3,6 +3,7 @@ import { validateSync } from 'class-validator';
 import { GLOBAL_PREFIX } from '@/constants';
 import pkg from '../../package.json';
 import { ConfigValidationError } from './config-validation.error';
+import { getAIConfig } from './dto/ai-vars.dto';
 import { getDbConfig } from './dto/db-vars.dto';
 import { getOAuthConfig } from './dto/oauth-vars.dto';
 import { getRedisConfig } from './dto/redis-vars.dto';
@@ -43,6 +44,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
       serviceConfig.app.webUrl,
       GLOBAL_PREFIX,
     ),
+    ai: getAIConfig(validatedConfig),
   } as const;
 };
 

@@ -19,7 +19,7 @@ export type ErrorHandler = (error: AxiosError) => Error;
 
 export interface ApiRequestConfig<TRequest, TResponse> {
   method: HttpMethod;
-  endpoint: string;
+  endpoint?: string;
   payload?: TRequest;
   pathParams?: ParamsType;
   queryParams?: ParamsType;

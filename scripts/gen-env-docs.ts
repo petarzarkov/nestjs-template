@@ -18,6 +18,7 @@ const groupConfig: Record<string, string | string[]> = {
   WebSocket: 'WS_',
   'HTTP Client': 'HTTP_REQ_',
   OAuth: 'OAUTH_',
+  AI: 'AI_',
   General: '',
 };
 

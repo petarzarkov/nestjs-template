@@ -1,8 +1,11 @@
+import { HttpModule } from '@nestjs/axios';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AIModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/app.config.module';
-import { validateConfig } from './config/env.validation';
+import { ValidatedConfig, validateConfig } from './config/env.validation';
+import { AppConfigService } from './config/services/app.config.service';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
@@ -21,6 +24,15 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
       validate: validateConfig,
     }),
+    HttpModule.registerAsync({
+      global: true,
+      imports: [AppConfigModule],
+      useFactory: async (configService: AppConfigService<ValidatedConfig>) => ({
+        timeout: configService.getOrThrow('http.timeout'),
+        maxRedirects: configService.getOrThrow('http.maxRedirects'),
+      }),
+      inject: [AppConfigService],
+    }),
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
@@ -30,6 +42,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     AuthModule.forRoot(),
     UsersModule,
+    AIModule.forRoot(),
   ],
   providers: [
     HttpLoggingInterceptor,

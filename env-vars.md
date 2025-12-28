@@ -49,6 +49,9 @@ This document outlines the environment variables required for the project. These
 | `LOG_MASK_FIELDS` | Comma-separated list of fields to mask in logs | `'accessToken,jwt,password,secret,phone'` | .env.example |
 | `LOG_FILTER_EVENTS` | Comma-separated list of events to fully exclude from logging e.g. '/api/service/health' | `'/api/service/health,/api/service/config,/api/service/up'` | .env.example |
 | `LOG_MAX_ARRAY_LENGTH` | Maximum number of array items to include in logs before truncating | `1` | .env.example |
+| `AI_GEMINI_API_KEY` | No description provided. | `your_gemini_api_key` | .env.example |
+| `AI_GROQ_API_KEY` | No description provided. | `your_groq_api_key` | .env.example |
+| `AI_OPENROUTER_API_KEY` | No description provided. | `your_openrouter_api_key` | .env.example |
 
 ### Security & JWT
 
@@ -81,6 +84,13 @@ This document outlines the environment variables required for the project. These
 | `GITHUB_OAUTH_CLIENT_SECRET` | Your GitHub OAuth client secret. | `your_github_client_secret` | .env.example |
 | `LINKEDIN_OAUTH_CLIENT_ID` | Your LinkedIn OAuth client ID. | `your_linkedin_client_id` | .env.example |
 | `LINKEDIN_OAUTH_CLIENT_SECRET` | Your LinkedIn OAuth client secret | `your_linkedin_client_secret` | .env.example |
+
+### AI
+
+| Variable | Description | Default Value | Source |
+|---|---|---|---|
+| `AI_STREAM_TIMEOUT` | No description provided. | `10000` | .env.example |
+| `AI_DEFAULT_TEMPERATURE` | No description provided. | `0.9` | .env.example |
 
 ### General
 
