@@ -7,7 +7,7 @@ A production-ready NestJS monolith template with Bun, Biome, TypeScript, TypeORM
 - **Modular Monolith**: Clean module boundaries without microservices complexity
 - **Type Safety**: End-to-end type safety from DB schema to API
 - **Recovery-Oriented**: Database-first design with PostgreSQL persistence
-- **Modern Stack**: Bun, NestJS, TypeORM, TypeScript, Biome, React Emails
+- **Modern Stack**: Bun, NestJS, TypeORM, BullMQ, TypeScript, Biome, React Emails
 
 ## Prerequisites
 
@@ -86,23 +86,28 @@ bun run create:admin        # Create a new admin user
 
 All Redis features are optional and activated via environment variables. Requires `REDIS_HOST` to be set.
 
-| Feature               | Env Variable                    | Description                                           |
-| --------------------- | ------------------------------- | ----------------------------------------------------- |
-| **Caching**           | `REDIS_CACHE_ENABLED=true`      | Global `CacheInterceptor` with Redis store            |
-| **Throttling**        | `REDIS_THROTTLE_ENABLED=true`   | Global `ThrottlerGuard` with Redis storage            |
-| **WebSocket Adapter** | `REDIS_WS_ADAPTER_ENABLED=true` | Socket.io Redis adapter for multi-instance support    |
-| **Pub/Sub Events**    | `REDIS_PUBSUB_ENABLED=true`     | NestJS microservices Redis transport for event system |
+| Feature               | Env Variable                    | Description                                        |
+| --------------------- | ------------------------------- | -------------------------------------------------- |
+| **Caching**           | `REDIS_CACHE_ENABLED=true`      | Global `CacheInterceptor` with Redis store         |
+| **Throttling**        | `REDIS_THROTTLE_ENABLED=true`   | Global `ThrottlerGuard` with Redis storage         |
+| **WebSocket Adapter** | `REDIS_WS_ADAPTER_ENABLED=true` | Socket.io Redis adapter for multi-instance support |
+| **Job Queues**        | `REDIS_QUEUES_ENABLED=true`     | BullMQ queues for background job processing        |
 
-### Event System
+### Job Queue System
 
-When `REDIS_PUBSUB_ENABLED=true`, the following events are published:
+When `REDIS_QUEUES_ENABLED=true`, background jobs are processed via BullMQ queues:
 
+**Published Events:**
 - `user.registered` - When a new user registers (direct or via invite)
 - `user.invited` - When an invite is created
 - `user.password_reset` - When a password reset is requested
 
-Events are handled by `NotificationHandler` using `@EventPattern` decorators, which:
+**Queue Processing:**
+- Jobs are handled by `NotificationWorker` with configurable concurrency and rate limiting
+- Failed jobs automatically retry with exponential backoff
+- Jobs are persisted in Redis for durability and crash recovery
 
+**Actions:**
 - Sends appropriate emails via `EmailService`
 - Emits WebSocket notifications via `EventsGateway`
 
