@@ -4,7 +4,7 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { AIResponseDto } from './dto/ai-response.dto';
 import { AIProvider } from './enum/ai-provider.enum';
 import { GeminiAIProvider } from './providers/gemini-ai.provider';
-import { GenericAIProvider } from './providers/generic-ai.provider';
+import { OpenAIProvider } from './providers/open-ai.provider';
 
 @Injectable()
 export class AIService {
@@ -13,7 +13,7 @@ export class AIService {
   constructor(
     private configService: AppConfigService<ValidatedConfig>,
     private geminiAIProvider: GeminiAIProvider,
-    private genericAIProvider: GenericAIProvider,
+    private openAIProvider: OpenAIProvider,
   ) {
     this.#config = this.configService.getOrThrow('ai');
   }
@@ -34,7 +34,7 @@ export class AIService {
     const responseText =
       provider === AIProvider.GOOGLE
         ? await this.geminiAIProvider.queryProvider(model, prompt, systemPrompt)
-        : await this.genericAIProvider.queryProvider(
+        : await this.openAIProvider.queryProvider(
             provider,
             model,
             prompt,
@@ -53,6 +53,6 @@ export class AIService {
       return this.geminiAIProvider.listModels();
     }
 
-    return this.genericAIProvider.listModels(provider);
+    return this.openAIProvider.listModels(provider);
   }
 }

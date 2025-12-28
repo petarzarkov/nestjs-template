@@ -5,7 +5,7 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { AIController } from './ai.controller';
 import { AIService } from './ai.service';
 import { GeminiAIProvider } from './providers/gemini-ai.provider';
-import { GenericAIProvider } from './providers/generic-ai.provider';
+import { OpenAIProvider } from './providers/open-ai.provider';
 
 export class AIModule {
   static forRoot(): DynamicModule {
@@ -31,8 +31,8 @@ export class AIModule {
     }
 
     if (process.env.AI_GROQ_API_KEY || process.env.AI_OPENROUTER_API_KEY) {
-      providers.push(GenericAIProvider);
-      exports.push(GenericAIProvider);
+      providers.push(OpenAIProvider);
+      exports.push(OpenAIProvider);
     }
 
     return {

@@ -8,7 +8,7 @@ import { ContextLogger } from '@/logger/services/context-logger.service';
 import { AIProvider } from '../enum/ai-provider.enum';
 
 @Injectable()
-export class GenericAIProvider {
+export class OpenAIProvider {
   private config: ValidatedConfig['ai'];
 
   constructor(
@@ -30,7 +30,7 @@ export class GenericAIProvider {
     }
 
     return this.helpersService.makeExternalApiCall<TRequest, TResponse>({
-      flow: 'generic-ai',
+      flow: 'openapi-ai',
       baseUrl: providerConfig.url,
       httpService: this.httpService,
       headerFactory: () => ({
