@@ -103,29 +103,7 @@ describe('Auth (e2e)', () => {
       }
     });
 
-    test('should trigger Redis Streams event and receive WebSocket notification', async () => {
-      // First verify Redis Streams is enabled
-      const configResponse = await ctx.api.get<{
-        redis: {
-          enabled: boolean;
-          cacheEnabled?: boolean;
-          throttleEnabled?: boolean;
-          wsAdapterEnabled?: boolean;
-          queuesEnabled?: boolean;
-        };
-      }>('/api/service/config');
-
-      expect(configResponse.status).toBe(200);
-      expect(configResponse.data).toHaveProperty('redis');
-
-      if (
-        !configResponse.data.redis.enabled ||
-        !configResponse.data.redis.queuesEnabled
-      ) {
-        console.log('⚠️  Redis queues not enabled, skipping event flow test');
-        return;
-      }
-
+    test('should trigger BullMQ job queue and receive WebSocket notification', async () => {
       // Connect admin WebSocket to listen for notifications
       const { accessToken } = await ctx.loginAsAdmin();
       ctx.ws.connect(accessToken, E2E.API_URL);
@@ -145,12 +123,12 @@ describe('Auth (e2e)', () => {
 
       expect(response.status).toBe(201);
 
-      // Wait for the WebSocket notification from Redis Streams
-      // Flow: Register → EventPublisher → Redis Streams → StreamConsumer → NotificationHandler → WebSocket
+      // Wait for the WebSocket notification from BullMQ
+      // Flow: Register → NotificationPublisherService → BullMQ Queue → NotificationProcessor → WebSocket
       const notification = await ctx.ws.waitForEvent<{
         event: string;
         payload: { email: string; name: string; type: string };
-      }>('notification', 3000); // 3s timeout should be sufficient with 100ms block time
+      }>('notification', 3000); // 3s timeout
 
       expect(notification).toBeDefined();
       expect(notification.event).toBe('user.registered');

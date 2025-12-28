@@ -70,7 +70,6 @@ export class HealthController {
     status: HttpStatus.OK,
   })
   version() {
-    const redisConfig = this.configService.get('redis');
     return {
       name: this.appConfig.name,
       version: this.appConfig.version,
@@ -78,15 +77,6 @@ export class HealthController {
       commitMessage: this.serviceConfig.commitMessage,
       commitSha: this.serviceConfig.commitSha,
       tz: this.appConfig.timezone,
-      redis: redisConfig
-        ? {
-            enabled: true,
-            cacheEnabled: redisConfig.cache.enabled,
-            throttleEnabled: redisConfig.throttle.enabled,
-            wsAdapterEnabled: redisConfig.wsAdapterEnabled,
-            queuesEnabled: redisConfig.queues.enabled,
-          }
-        : { enabled: false },
       versions: process.versions,
     };
   }
