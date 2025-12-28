@@ -1,21 +1,46 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import type { ValidatedConfig } from '@/config/env.validation';
+import { AppConfigService } from '@/config/services/app.config.service';
 import { EmailModule } from './email/email.module';
+import { EVENT_CONSTANTS } from './events/events';
 import { EventsModule } from './events/events.module';
-import { NotificationQueue } from './queues/notification.queue';
+import { NotificationProcessor } from './processors/notification.processor';
 import { NotificationPublisherService } from './services/notification-publisher.service';
-import { NotificationWorker } from './workers/notification.worker';
 
-/**
- * Module for BullMQ-based notification queues.
- * Provides queue, worker, and publisher services.
- */
 @Module({
-  imports: [EmailModule, EventsModule.forRoot()],
-  providers: [
-    NotificationQueue,
-    NotificationWorker,
-    NotificationPublisherService,
+  imports: [
+    BullModule.registerQueueAsync({
+      name: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+      useFactory: (configService: AppConfigService<ValidatedConfig>) => {
+        const redisConfig = configService.get('redis');
+        if (!redisConfig?.queues.enabled) {
+          return {};
+        }
+        return {
+          defaultJobOptions: {
+            attempts: redisConfig.queues.maxRetries,
+            backoff: {
+              type: 'exponential',
+              delay: redisConfig.queues.retryDelayMs,
+            },
+            removeOnComplete: {
+              count: 100, // Keep last 100 completed jobs
+              age: 86400, // 24 hours
+            },
+            removeOnFail: {
+              count: 500, // Keep last 500 failed jobs
+              age: 604800, // 7 days
+            },
+          },
+        };
+      },
+      inject: [AppConfigService],
+    }),
+    EmailModule,
+    EventsModule.forRoot(),
   ],
+  providers: [NotificationProcessor, NotificationPublisherService],
   exports: [NotificationPublisherService],
 })
 export class NotificationQueueModule {}

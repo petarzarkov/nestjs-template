@@ -103,7 +103,9 @@ When `REDIS_QUEUES_ENABLED=true`, background jobs are processed via BullMQ queue
 - `user.password_reset` - When a password reset is requested
 
 **Queue Processing:**
-- Jobs are handled by `NotificationWorker` with configurable concurrency and rate limiting
+- Jobs are handled by `NotificationProcessor` using `@Processor()` decorator
+- Event handlers use `@OnWorkerEvent()` decorators for lifecycle hooks
+- Configurable concurrency and rate limiting via BullMQ options
 - Failed jobs automatically retry with exponential backoff
 - Jobs are persisted in Redis for durability and crash recovery
 

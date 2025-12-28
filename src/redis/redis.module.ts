@@ -1,4 +1,5 @@
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { BullModule } from '@nestjs/bullmq';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -6,6 +7,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
+import { NotificationModule } from '@/notifications/notification.module';
 
 /**
  * Redis module that conditionally enables Redis features based on environment variables.
@@ -24,6 +26,8 @@ export class RedisModule {
       Boolean(redisHost) && process.env.REDIS_THROTTLE_ENABLED === 'true';
     const cacheEnabled =
       Boolean(redisHost) && process.env.REDIS_CACHE_ENABLED === 'true';
+    const queuesEnabled =
+      Boolean(redisHost) && process.env.REDIS_QUEUES_ENABLED === 'true';
 
     const imports: DynamicModule['imports'] = [];
     const providers: Provider[] = [];
@@ -85,6 +89,27 @@ export class RedisModule {
         useClass: CacheInterceptor,
       });
       exports.push(CacheModule);
+    }
+
+    if (queuesEnabled) {
+      imports.push(
+        BullModule.forRootAsync({
+          inject: [AppConfigService],
+          useFactory: (configService: AppConfigService<ValidatedConfig>) => {
+            const redisConfig = configService.getOrThrow('redis');
+
+            return {
+              connection: {
+                host: redisConfig.host,
+                port: redisConfig.port,
+                password: redisConfig.password,
+                db: redisConfig.db,
+              },
+            };
+          },
+        }),
+        NotificationModule,
+      );
     }
 
     return {

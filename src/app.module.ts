@@ -12,7 +12,6 @@ import { DatabaseModule } from './db/database.module';
 import { HealthModule } from './health/health.module';
 import { HelpersModule } from './helpers/helpers.module';
 import { LoggerModule } from './logger/logger.module';
-import { NotificationModule } from './notifications/notification.module';
 import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
 
@@ -31,7 +30,6 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     AuthModule.forRoot(),
     UsersModule,
-    NotificationModule,
   ],
   providers: [
     HttpLoggingInterceptor,

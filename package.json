@@ -33,7 +33,7 @@
   "dependencies": {
     "@nest-lab/throttler-storage-redis": "1.1.0",
     "@nestjs/axios": "4.0.1",
-    "@nestjs/bullmq": "11.0.4",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/cache-manager": "3.1.0",
     "@nestjs/common": "11.1.10",
     "@nestjs/config": "4.0.2",
@@ -52,7 +52,7 @@
     "@react-email/components": "1.0.2",
     "@socket.io/redis-adapter": "8.3.0",
     "axios": "1.13.2",
-    "bullmq": "^5.66.3",
+    "bullmq": "5.66.4",
     "cache-manager": "7.2.7",
     "cache-manager-ioredis-yet": "2.1.2",
     "class-transformer": "0.5.1",
