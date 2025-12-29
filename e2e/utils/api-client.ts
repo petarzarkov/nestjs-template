@@ -1,3 +1,5 @@
+import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
+import { SanitizedUser } from '@/users/entity/user.entity';
 import { E2E } from '../constants';
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -86,17 +88,11 @@ export class ApiClient {
   }
 
   // Auth shortcuts
-  async login(
-    email: string,
-    password: string,
-  ): Promise<{ accessToken: string }> {
-    const response = await this.post<{ accessToken: string }>(
-      '/api/auth/login',
-      {
-        email,
-        password,
-      },
-    );
+  async login(email: string, password: string) {
+    const response = await this.post<AuthResponseDto>('/api/auth/login', {
+      email,
+      password,
+    });
 
     if (!response.ok) {
       throw new Error(`Login failed: ${JSON.stringify(response.data)}`);
@@ -110,8 +106,8 @@ export class ApiClient {
     email: string;
     password: string;
     inviteCode: string;
-  }): Promise<{ id: string; email: string }> {
-    const response = await this.post<{ id: string; email: string }>(
+  }) {
+    const response = await this.post<AuthResponseDto>(
       '/api/auth/register',
       data,
     );
@@ -123,13 +119,8 @@ export class ApiClient {
     return response.data;
   }
 
-  async getMe(): Promise<{ id: string; email: string; roles: string[] }> {
-    const response = await this.get<{
-      id: string;
-      email: string;
-      roles: string[];
-    }>('/api/users/me');
-
+  async getMe() {
+    const response = await this.get<SanitizedUser>('/api/users/me');
     if (!response.ok) {
       throw new Error(`Get me failed: ${JSON.stringify(response.data)}`);
     }

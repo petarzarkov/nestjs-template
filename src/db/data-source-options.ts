@@ -7,6 +7,11 @@ import { SnakeNamingStrategy } from './strategies/snake-case.strategy';
 
 const { db } = validateDbConfig(process.env);
 
+const isProduction = process.env.NODE_ENV === 'production';
+const rootDir = isProduction ? 'dist' : 'src';
+
+console.log(`Root dir is: ${rootDir}`);
+
 /**
  * Default PostgreSQL connection options
  */
@@ -25,8 +30,8 @@ export const dbOptions: DataSourceOptions = {
       : false,
   synchronize: false,
   namingStrategy: new SnakeNamingStrategy(),
-  entities: [join(cwd(), 'src/**/*.entity.{ts,js}')],
-  migrations: [join(cwd(), 'src/db/migrations/**/*.{ts,js}')],
+  entities: [join(cwd(), `${rootDir}/**/*.entity.{ts,js}`)],
+  migrations: [join(cwd(), `${rootDir}/db/migrations/**/*.{ts,js}`)],
 };
 
 const dataSource = new DataSource(dbOptions);

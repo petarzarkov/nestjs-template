@@ -26,6 +26,7 @@
     "typeorm": "bun --env-file=.env ./node_modules/typeorm/cli.js -d src/db/data-source-options.ts",
     "migration:gen": "bash ./scripts/migration-generate.sh",
     "migration:run": "bun run typeorm migration:run",
+    "migration:run:prod": "NODE_ENV=production bun ./node_modules/typeorm/cli.js -d dist/db/data-source-options.js migration:run",
     "migration:revert": "bun run typeorm migration:revert",
     "db:drop": "bun run typeorm schema:drop",
     "create:admin": "bun --env-file=.env ./scripts/create-admin.ts"

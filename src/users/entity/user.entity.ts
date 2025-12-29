@@ -21,11 +21,11 @@ export class User {
   id!: string;
 
   @ApiProperty()
-  @Column({ unique: true })
+  @Column({ type: 'text', unique: true })
   @IsEmail()
   email!: string;
 
-  @Column({ select: false, nullable: true })
+  @Column({ type: 'text', select: false, nullable: true })
   @PasswordDecorator(true)
   password!: string | null;
 
@@ -59,7 +59,7 @@ export class User {
   roles!: UserRole[];
 
   @ApiProperty()
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   @IsBoolean()
   suspended!: boolean;
 
