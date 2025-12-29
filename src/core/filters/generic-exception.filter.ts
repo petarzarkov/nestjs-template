@@ -1,12 +1,10 @@
 import {
   ArgumentsHost,
-  BadRequestException,
   Catch,
   ExceptionFilter,
   HttpException,
   HttpStatus,
   Injectable,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ContextService } from '@/logger/services/context.service';
@@ -39,140 +37,54 @@ export class GenericExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    const { httpException, status } = this.createHttpException(exception);
-    let responseBody: string | object = httpException.getResponse();
-
-    // Enhance BadRequestException with errorFields if it contains validation errors
-    if (
-      httpException instanceof BadRequestException &&
-      status === HttpStatus.BAD_REQUEST &&
-      responseBody instanceof Object
-    ) {
-      const enhancedResponse = this.enhanceBadRequestResponse(
-        responseBody as Record<string, unknown>,
-      );
-      responseBody = enhancedResponse as string | object;
-    }
-
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    const responseBody = this.exceptionResponse(exception);
+    if (responseBody.status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error('Server error occurred', {
         error: exception,
-        status: status,
-        responseBody: responseBody,
+        status: responseBody.status,
+        responseBody,
       });
     } else {
       this.logger.warn('Client error occurred', {
         error: exception,
-        status: status,
-        responseBody: responseBody,
+        status: responseBody.status,
+        responseBody,
       });
     }
 
-    response.status(status).json(responseBody);
+    response.status(responseBody.status).json(responseBody);
   }
 
-  /**
-   * Creates appropriate HTTP exception and determines status code
-   */
-  private createHttpException(exception: unknown): {
-    httpException: HttpException;
-    status: number;
-  } {
-    // If it's already an HttpException, return it as is
+  private exceptionResponse(exception: unknown) {
     if (exception instanceof HttpException) {
+      const errorResponse = exception.getResponse();
+      const parsedError =
+        typeof errorResponse === 'object'
+          ? {
+              error:
+                'error' in errorResponse
+                  ? errorResponse.error
+                  : 'INTERNAL_SERVER_ERROR',
+              message:
+                'message' in errorResponse
+                  ? errorResponse.message
+                  : 'An unknown error occurred',
+            }
+          : {
+              error: exception.name,
+              message: errorResponse || 'An unknown error occurred',
+            };
+
       return {
-        httpException: exception,
-        status: exception.getStatus(),
+        ...parsedError,
+        status: exception?.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
 
-    // Handle regular Error objects
-    if (exception instanceof Error) {
-      return {
-        httpException: new InternalServerErrorException(exception.message),
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
-    }
-
-    // Handle string errors
-    if (typeof exception === 'string') {
-      return {
-        httpException: new InternalServerErrorException(exception),
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
-    }
-
-    // Handle object errors
-    if (typeof exception === 'object' && exception !== null) {
-      const errorObj = exception as Record<string, unknown>;
-      const message =
-        'message' in errorObj && typeof errorObj.message === 'string'
-          ? errorObj.message
-          : 'Unknown error';
-
-      return {
-        httpException: new InternalServerErrorException(message),
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
-    }
-
-    // Default fallback
     return {
-      httpException: new InternalServerErrorException(
-        'An unknown error occurred',
-      ),
+      error: 'INTERNAL_SERVER_ERROR',
+      message: 'An unknown error occurred',
       status: HttpStatus.INTERNAL_SERVER_ERROR,
     };
-  }
-
-  private enhanceBadRequestResponse(
-    responseBody: Record<string, unknown> | null,
-  ) {
-    if (responseBody === null) {
-      return responseBody;
-    }
-
-    if ('errorFields' in responseBody) {
-      return responseBody;
-    }
-
-    if ('message' in responseBody) {
-      const message = responseBody.message;
-      if (Array.isArray(message)) {
-        const errorFields = message.map((error: unknown, index: number) => {
-          if (typeof error === 'string') {
-            // Handle special case: "property 'fieldName' should not exist"
-            const propertyMatch = error.match(
-              /property '([^']+)' should not exist/,
-            );
-            if (propertyMatch) {
-              return {
-                field: propertyMatch[1],
-                error,
-              };
-            }
-
-            const fieldMatch = error.match(/^([a-zA-Z_][a-zA-Z0-9_]*)/);
-            const field = fieldMatch ? fieldMatch[1] : `field${index}`;
-
-            return {
-              field,
-              error,
-            };
-          }
-          return {
-            field: `field${index}`,
-            error: String(error),
-          };
-        });
-
-        return {
-          ...responseBody,
-          errorFields,
-        };
-      }
-    }
-
-    return responseBody;
   }
 }

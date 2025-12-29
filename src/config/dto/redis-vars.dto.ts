@@ -36,20 +36,8 @@ export class RedisVars {
   @Min(SECOND)
   @Max(MINUTE)
   @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 30000))
-  REDIS_CACHE_TTL: number = 30000; // 30 seconds in ms
-
-  @IsNumber()
-  @Min(1000)
-  @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : MINUTE))
-  REDIS_THROTTLE_TTL: number = MINUTE;
-
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 100))
-  REDIS_THROTTLE_LIMIT: number = 100; // requests per TTL
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 5000))
+  REDIS_CACHE_TTL: number = 5000; // 5 seconds in ms
 
   @IsNumber()
   @Min(1)
@@ -95,10 +83,6 @@ export const getRedisConfig = (config: RedisVars) => {
     db: config.REDIS_DB,
     cache: {
       ttl: config.REDIS_CACHE_TTL,
-    },
-    throttle: {
-      ttl: config.REDIS_THROTTLE_TTL,
-      limit: config.REDIS_THROTTLE_LIMIT,
     },
     queues: {
       maxRetries: config.REDIS_QUEUES_MAX_RETRIES,

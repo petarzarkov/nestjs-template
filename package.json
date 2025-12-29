@@ -31,6 +31,8 @@
     "create:admin": "bun --env-file=.env ./scripts/create-admin.ts"
   },
   "dependencies": {
+    "@google/genai": "1.34.0",
+    "@keyv/redis": "^5.1.5",
     "@nest-lab/throttler-storage-redis": "1.1.0",
     "@nestjs/axios": "4.0.1",
     "@nestjs/bullmq": "^11.0.4",
@@ -54,11 +56,9 @@
     "axios": "1.13.2",
     "bullmq": "5.66.4",
     "cache-manager": "7.2.7",
-    "cache-manager-ioredis-yet": "2.1.2",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.3",
     "decimal.js": "10.6.0",
-    "@google/genai": "1.34.0",
     "ioredis": "5.8.2",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
