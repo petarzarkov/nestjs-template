@@ -64,14 +64,19 @@ export class GenericExceptionFilter implements ExceptionFilter {
               error:
                 'error' in errorResponse
                   ? errorResponse.error
-                  : 'INTERNAL_SERVER_ERROR',
+                  : HttpStatus[
+                      exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR
+                    ],
               message:
                 'message' in errorResponse
                   ? errorResponse.message
                   : 'An unknown error occurred',
             }
           : {
-              error: exception.name,
+              error:
+                HttpStatus[
+                  exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR
+                ],
               message: errorResponse || 'An unknown error occurred',
             };
 
