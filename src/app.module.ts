@@ -1,6 +1,8 @@
+import { join } from 'node:path';
 import { HttpModule } from '@nestjs/axios';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { AIModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/app.config.module';
@@ -32,6 +34,11 @@ import { UsersModule } from './users/users.module';
         maxRedirects: configService.getOrThrow('http.maxRedirects'),
       }),
       inject: [AppConfigService],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
+      exclude: ['/api*'],
     }),
     ScheduleModule.forRoot(),
     HelpersModule,

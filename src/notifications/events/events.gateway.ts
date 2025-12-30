@@ -1,8 +1,11 @@
 import { HttpStatus, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -21,6 +24,7 @@ import { ExtendedSocket, WebSocketBaseMessage, WSServer } from './events.dto';
 
 export const ROOMS = {
   ADMINS: 'admins',
+  CHAT: 'chat',
   user: (id: string) => `user_${id}`,
 };
 
@@ -162,7 +166,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: ExtendedSocket) {
     const user = client.data.user;
     const userRoom = ROOMS.user(user.id);
-    const rooms = [userRoom];
+    const rooms = [userRoom, ROOMS.CHAT];
     if (user.roles.includes(UserRole.ADMIN)) {
       rooms.push(ROOMS.ADMINS);
     }
@@ -179,13 +183,54 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       message: `Connected to WS with id ${client.id}`,
       payload: user,
     });
+
+    // Notify chat room that user joined
+    this.server.to(ROOMS.CHAT).emit('userJoined', {
+      username: user.email,
+      timestamp: new Date(),
+    });
+
+    // Send user count
+    const chatRoom = this.server.sockets.adapter.rooms.get(ROOMS.CHAT);
+    const userCount = chatRoom ? chatRoom.size : 0;
+    this.server.to(ROOMS.CHAT).emit('userCount', userCount);
   }
 
   handleDisconnect(client: ExtendedSocket) {
+    const user = client.data.user;
+
     this.logger.log(`WS Disconnected: ${client.id}`, {
-      payload: client.data.user,
+      payload: user,
       requestId: client.handshake.headers[REQUEST_ID_HEADER_KEY],
     });
+
+    // Notify chat room that user left
+    if (user) {
+      this.server.to(ROOMS.CHAT).emit('userLeft', {
+        username: user.email,
+        timestamp: new Date(),
+      });
+
+      // Send updated user count
+      const chatRoom = this.server.sockets.adapter.rooms.get(ROOMS.CHAT);
+      const userCount = chatRoom ? chatRoom.size : 0;
+      this.server.to(ROOMS.CHAT).emit('userCount', userCount);
+    }
+  }
+
+  @SubscribeMessage('chatMessage')
+  handleChatMessage(
+    @MessageBody() data: { message: string },
+    @ConnectedSocket() client: ExtendedSocket,
+  ) {
+    const user = client.data.user;
+    const chatMessage = {
+      username: user.email,
+      message: data.message,
+      timestamp: new Date(),
+    };
+    this.server.to(ROOMS.CHAT).emit('message', chatMessage);
+    return { event: 'messageSent', data: { success: true } };
   }
 
   sendNotification<K extends EventType, T extends EventMap[K]>(data: {

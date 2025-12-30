@@ -3,33 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OAuth2 Local Test</title>
+    <title>Real-time Chat</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
     <style>
-        body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f5; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        .btn { display: inline-block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px; }
-        .btn-github { background-color: #333; }
-        .btn-google { background-color: #DB4437; }
-        .btn-linkedin { background-color: #0077b5; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            max-height: 700px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .user-count {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        #auth-section {
+            padding: 40px;
+            text-align: center;
+        }
+
+        #auth-section h2 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 300px;
+            margin: 0 auto 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-github {
+            background-color: #24292e;
+            color: white;
+        }
+
+        .btn-github:hover {
+            background-color: #000;
+            transform: translateY(-2px);
+        }
+
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            position: relative;
+            color: #666;
+        }
+
+        .register-form {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .register-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .register-form input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-register {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        #chat-section {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-user {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border-left: 3px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .system-message {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+            margin: 10px 0;
+        }
+
+        .input-section {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .message-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #message-input:focus {
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 Real-time Chat</h1>
+            <div class="user-count" id="user-count">0 users online</div>
+        </div>
 
-    <div class="card">
-        <h2>Test OAuth Flow</h2>
-        
-        <a href="http://localhost:2999/api/auth/github" class="btn btn-github">
-            Login with GitHub
-        </a>
+        <div id="auth-section">
+            <h2>Join the Chat</h2>
 
-        <a href="http://localhost:2999/api/auth/google" class="btn btn-google">
-            Login with Google
-        </a>
+            <div class="auth-buttons">
+                <a href="/api/auth/github" class="btn btn-github">
+                    Login with GitHub
+                </a>
+            </div>
 
-        <a href="http://localhost:2999/api/auth/linkedin" class="btn btn-linkedin">
-            Login with LinkedIn
-        </a>
+            <div class="divider">
+                <span>or</span>
+            </div>
+
+            <form class="register-form" id="register-form">
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Enter your email"
+                    required
+                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                    title="Please enter a valid email address"
+                >
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Password (min 6 chars, 1 uppercase, 1 symbol)"
+                    required
+                    minlength="6"
+                    pattern="^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':&quot;\\|,.<>?]).{6,}$"
+                    title="Password must be at least 6 characters with 1 uppercase letter and 1 symbol"
+                >
+                <button type="submit" class="btn btn-register">
+                    Register / Login
+                </button>
+            </form>
+        </div>
+
+        <div id="chat-section">
+            <div id="messages"></div>
+            <div class="input-section">
+                <form class="message-form" id="message-form">
+                    <input
+                        type="text"
+                        id="message-input"
+                        placeholder="Type a message..."
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" class="btn-send">Send</button>
+                </form>
+            </div>
+        </div>
     </div>
 
+    <script>
+        let socket;
+
+        // Check if user is already authenticated via OAuth
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (token) {
+            // User authenticated via OAuth
+            localStorage.setItem('token', token);
+            // Clean URL
+            window.history.replaceState({}, document.title, '/');
+            joinChat();
+        }
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                // Try login first
+                let response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                // If login fails, try registration
+                if (!response.ok) {
+                    response = await fetch('/api/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email, password }),
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error('Authentication failed');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('token', data.accessToken);
+                joinChat();
+            } catch (error) {
+                alert('Authentication failed. Please check your credentials.');
+                console.error(error);
+            }
+        });
+
+        function joinChat() {
+            // Hide auth section, show chat
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('chat-section').style.display = 'flex';
+
+            // Initialize socket connection with JWT token
+            const token = localStorage.getItem('token');
+            socket = io({
+                path: '/ws',
+                transports: ['websocket'],
+                auth: {
+                    token: `Bearer ${token}`
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+
+            socket.on('connected', (data) => {
+                console.log('Authenticated:', data);
+            });
+
+            socket.on('userJoined', (data) => {
+                addSystemMessage(`${data.username} joined the chat`);
+            });
+
+            socket.on('userLeft', (data) => {
+                addSystemMessage(`${data.username} left the chat`);
+            });
+
+            socket.on('userCount', (count) => {
+                document.getElementById('user-count').textContent = `${count} user${count !== 1 ? 's' : ''} online`;
+            });
+
+            socket.on('message', (data) => {
+                addMessage(data);
+            });
+
+            socket.on('disconnect', () => {
+                addSystemMessage('Disconnected from server');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                addSystemMessage('Failed to connect. Please refresh and try again.');
+            });
+        }
+
+        document.getElementById('message-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+
+            if (message && socket) {
+                socket.emit('chatMessage', { message });
+                input.value = '';
+            }
+        });
+
+        function addMessage(data) {
+            const messagesDiv = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message';
+
+            const time = new Date(data.timestamp).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            messageEl.innerHTML = `
+                <div class="message-user">${escapeHtml(data.username)}</div>
+                <div class="message-content">${escapeHtml(data.message)}</div>
+                <div class="message-time">${time}</div>
+            `;
+
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const messagesDiv = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = 'system-message';
+            messageEl.textContent = text;
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 </html>

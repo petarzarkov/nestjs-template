@@ -13,6 +13,12 @@ export class WebSocketMessage<Key extends EventType, T extends EventMap[Key]> {
   payload!: T;
 }
 
+export interface ChatMessage {
+  username: string;
+  message: string;
+  timestamp: Date;
+}
+
 export interface WebSocketEmitEvents {
   connected: (message: WebSocketBaseMessage<SanitizedUser>) => void;
   exception: (message: WebSocketBaseMessage) => void;
@@ -20,6 +26,10 @@ export interface WebSocketEmitEvents {
     message: WebSocketMessage<EventType, EventMap[EventType]>,
   ) => void;
   global_notification: (message: WebSocketBaseMessage) => void;
+  userJoined: (data: { username: string; timestamp: Date }) => void;
+  userLeft: (data: { username: string; timestamp: Date }) => void;
+  userCount: (count: number) => void;
+  message: (data: ChatMessage) => void;
 }
 
 export type EmitToClient = <K extends keyof WebSocketEmitEvents>(

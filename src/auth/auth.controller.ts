@@ -19,7 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { BaseResponseDto } from '@/auth/dto/base-response.dto';
 import { LoginRequestDto } from '@/auth/dto/login-request.dto';
@@ -196,13 +196,16 @@ export class AuthController {
   @Get('github/callback')
   @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
   @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Returns JWT token after successful login',
-    type: AuthResponseDto,
+    status: HttpStatus.FOUND,
+    description: 'Redirects to chat with JWT token',
   })
   @ApiExcludeEndpoint()
-  async githubAuthCallback(@Req() req: Request) {
-    return this.handleOAuthCallback(req);
+  async githubAuthCallback(@Req() req: Request & { res: Response }) {
+    const authResponse = this.handleOAuthCallback(req);
+    const user = req.user as SanitizedUser;
+    // Redirect to chat with token and username
+    const redirectUrl = `/?token=${authResponse.accessToken}&username=${encodeURIComponent(user.email)}`;
+    req.res.redirect(redirectUrl);
   }
 
   @UseGuards(AuthGuard(OAuthProvider.LINKEDIN))
