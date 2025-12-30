@@ -1,4 +1,3 @@
-import KeyvRedis from '@keyv/redis';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bullmq';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
@@ -9,14 +8,16 @@ import type { Request } from 'express';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { NotificationModule } from '@/notifications/notification.module';
+import { KeyvIoredisAdapter } from './services/keyv-ioredis-adapter';
+import { RedisService } from './services/redis.service';
 
 @Global()
 @Module({
   imports: [
     ThrottlerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (configService: AppConfigService<ValidatedConfig>) => {
-        const redisConfig = configService.getOrThrow('redis');
+      inject: [RedisService],
+      useFactory: (redisService: RedisService) => {
+        const redisClient = redisService.redisClient;
         return {
           throttlers: [
             {
@@ -41,24 +42,24 @@ import { NotificationModule } from '@/notifications/notification.module';
                 !!context.switchToHttp().getRequest<Request>().user,
             },
           ],
-          storage: new ThrottlerStorageRedisService({
-            host: redisConfig.host,
-            port: redisConfig.port,
-            password: redisConfig.password,
-            db: redisConfig.db,
-          }),
+          storage: new ThrottlerStorageRedisService(redisClient),
         };
       },
     }),
     CacheModule.registerAsync({
-      inject: [AppConfigService],
+      inject: [AppConfigService, RedisService],
       isGlobal: true,
-      useFactory: async (configService: AppConfigService<ValidatedConfig>) => {
+      useFactory: async (
+        configService: AppConfigService<ValidatedConfig>,
+        redisService: RedisService,
+      ) => {
         const redisConfig = configService.getOrThrow('redis');
-        const redisUrl = `redis://${redisConfig.password ? `:${redisConfig.password}@` : ''}${redisConfig.host}:${redisConfig.port}/${redisConfig.db}`;
+        const redisClient = redisService.redisClient;
+        const adapter = new KeyvIoredisAdapter(redisClient);
+
         return {
           ttl: redisConfig.cache.ttl,
-          stores: [new KeyvRedis(redisUrl)],
+          stores: [adapter],
         };
       },
     }),
@@ -66,6 +67,8 @@ import { NotificationModule } from '@/notifications/notification.module';
       inject: [AppConfigService],
       useFactory: (configService: AppConfigService<ValidatedConfig>) => {
         const redisConfig = configService.getOrThrow('redis');
+
+        // Leave the connection to the Redis client to the BullMQ module to manage.
         return {
           connection: {
             host: redisConfig.host,
@@ -79,6 +82,7 @@ import { NotificationModule } from '@/notifications/notification.module';
     NotificationModule,
   ],
   providers: [
+    RedisService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
@@ -88,6 +92,12 @@ import { NotificationModule } from '@/notifications/notification.module';
       useClass: CacheInterceptor,
     },
   ],
-  exports: [ThrottlerModule, CacheModule, BullModule, NotificationModule],
+  exports: [
+    ThrottlerModule,
+    CacheModule,
+    BullModule,
+    NotificationModule,
+    RedisService,
+  ],
 })
 export class RedisModule {}
