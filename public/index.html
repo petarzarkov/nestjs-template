@@ -163,6 +163,8 @@
         .message {
             margin-bottom: 15px;
             animation: slideIn 0.3s ease;
+            display: flex;
+            gap: 10px;
         }
 
         @keyframes slideIn {
@@ -174,6 +176,29 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            object-fit: cover;
+            border: 2px solid #667eea;
+        }
+
+        .message-avatar.ai-avatar {
+            border-color: #f5576c;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .message-body {
+            flex: 1;
+            min-width: 0;
         }
 
         .message-user {
@@ -281,7 +306,8 @@
             color: #f093fb;
         }
 
-        #ai-provider {
+        #ai-provider,
+        #ai-model {
             padding: 8px 12px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
@@ -289,10 +315,18 @@
             outline: none;
             cursor: pointer;
             background: white;
+            min-width: 150px;
         }
 
-        #ai-provider:focus {
+        #ai-provider:focus,
+        #ai-model:focus {
             border-color: #f093fb;
+        }
+
+        #ai-provider:disabled,
+        #ai-model:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .ai-message .message-user {
@@ -307,6 +341,10 @@
             background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
             border-left: 3px solid #f5576c;
             white-space: pre-wrap;
+        }
+
+        .message-content::first-line {
+            font-weight: 600;
         }
 
         .typing-indicator {
@@ -384,10 +422,11 @@
                         <input type="checkbox" id="ask-ai-toggle">
                         <span>🤖 Ask AI about this message</span>
                     </label>
-                    <select id="ai-provider">
-                        <option value="groq">Groq (Fast)</option>
-                        <option value="google">Gemini</option>
-                        <option value="openrouter">OpenRouter</option>
+                    <select id="ai-provider" disabled>
+                        <option value="">Loading providers...</option>
+                    </select>
+                    <select id="ai-model" disabled>
+                        <option value="">Select provider first</option>
                     </select>
                 </div>
             </div>
@@ -397,6 +436,7 @@
     <script>
         let socket;
         const aiRequests = new Map(); // Track AI streaming requests
+        let availableModels = []; // Store fetched models
 
         // Check if user is already authenticated via OAuth
         const urlParams = new URLSearchParams(window.location.search);
@@ -449,10 +489,98 @@
             }
         });
 
+        async function fetchAvailableModels() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/ai/models', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch models');
+                }
+
+                availableModels = await response.json();
+                populateProviderDropdown();
+            } catch (error) {
+                console.error('Failed to fetch AI models:', error);
+                // Fallback to basic providers
+                document.getElementById('ai-provider').innerHTML = `
+                    <option value="">No models available</option>
+                `;
+            }
+        }
+
+        function populateProviderDropdown() {
+            const providerSelect = document.getElementById('ai-provider');
+
+            if (availableModels.length === 0) {
+                providerSelect.innerHTML = '<option value="">No providers configured</option>';
+                return;
+            }
+
+            providerSelect.innerHTML = '<option value="">Select provider</option>';
+            availableModels.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.provider;
+                option.textContent = getProviderDisplayName(item.provider);
+                providerSelect.appendChild(option);
+            });
+
+            providerSelect.disabled = false;
+        }
+
+        function getProviderDisplayName(provider) {
+            const names = {
+                'groq': 'Groq (Fast)',
+                'google': 'Google Gemini',
+                'openrouter': 'OpenRouter'
+            };
+            return names[provider] || provider;
+        }
+
+        function populateModelDropdown(provider) {
+            const modelSelect = document.getElementById('ai-model');
+
+            if (!provider) {
+                modelSelect.innerHTML = '<option value="">Select provider first</option>';
+                modelSelect.disabled = true;
+                return;
+            }
+
+            const providerData = availableModels.find(item => item.provider === provider);
+
+            if (!providerData || !providerData.models || providerData.models.length === 0) {
+                modelSelect.innerHTML = '<option value="">No models available</option>';
+                modelSelect.disabled = true;
+                return;
+            }
+
+            modelSelect.innerHTML = '<option value="">Select model</option>';
+            providerData.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelSelect.appendChild(option);
+            });
+
+            // Auto-select first model
+            if (providerData.models.length > 0) {
+                modelSelect.value = providerData.models[0];
+            }
+
+            modelSelect.disabled = false;
+        }
+
         function joinChat() {
             // Hide auth section, show chat
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('chat-section').style.display = 'flex';
+
+            // Fetch available AI models
+            fetchAvailableModels();
 
             // Initialize socket connection with JWT token
             const token = localStorage.getItem('token');
@@ -491,10 +619,11 @@
             socket.on('aiMessageChunk', (data) => {
                 if (!aiRequests.has(data.requestId)) {
                     // First chunk - create AI message element
-                    const messageEl = createAIMessageElement(data.requestId);
+                    const messageEl = createAIMessageElement(data.requestId, data.provider, data.model, data.username);
                     aiRequests.set(data.requestId, {
                         messageEl,
-                        fullText: ''
+                        fullText: '',
+                        username: data.username
                     });
                 }
 
@@ -507,7 +636,7 @@
                 } else {
                     // Append chunk to the message
                     request.fullText += data.chunk;
-                    updateAIMessage(request.messageEl, request.fullText);
+                    updateAIMessage(request.messageEl, request.fullText, request.username);
                 }
             });
 
@@ -515,7 +644,7 @@
                 // If there's a pending AI request, show error in that message
                 if (aiRequests.has(data.requestId)) {
                     const request = aiRequests.get(data.requestId);
-                    showAIError(request.messageEl, data.error);
+                    showAIError(request.messageEl, data.error, data.username || request.username);
                     aiRequests.delete(data.requestId);
                 } else {
                     // Otherwise show as system message
@@ -533,6 +662,12 @@
             });
         }
 
+        // Provider selection handler
+        document.getElementById('ai-provider').addEventListener('change', (e) => {
+            const provider = e.target.value;
+            populateModelDropdown(provider);
+        });
+
         document.getElementById('message-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const input = document.getElementById('message-input');
@@ -545,15 +680,16 @@
 
                 // If "Ask AI" is checked, trigger AI request with the sent message
                 if (shouldAskAI) {
-                    setTimeout(() => {
-                        const provider = document.getElementById('ai-provider').value;
-                        const models = {
-                            groq: 'llama-3.3-70b-versatile',
-                            google: 'gemini-2.5-flash',
-                            openrouter: 'anthropic/claude-3.5-sonnet'
-                        };
-                        requestAI(message, provider, models[provider]);
-                    }, 100); // Small delay to ensure message is sent first
+                    const provider = document.getElementById('ai-provider').value;
+                    const model = document.getElementById('ai-model').value;
+
+                    if (provider && model) {
+                        setTimeout(() => {
+                            requestAI(message, provider, model);
+                        }, 100); // Small delay to ensure message is sent first
+                    } else {
+                        addSystemMessage('Please select a provider and model first');
+                    }
                 }
             }
         });
@@ -568,14 +704,31 @@
                 minute: '2-digit'
             });
 
+            // Get user avatar or use initials
+            const avatarHtml = data.picture
+                ? `<img src="${escapeHtml(data.picture)}" alt="${escapeHtml(data.username)}" class="message-avatar">`
+                : `<div class="message-avatar">${getInitials(data.username)}</div>`;
+
             messageEl.innerHTML = `
-                <div class="message-user">${escapeHtml(data.username)}</div>
-                <div class="message-content">${escapeHtml(data.message)}</div>
-                <div class="message-time">${time}</div>
+                ${avatarHtml}
+                <div class="message-body">
+                    <div class="message-user">${escapeHtml(data.username)}</div>
+                    <div class="message-content">${escapeHtml(data.message)}</div>
+                    <div class="message-time">${time}</div>
+                </div>
             `;
 
             messagesDiv.appendChild(messageEl);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
         }
 
         function addSystemMessage(text) {
@@ -605,24 +758,33 @@
             });
         }
 
-        function createAIMessageElement(requestId) {
+        function createAIMessageElement(requestId, provider, model, username) {
             const messagesDiv = document.getElementById('messages');
             const messageEl = document.createElement('div');
             messageEl.className = 'message ai-message';
             messageEl.id = `ai-${requestId}`;
+
+            const providerName = getProviderDisplayName(provider);
+            const modelShort = model ? model.split('/').pop() : 'AI';
+
             messageEl.innerHTML = `
-                <div class="message-user">AI Assistant <span class="typing-indicator">●●●</span></div>
-                <div class="message-content"></div>
-                <div class="message-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div class="message-avatar ai-avatar">🤖</div>
+                <div class="message-body">
+                    <div class="message-user">${providerName} (${modelShort}) <span class="typing-indicator">●●●</span></div>
+                    <div class="message-content"></div>
+                    <div class="message-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
             `;
             messagesDiv.appendChild(messageEl);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             return messageEl;
         }
 
-        function updateAIMessage(messageEl, text) {
+        function updateAIMessage(messageEl, text, username) {
             const contentEl = messageEl.querySelector('.message-content');
-            contentEl.textContent = text;
+            // Prepend @mention to the AI response
+            const mentionedText = `@${username} ${text}`;
+            contentEl.textContent = mentionedText;
             const messagesDiv = document.getElementById('messages');
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
@@ -632,12 +794,12 @@
             if (indicator) indicator.remove();
         }
 
-        function showAIError(messageEl, errorMessage) {
+        function showAIError(messageEl, errorMessage, username) {
             const indicator = messageEl.querySelector('.typing-indicator');
             if (indicator) indicator.remove();
 
             const contentEl = messageEl.querySelector('.message-content');
-            contentEl.textContent = `Error: ${errorMessage}`;
+            contentEl.textContent = `@${username} Error: ${errorMessage}`;
             contentEl.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)';
             contentEl.style.color = 'white';
         }

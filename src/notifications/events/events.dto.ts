@@ -21,6 +21,7 @@ export class BaseUserEvent {
 
 export class ChatMessage extends BaseUserEvent {
   message!: string;
+  picture!: string | null;
 }
 
 export class AIMessageRequest {

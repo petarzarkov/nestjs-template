@@ -236,6 +236,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       username: user.displayName || user.email?.split('@')[0],
       message: data.message,
       timestamp: new Date(),
+      picture: user.picture,
     };
     this.server.to(ROOMS.CHAT).emit('message', chatMessage);
     return { event: 'messageSent', data: { success: true } };
