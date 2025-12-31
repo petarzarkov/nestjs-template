@@ -76,11 +76,48 @@ bun run create:admin        # Create a new admin user
 - **Testing**: Bun's built-in test runner with TypeScript support
 - **WebSockets**: Socket.io gateway with authentication
 - **Email**: React Email templates with Resend
+- **AI Integration**: Unified AI service with streaming support
+  - Multiple providers: Google Gemini, Groq, OpenRouter
+  - Vercel AI SDK integration for consistent API
+  - Real-time streaming via WebSocket
+  - Dynamic model listing from provider APIs
+  - Clean error handling and structured logging
 - **Integrations**:
   - **Slack**: Global service for sending structured notifications/alerts
 - **Helpers**:
   - Resilient external API caller with retries, backoff & jitter
   - URL building and manipulation utilities
+
+## AI Integration
+
+The application includes a unified AI service that supports multiple providers through the Vercel AI SDK:
+
+### Supported Providers
+
+- **Google Gemini** - Access to Gemini 2.5 models (Flash, Pro)
+- **Groq** - Fast inference with Llama and Mixtral models
+- **OpenRouter** - Gateway to 300+ models from Anthropic, OpenAI, Meta, and more
+
+### Features
+
+- **Unified API**: Single service interface for all providers
+- **REST Endpoint**: `POST /api/ai/query` for synchronous requests
+- **WebSocket Streaming**: Real-time AI responses via Socket.io
+- **Dynamic Model Discovery**: Automatically fetches available models from each provider's API
+- **Model Listing**: `GET /api/ai/models` returns all available models across providers
+- **Error Handling**: Clean, structured error logging (no SDK stack dumps)
+- **Fallback Models**: Static model lists when API calls fail
+
+### Configuration
+
+Configure AI providers via environment variables (see `env-vars.md`):
+
+```bash
+AI_GEMINI_API_KEY=your_key
+AI_GROQ_API_KEY=your_key
+AI_OPENROUTER_API_KEY=your_key
+AI_DEFAULT_TEMPERATURE=0.8
+```
 
 ## Redis Features
 
@@ -117,7 +154,8 @@ Background jobs are processed via BullMQ queues using `@nestjs/bullmq`:
 
 ```bash
 src/
-├── auth/            # Authentication (Stratgies, Guards) & authorization
+├── ai/              # AI integration (Gemini, Groq, OpenRouter)
+├── auth/            # Authentication (Strategies, Guards) & authorization
 ├── config/          # Environment configuration
 ├── core/            # Shared decorators, filters, interceptors, pagination
 ├── db/              # TypeORM data source and migrations
@@ -129,7 +167,11 @@ src/
 ├── slack/           # Slack integration module
 ├── swagger/         # API documentation setup
 └── users/           # User management and invites
+
+public/              # Static files (demo chat UI - for testing only)
 ```
+
+> **Note**: The `public/` folder contains a basic HTML chat interface for testing and demonstrative purposes only. It is not intended for production use.
 
 ## Health Endpoints
 
