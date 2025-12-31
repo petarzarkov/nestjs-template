@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import { ExtendedError, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
+import { AIService } from '@/ai/services/ai.service';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
@@ -20,7 +21,13 @@ import { ContextLogger } from '@/logger/services/context-logger.service';
 import { EventMap, EventType } from '@/notifications/events/events';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { UsersService } from '@/users/services/users.service';
-import { ExtendedSocket, WebSocketBaseMessage, WSServer } from './events.dto';
+import {
+  AIMessageRequest,
+  ChatMessage,
+  ExtendedSocket,
+  WebSocketBaseMessage,
+  WSServer,
+} from './events.dto';
 
 export const ROOMS = {
   ADMINS: 'admins',
@@ -47,6 +54,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger: ContextLogger,
     private readonly usersService: UsersService,
     private readonly contextService: ContextService,
+    private readonly aiService: AIService,
   ) {}
 
   afterInit(server: WSServer) {
@@ -186,7 +194,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify chat room that user joined
     this.server.to(ROOMS.CHAT).emit('userJoined', {
-      username: user.email,
+      username: user.displayName || user.email?.split('@')[0],
       timestamp: new Date(),
     });
 
@@ -224,13 +232,71 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: ExtendedSocket,
   ) {
     const user = client.data.user;
-    const chatMessage = {
-      username: user.email,
+    const chatMessage: ChatMessage = {
+      username: user.displayName || user.email?.split('@')[0],
       message: data.message,
       timestamp: new Date(),
     };
     this.server.to(ROOMS.CHAT).emit('message', chatMessage);
     return { event: 'messageSent', data: { success: true } };
+  }
+
+  @SubscribeMessage('aiRequest')
+  async handleAIRequest(
+    @MessageBody()
+    data: AIMessageRequest,
+    @ConnectedSocket() client: ExtendedSocket,
+  ) {
+    const requestId = uuidv4();
+    const user = client.data.user;
+    try {
+      const stream = this.aiService.streamProvider(
+        data.provider,
+        data.model,
+        data.prompt,
+      );
+
+      for await (const chunk of stream) {
+        client.emit('aiMessageChunk', {
+          requestId,
+          chunk,
+          provider: data.provider,
+          model: data.model,
+          done: false,
+          username: user.displayName || user.email?.split('@')[0],
+        });
+      }
+
+      // Send completion signal
+      client.emit('aiMessageChunk', {
+        requestId,
+        chunk: '',
+        provider: data.provider,
+        model: data.model,
+        done: true,
+        username: user.displayName || user.email?.split('@')[0],
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'AI request failed';
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+
+      this.logger.error('AI streaming failed', {
+        errorMessage,
+        errorName,
+        provider: data.provider,
+        model: data.model,
+        requestId,
+      });
+
+      client.emit('aiError', {
+        requestId,
+        error: errorMessage,
+        provider: data.provider,
+        model: data.model,
+        username: user.displayName || user.email?.split('@')[0],
+      });
+    }
   }
 
   sendNotification<K extends EventType, T extends EventMap[K]>(data: {

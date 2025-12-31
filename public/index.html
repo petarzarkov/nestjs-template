@@ -249,6 +249,77 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        .ai-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .ai-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .ai-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #f093fb;
+        }
+
+        .ai-toggle:hover {
+            color: #f093fb;
+        }
+
+        #ai-provider {
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            background: white;
+        }
+
+        #ai-provider:focus {
+            border-color: #f093fb;
+        }
+
+        .ai-message .message-user {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .ai-message .message-content {
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
+            border-left: 3px solid #f5576c;
+            white-space: pre-wrap;
+        }
+
+        .typing-indicator {
+            display: inline-block;
+            animation: blink 1.4s infinite;
+            font-size: 18px;
+            margin-left: 5px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -308,12 +379,24 @@
                     >
                     <button type="submit" class="btn-send">Send</button>
                 </form>
+                <div class="ai-section">
+                    <label class="ai-toggle">
+                        <input type="checkbox" id="ask-ai-toggle">
+                        <span>🤖 Ask AI about this message</span>
+                    </label>
+                    <select id="ai-provider">
+                        <option value="groq">Groq (Fast)</option>
+                        <option value="google">Gemini</option>
+                        <option value="openrouter">OpenRouter</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let socket;
+        const aiRequests = new Map(); // Track AI streaming requests
 
         // Check if user is already authenticated via OAuth
         const urlParams = new URLSearchParams(window.location.search);
@@ -405,6 +488,41 @@
                 addMessage(data);
             });
 
+            socket.on('aiMessageChunk', (data) => {
+                if (!aiRequests.has(data.requestId)) {
+                    // First chunk - create AI message element
+                    const messageEl = createAIMessageElement(data.requestId);
+                    aiRequests.set(data.requestId, {
+                        messageEl,
+                        fullText: ''
+                    });
+                }
+
+                const request = aiRequests.get(data.requestId);
+
+                if (data.done) {
+                    // Stream finished - finalize the message
+                    finalizeAIMessage(request.messageEl);
+                    aiRequests.delete(data.requestId);
+                } else {
+                    // Append chunk to the message
+                    request.fullText += data.chunk;
+                    updateAIMessage(request.messageEl, request.fullText);
+                }
+            });
+
+            socket.on('aiError', (data) => {
+                // If there's a pending AI request, show error in that message
+                if (aiRequests.has(data.requestId)) {
+                    const request = aiRequests.get(data.requestId);
+                    showAIError(request.messageEl, data.error);
+                    aiRequests.delete(data.requestId);
+                } else {
+                    // Otherwise show as system message
+                    addSystemMessage(`AI Error: ${data.error}`);
+                }
+            });
+
             socket.on('disconnect', () => {
                 addSystemMessage('Disconnected from server');
             });
@@ -419,10 +537,24 @@
             e.preventDefault();
             const input = document.getElementById('message-input');
             const message = input.value.trim();
+            const shouldAskAI = document.getElementById('ask-ai-toggle').checked;
 
             if (message && socket) {
                 socket.emit('chatMessage', { message });
                 input.value = '';
+
+                // If "Ask AI" is checked, trigger AI request with the sent message
+                if (shouldAskAI) {
+                    setTimeout(() => {
+                        const provider = document.getElementById('ai-provider').value;
+                        const models = {
+                            groq: 'llama-3.3-70b-versatile',
+                            google: 'gemini-2.5-flash',
+                            openrouter: 'anthropic/claude-3.5-sonnet'
+                        };
+                        requestAI(message, provider, models[provider]);
+                    }, 100); // Small delay to ensure message is sent first
+                }
             }
         });
 
@@ -459,6 +591,55 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // AI functionality
+        function requestAI(prompt, provider, model) {
+            if (!socket) return;
+
+            socket.emit('aiRequest', {
+                provider,
+                model,
+                prompt,
+                systemPrompt: 'You are a helpful AI assistant in a chat application. Provide concise, friendly responses.'
+            });
+        }
+
+        function createAIMessageElement(requestId) {
+            const messagesDiv = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message ai-message';
+            messageEl.id = `ai-${requestId}`;
+            messageEl.innerHTML = `
+                <div class="message-user">AI Assistant <span class="typing-indicator">●●●</span></div>
+                <div class="message-content"></div>
+                <div class="message-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+            `;
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return messageEl;
+        }
+
+        function updateAIMessage(messageEl, text) {
+            const contentEl = messageEl.querySelector('.message-content');
+            contentEl.textContent = text;
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function finalizeAIMessage(messageEl) {
+            const indicator = messageEl.querySelector('.typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function showAIError(messageEl, errorMessage) {
+            const indicator = messageEl.querySelector('.typing-indicator');
+            if (indicator) indicator.remove();
+
+            const contentEl = messageEl.querySelector('.message-content');
+            contentEl.textContent = `Error: ${errorMessage}`;
+            contentEl.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)';
+            contentEl.style.color = 'white';
         }
     </script>
 </body>

@@ -1,5 +1,6 @@
 import type { DefaultEventsMap } from 'socket.io';
 import { Server, Socket } from 'socket.io';
+import { AIProvider } from '@/ai/enum/ai-provider.enum';
 import type { EventMap, EventType } from '@/notifications/events/events';
 import type { SanitizedUser } from '@/users/entity/user.entity';
 
@@ -13,10 +14,36 @@ export class WebSocketMessage<Key extends EventType, T extends EventMap[Key]> {
   payload!: T;
 }
 
-export interface ChatMessage {
-  username: string;
-  message: string;
-  timestamp: Date;
+export class BaseUserEvent {
+  username!: string;
+  timestamp!: Date;
+}
+
+export class ChatMessage extends BaseUserEvent {
+  message!: string;
+}
+
+export class AIMessageRequest {
+  provider!: AIProvider;
+  model!: string;
+  prompt!: string;
+}
+
+export class AIMessageChunk {
+  requestId!: string;
+  chunk!: string;
+  provider!: AIProvider;
+  model!: string;
+  done!: boolean;
+  username!: string;
+}
+
+export class AIMessageError {
+  requestId!: string;
+  error!: string;
+  provider!: AIProvider;
+  model!: string;
+  username!: string;
 }
 
 export interface WebSocketEmitEvents {
@@ -26,10 +53,12 @@ export interface WebSocketEmitEvents {
     message: WebSocketMessage<EventType, EventMap[EventType]>,
   ) => void;
   global_notification: (message: WebSocketBaseMessage) => void;
-  userJoined: (data: { username: string; timestamp: Date }) => void;
-  userLeft: (data: { username: string; timestamp: Date }) => void;
+  userJoined: (data: BaseUserEvent) => void;
+  userLeft: (data: BaseUserEvent) => void;
   userCount: (count: number) => void;
   message: (data: ChatMessage) => void;
+  aiMessageChunk: (data: AIMessageChunk) => void;
+  aiError: (data: AIMessageError) => void;
 }
 
 export type EmitToClient = <K extends keyof WebSocketEmitEvents>(

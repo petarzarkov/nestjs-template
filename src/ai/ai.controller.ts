@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
-import { AIService } from './ai.service';
+import { AIModelItemDto } from './dto/ai-model-item.dto';
 import { AIRequestDto } from './dto/ai-request.dto';
 import { AIResponseDto } from './dto/ai-response.dto';
-import { ListModelsQueryDto } from './dto/list-models-query.dto';
+import { AIService } from './services/ai.service';
 
 @ApiTags('ai')
 @Controller('ai')
@@ -27,8 +27,12 @@ export class AIController {
   }
 
   @Get('models')
-  @ApiOperation({ summary: 'List available models from the AI provider' })
-  listModels(@Query() query: ListModelsQueryDto): Promise<string[]> {
-    return this.aiService.listModels(query.provider);
+  @ApiOperation({ summary: 'List all available models from all providers' })
+  @ApiOkResponse({
+    type: AIModelItemDto,
+    isArray: true,
+  })
+  listAllModels(): Promise<AIModelItemDto[]> {
+    return this.aiService.listAllModels();
   }
 }
