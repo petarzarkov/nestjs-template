@@ -16,6 +16,7 @@ import { PaginationModule } from './core/pagination/pagination.module';
 import { DatabaseModule } from './db/database.module';
 import { HealthModule } from './health/health.module';
 import { HelpersModule } from './helpers/helpers.module';
+import { JobDiscoveryModule } from './job-discovery/job-discovery.module';
 import { LoggerModule } from './logger/logger.module';
 import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
@@ -50,6 +51,7 @@ import { UsersModule } from './users/users.module';
     AuthModule.forRoot(),
     UsersModule,
     AIModule.forRoot(),
+    JobDiscoveryModule,
   ],
   providers: [
     HttpLoggingInterceptor,

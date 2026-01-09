@@ -13,7 +13,7 @@ type JobHandler<T extends EventType = EventType> = (
 ) => Promise<void>;
 
 @Injectable()
-export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
+export class JobDiscoveryService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = [];
 
   constructor(
@@ -25,7 +25,6 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const handlersByQueue = this.#discoverHandlers();
-    console.log('handlersByQueue', handlersByQueue);
     this.#startWorkers(handlersByQueue);
   }
 
