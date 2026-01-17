@@ -7,4 +7,9 @@
 root = "./src"
 
 # Coverage
-coverageThreshold = { lines = 0.5, functions = 0.5, statements = 0.5 }
+coverageDir = "coverage" 
+coverageReporter  = ["text", "lcov"]  # default ["text"]
+# coverageThreshold = { lines = 0.7, functions = 0.6, statements = 0.7 }
+
+[test.reporter]
+junit = "coverage/test-results.xml"

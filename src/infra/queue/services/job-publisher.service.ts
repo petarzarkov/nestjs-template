@@ -5,12 +5,12 @@ import type { BackoffOptions, JobsOptions, KeepJobs, Queue } from 'bullmq';
 import { SECOND } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
-import type { BaseEvent } from '../../../notifications/events/base-event.dto';
+import type { BaseEvent } from '@/notifications/events/base-event.dto';
 import {
   EVENT_CONSTANTS,
   type EventMap,
   type EventType,
-} from '../../../notifications/events/events';
+} from '@/notifications/events/events';
 
 export interface PublishOptions extends JobsOptions {
   userId?: string;

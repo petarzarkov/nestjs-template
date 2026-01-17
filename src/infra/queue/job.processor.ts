@@ -34,6 +34,9 @@ export default async function jobProcessor(job: Job) {
       job,
       error,
     });
+    await job.log(
+      `Failed to process job ${job.id}: ${error instanceof Error ? error.message : error}, stack: ${error instanceof Error ? error.stack : 'unknown'}`,
+    );
     throw error;
   } finally {
     await app.close();

@@ -5,13 +5,8 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { JOB_HANDLER_METADATA } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
-import { EventType } from '@/notifications/events/events';
 import type { JobHandlerOptions } from '../decorators/job-handler.decorator';
-import type { QueueJob } from '../types/queue-job.type';
-
-type JobHandler<T extends EventType = EventType> = (
-  job: Job<QueueJob<T>>,
-) => Promise<void>;
+import type { JobHandlerType } from '../types/queue-job.type';
 
 @Injectable()
 export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
@@ -41,8 +36,8 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('All job workers shut down');
   }
 
-  #discoverHandlers(): Map<string, Map<string, JobHandler>> {
-    const queueMap = new Map<string, Map<string, JobHandler>>();
+  #discoverHandlers(): Map<string, Map<string, JobHandlerType>> {
+    const queueMap = new Map<string, Map<string, JobHandlerType>>();
 
     const providers = this.discoveryService.getProviders();
     const controllers = this.discoveryService.getControllers();
@@ -80,7 +75,7 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     return queueMap;
   }
 
-  #startWorkers(queueMap: Map<string, Map<string, JobHandler>>) {
+  #startWorkers(queueMap: Map<string, Map<string, JobHandlerType>>) {
     const redisConfig = this.configService.getOrThrow('redis');
 
     for (const [queueName, handlers] of queueMap) {

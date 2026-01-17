@@ -8,6 +8,7 @@ export const EVENT_CONSTANTS = {
   EXCHANGE: 'domain_events_exchange',
   QUEUES: {
     NOTIFICATIONS_EVENTS: 'notifications-events-queue',
+    BACKGROUND_JOBS: 'background-jobs-queue',
   },
   ROUTING_KEYS: {
     // User domain events

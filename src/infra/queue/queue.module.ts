@@ -32,6 +32,25 @@ import { JobDispatcherService } from './services/job-dispatcher.service';
         };
       },
     }),
+    BullModule.registerQueueAsync({
+      name: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => {
+        const redisConfig = configService.getOrThrow('redis');
+
+        return {
+          defaultJobOptions: {
+            attempts: redisConfig.queues.maxRetries,
+            backoff: {
+              type: 'exponential',
+              delay: redisConfig.queues.retryDelayMs,
+            },
+            removeOnComplete: { count: 1000 },
+            removeOnFail: { count: 500 },
+          },
+        };
+      },
+    }),
     BullBoardModule.forRootAsync({
       inject: [AppConfigService],
       useFactory: (configService: AppConfigService) => {
@@ -56,6 +75,10 @@ import { JobDispatcherService } from './services/job-dispatcher.service';
     }),
     BullBoardModule.forFeature({
       name: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
       adapter: BullMQAdapter,
     }),
   ],
