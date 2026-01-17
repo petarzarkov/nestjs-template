@@ -10,15 +10,17 @@ import { ValidatedConfig, validateConfig } from './config/env.validation';
 import { AppConfigService } from './config/services/app.config.service';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
+import { HelpersModule } from './core/helpers/helpers.module';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
+import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { PaginationModule } from './core/pagination/pagination.module';
-import { DatabaseModule } from './db/database.module';
-import { HealthModule } from './health/health.module';
-import { HelpersModule } from './helpers/helpers.module';
-import { JobDiscoveryModule } from './job-discovery/job-discovery.module';
-import { LoggerModule } from './logger/logger.module';
-import { RedisModule } from './redis/redis.module';
+import { DatabaseModule } from './infra/db/database.module';
+import { HealthModule } from './infra/health/health.module';
+import { LoggerModule } from './infra/logger/logger.module';
+import { QueueModule } from './infra/queue/queue.module';
+import { RedisModule } from './infra/redis/redis.module';
+import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -41,6 +43,7 @@ import { UsersModule } from './users/users.module';
       serveRoot: '/',
       exclude: ['/api*'],
     }),
+    AuthModule.forRoot(),
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
@@ -48,16 +51,17 @@ import { UsersModule } from './users/users.module';
     PaginationModule,
     LoggerModule,
     HealthModule,
-    AuthModule.forRoot(),
     UsersModule,
     AIModule.forRoot(),
-    JobDiscoveryModule,
+    NotificationModule,
+    QueueModule,
   ],
   providers: [
     HttpLoggingInterceptor,
     TypeOrmExceptionFilter,
     GenericExceptionFilter,
     RequestMiddleware,
+    HtmlBasicAuthMiddleware,
   ],
 })
 export class AppModule {

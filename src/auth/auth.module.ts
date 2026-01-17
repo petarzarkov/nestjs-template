@@ -1,13 +1,16 @@
 import { DynamicModule, forwardRef, Module, Provider } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AppConfigModule } from '@/config/app.config.module';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { DatabaseModule } from '@/db/database.module';
+import { DatabaseModule } from '@/infra/db/database.module';
 import { UsersModule } from '@/users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthProvider } from './entity/auth-provider.entity';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { AuthProvidersRepository } from './repos/auth-providers.repository';
 import { AuthService } from './services/auth.service';
 import { GithubStrategy } from './strategies/github.strategy';
@@ -24,6 +27,14 @@ export class AuthModule {
       LocalStrategy,
       JwtStrategy,
       AuthProvidersRepository,
+      {
+        provide: APP_GUARD,
+        useClass: JwtAuthGuard,
+      },
+      {
+        provide: APP_GUARD,
+        useClass: RolesGuard,
+      },
     ];
 
     const baseExports: (string | symbol | Provider)[] = [

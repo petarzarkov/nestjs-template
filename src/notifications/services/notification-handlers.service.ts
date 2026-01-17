@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Job } from 'bullmq';
-import { JobHandler } from '@/core/decorators/job-handler.decorator';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { JobHandler } from '@/infra/queue/decorators/job-handler.decorator';
 import { EmailService } from '../email/services/email.service';
 import { EVENT_CONSTANTS } from '../events/events';
 import { EventsGateway } from '../events/events.gateway';
@@ -15,10 +15,10 @@ export class NotificationHandlersService {
     private readonly eventsGateway: EventsGateway,
   ) {}
 
-  @JobHandler(
-    EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-    EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
-  )
+  @JobHandler({
+    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+  })
   async handleUserRegistered(
     job: Job<
       NotificationJob<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED>
@@ -37,10 +37,10 @@ export class NotificationHandlersService {
     this.logger.verbose(`Job completed - ID: ${job.id}; EVENT: ${eventType}`);
   }
 
-  @JobHandler(
-    EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-    EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
-  )
+  @JobHandler({
+    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+  })
   async handleUserInvited(
     job: Job<NotificationJob<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED>>,
   ): Promise<void> {
@@ -57,10 +57,10 @@ export class NotificationHandlersService {
     this.logger.verbose(`Job completed - ID: ${job.id}; EVENT: ${eventType}`);
   }
 
-  @JobHandler(
-    EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-    EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
-  )
+  @JobHandler({
+    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
+  })
   async handlePasswordReset(
     job: Job<
       NotificationJob<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET>

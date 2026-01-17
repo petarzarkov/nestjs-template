@@ -124,7 +124,7 @@ describe('Auth (e2e)', () => {
       expect(response.status).toBe(201);
 
       // Wait for the WebSocket notification from BullMQ
-      // Flow: Register → NotificationPublisherService → BullMQ Queue → NotificationProcessor → WebSocket
+      // Flow: Register → EventPublisherService → BullMQ Queue → NotificationProcessor → WebSocket
       const notification = await ctx.ws.waitForEvent<{
         event: string;
         payload: { email: string; name: string; type: string };

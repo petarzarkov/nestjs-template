@@ -10,9 +10,9 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { NotificationPublisherService } from '@/notifications/services/notification-publisher.service';
+import { EventPublisherService } from '@/notifications/services/event-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -27,7 +27,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly passwordResetTokensRepository: PasswordResetTokensRepository,
     private readonly authProvidersRepository: AuthProvidersRepository,
-    private readonly eventPublisher: NotificationPublisherService,
+    private readonly eventPublisher: EventPublisherService,
     private readonly jwtService: JwtService,
     @InjectEntityManager() private readonly entityManager: EntityManager,
     private readonly logger: ContextLogger,

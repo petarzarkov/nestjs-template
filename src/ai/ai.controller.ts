@@ -1,6 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { AIModelItemDto } from './dto/ai-model-item.dto';
 import { AIRequestDto } from './dto/ai-request.dto';
@@ -10,7 +9,6 @@ import { AIService } from './services/ai.service';
 @ApiTags('ai')
 @Controller('ai')
 @ApiJwtAuth()
-@UseGuards(JwtAuthGuard)
 export class AIController {
   constructor(private readonly aiService: AIService) {}
 

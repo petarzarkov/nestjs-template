@@ -48,3 +48,5 @@ export const PAGINATION = Object.freeze({
   MAX_TAKE: 50,
   MAX_SEARCH: 256,
 });
+
+export const JOB_HANDLER_METADATA = 'JOB_HANDLER_METADATA';

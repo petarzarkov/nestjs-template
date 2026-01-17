@@ -2,7 +2,7 @@ import * as crypto from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { NotificationPublisherService } from '@/notifications/services/notification-publisher.service';
+import { EventPublisherService } from '@/notifications/services/event-publisher.service';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
 import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
 import { Invite } from '@/users/invites/entity/invite.entity';
@@ -15,7 +15,7 @@ export class InvitesService {
   constructor(
     private readonly invitesRepository: InvitesRepository,
     private readonly usersRepository: UsersRepository,
-    private readonly eventPublisher: NotificationPublisherService,
+    private readonly eventPublisher: EventPublisherService,
   ) {}
 
   async findAll(query: ListInvitesQueryDto): Promise<Invite[]> {

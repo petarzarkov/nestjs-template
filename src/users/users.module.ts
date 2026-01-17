@@ -1,6 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AuthProvider } from '@/auth/entity/auth-provider.entity';
-import { DatabaseModule } from '@/db/database.module';
+import { DatabaseModule } from '@/infra/db/database.module';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
 import { InvitesModule } from './invites/invites.module';

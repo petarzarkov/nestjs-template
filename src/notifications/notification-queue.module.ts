@@ -5,8 +5,8 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { EmailModule } from './email/email.module';
 import { EVENT_CONSTANTS } from './events/events';
 import { EventsModule } from './events/events.module';
+import { EventPublisherService } from './services/event-publisher.service';
 import { NotificationHandlersService } from './services/notification-handlers.service';
-import { NotificationPublisherService } from './services/notification-publisher.service';
 
 @Module({
   imports: [
@@ -37,7 +37,7 @@ import { NotificationPublisherService } from './services/notification-publisher.
     EmailModule,
     EventsModule.forRoot(),
   ],
-  providers: [NotificationHandlersService, NotificationPublisherService],
-  exports: [NotificationPublisherService],
+  providers: [NotificationHandlersService, EventPublisherService],
+  exports: [EventPublisherService],
 })
 export class NotificationQueueModule {}

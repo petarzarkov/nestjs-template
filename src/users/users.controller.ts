@@ -6,11 +6,8 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/auth/guards/roles.guard';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
@@ -31,7 +28,6 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN, UserRole.USER)
   @ApiJwtAuth()
   @ApiOperation({ summary: 'Get users list' })
@@ -47,7 +43,6 @@ export class UsersController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
   @ApiJwtAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiOkResponse({ type: SanitizedUser })
@@ -58,7 +53,6 @@ export class UsersController {
   }
 
   @Post(':userId/suspend')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiJwtAuth()
   @ApiOperation({
@@ -78,7 +72,6 @@ export class UsersController {
   }
 
   @Post(':userId/reinstate')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiJwtAuth()
   @ApiOperation({
@@ -93,7 +86,6 @@ export class UsersController {
   }
 
   @Patch(':userId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiJwtAuth()
   @ApiOperation({

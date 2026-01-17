@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import { DataSource } from 'typeorm';
 import { BASE_USER_TEST_PASS } from '@/constants';
 import { password as passwordUtil } from '@/core/utils/password.util';
-import { dbOptions } from '@/db/data-source-options';
+import { dbOptions } from '@/infra/db/data-source-options';
 import { User } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 

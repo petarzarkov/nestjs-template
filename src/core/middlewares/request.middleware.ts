@@ -5,8 +5,8 @@ import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import {
   AsyncContext,
   ContextService,
-} from '@/logger/services/context.service';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+} from '@/infra/logger/services/context.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 
 @Injectable()
 export class RequestMiddleware implements NestMiddleware {

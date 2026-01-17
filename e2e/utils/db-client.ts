@@ -1,6 +1,6 @@
 import type { Repository } from 'typeorm';
 import { DataSource } from 'typeorm';
-import { SnakeNamingStrategy } from '@/db/strategies/snake-case.strategy';
+import { SnakeNamingStrategy } from '@/infra/db/strategies/snake-case.strategy';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
 import { Invite } from '@/users/invites/entity/invite.entity';

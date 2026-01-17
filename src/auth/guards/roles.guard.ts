@@ -1,10 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '@/core/decorators/public.decorator';
 import {
   REQUIRE_ALL_ROLES_KEY,
   ROLES_KEY,
 } from '@/core/decorators/roles.decorator';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 
@@ -16,13 +17,21 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    // If no roles are required on the endpoint, allow access.
     if (!requiredRoles || requiredRoles.length === 0) {
+      // If no roles are required on the endpoint, allow access.
       return true;
     }
 
@@ -32,8 +41,9 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    const { user }: { user: SanitizedUser } =
-      context.switchToHttp().getRequest() || {};
+    const { user }: { user: SanitizedUser } = context
+      .switchToHttp()
+      .getRequest();
 
     if (!user || !user.roles) {
       this.logger.error(
@@ -42,8 +52,8 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    // If requireAll is true, check if the user has every single required role.
     if (requireAll) {
+      // If requireAll is true, check if the user has every single required role.
       return requiredRoles.every(role => user.roles.includes(role));
     }
 

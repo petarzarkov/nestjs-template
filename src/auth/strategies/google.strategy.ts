@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { OAuthProvider } from '../enum/oauth-provider.enum';
 import { AuthService } from '../services/auth.service';
 

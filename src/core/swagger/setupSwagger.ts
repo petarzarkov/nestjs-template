@@ -1,0 +1,75 @@
+import { INestApplication } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidatedConfig } from '@/config/env.validation';
+import { PackageJson } from '@/config/PackageJson';
+import { GLOBAL_PREFIX } from '@/constants';
+import { HtmlBasicAuthMiddleware } from '../middlewares/html-basic-auth.middleware';
+
+export function setupSwagger(
+  app: INestApplication,
+  pkg: PackageJson,
+  appConfig: ValidatedConfig['app'],
+) {
+  const SWAGGER_PATH = `/${GLOBAL_PREFIX}/docs`;
+  const htmlBasicAuthMiddleware = app.get(HtmlBasicAuthMiddleware);
+
+  app.use(
+    [SWAGGER_PATH, `${SWAGGER_PATH}-json`],
+    htmlBasicAuthMiddleware.use.bind(htmlBasicAuthMiddleware),
+  );
+
+  const title = `${appConfig.name} ${appConfig.env}`;
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle(title)
+    .setDescription(pkg.description)
+    .setVersion(appConfig.version)
+    .setContact(pkg.author.name, pkg.author.url, pkg.author.email)
+    .addBearerAuth(
+      {
+        type: 'http',
+        in: 'header',
+        bearerFormat: 'JWT',
+        scheme: 'bearer',
+        name: 'Authorization',
+        description: 'Enter your access token',
+      },
+      'bearerAuth',
+    )
+    .addSecurityRequirements('bearerAuth')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup(SWAGGER_PATH, app, document, {
+    customSiteTitle: title,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customfavIcon: appConfig.logoUrl,
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'method',
+      responseInterceptor: function setBearerOnLogin(response: {
+        ok: boolean;
+        url: string | string[];
+        body: { accessToken: string };
+      }) {
+        if (
+          response.ok &&
+          (response?.url?.includes(`${GLOBAL_PREFIX}/auth/login`) ||
+            response?.url?.includes(`${GLOBAL_PREFIX}/auth/register`))
+        ) {
+          (
+            window as unknown as Window & {
+              ui: {
+                preauthorizeApiKey: (name: string, apiKey: string) => void;
+              };
+            }
+          ).ui.preauthorizeApiKey('bearerAuth', response.body.accessToken);
+        }
+        return response;
+      },
+    },
+  });
+
+  return { title, swaggerPath: SWAGGER_PATH };
+}

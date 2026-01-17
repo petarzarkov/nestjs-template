@@ -41,7 +41,7 @@ export class User {
     description: 'Profile picture URL (from OAuth providers)',
     nullable: true,
   })
-  @Column({ type: 'text', nullable: true })
+  @Column({ nullable: true })
   @IsOptional()
   picture!: string | null;
 

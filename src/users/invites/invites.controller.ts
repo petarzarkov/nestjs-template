@@ -6,11 +6,8 @@ import {
   HttpStatus,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/auth/guards/roles.guard';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
 import { UserRole } from '@/users/enum/user-role.enum';
@@ -21,7 +18,6 @@ import { InvitesService } from './services/invites.service';
 
 @ApiTags('invites')
 @ApiJwtAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('invites')
 export class InvitesController {

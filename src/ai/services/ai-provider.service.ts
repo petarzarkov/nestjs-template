@@ -4,7 +4,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { generateText, streamText } from 'ai';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { AIProvider } from '../enum/ai-provider.enum';
 
 @Injectable()

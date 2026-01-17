@@ -9,7 +9,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { LogLevel } from '@/logger/enum/log-level.enum';
+import { LogLevel } from '@/infra/logger/log-level.enum';
 import { LOGGER, SECOND } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';
@@ -81,9 +81,9 @@ export class ServiceVars extends WsVars {
     [AppEnv.STG, AppEnv.PRD].includes(obj.APP_ENV),
   )
   @IsString({
-    message: 'SWAGGER_TOKEN is required when APP_ENV is "stage" or "prod".',
+    message: 'BASIC_AUTH_TOKEN is required when APP_ENV is "stage" or "prod".',
   })
-  SWAGGER_TOKEN?: string;
+  BASIC_AUTH_TOKEN?: string;
 
   // --- HTTP Client Configuration ---
   @IsNumber()
@@ -174,6 +174,11 @@ export class ServiceVars extends WsVars {
   @IsString()
   @IsOptional()
   WEB_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  LOGO_URL: string =
+    'https://cdn.betterttv.net/emote/5590b223b344e2c42a9e28e3/1x.webp';
 }
 
 export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
@@ -195,13 +200,14 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       nodeEnv: config.NODE_ENV,
       version: pkg.version,
       port: config.API_PORT,
-      swaggerToken: config.SWAGGER_TOKEN,
+      basicAuthToken: config.BASIC_AUTH_TOKEN,
       /**
        * @default "UTC"
        *
        * expected to be a valid timezone string
        */
       timezone: config.TZ,
+      logoUrl: config.LOGO_URL,
     },
     log: {
       /**
@@ -258,8 +264,8 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       channel: config.SLACK_CHANNEL,
     },
     jwt: {
-      secret: config.JWT_SECRET,
       expiration: config.JWT_EXPIRATION,
+      secret: config.JWT_SECRET,
     },
     ws: {
       connectTimeout: config.WS_CONNECT_TIMEOUT,

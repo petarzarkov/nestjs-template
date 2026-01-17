@@ -30,6 +30,7 @@ import {
 import { RegisterWithEmailDto } from '@/auth/dto/register-with-email.dto';
 import { RegisterWithInviteDto } from '@/auth/dto/register-with-invite.dto';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
+import { Public } from '@/core/decorators/public.decorator';
 import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
@@ -59,6 +60,7 @@ export class AuthController {
     return { accessToken };
   }
 
+  @Public()
   @Post('login')
   @UseGuards(AuthGuard(OAuthProvider.LOCAL))
   @ApiOperation({ summary: 'Authenticates a user with email and password' })
@@ -78,6 +80,7 @@ export class AuthController {
     return { accessToken };
   }
 
+  @Public()
   @Post('forgotten-password')
   @ApiOkResponse({
     type: BaseResponseDto,
@@ -96,6 +99,7 @@ export class AuthController {
     return { message: 'Password reset email sent' };
   }
 
+  @Public()
   @Post('password-reset')
   @ApiOkResponse({
     type: BaseResponseDto,
@@ -107,6 +111,7 @@ export class AuthController {
     return this.authService.passwordReset(resetToken, newPassword);
   }
 
+  @Public()
   @Post('register')
   @ApiExtraModels(RegisterWithEmailDto, RegisterWithInviteDto)
   @ApiBody({
@@ -157,6 +162,7 @@ export class AuthController {
     return { accessToken };
   }
 
+  @Public()
   @UseGuards(AuthGuard(OAuthProvider.GOOGLE))
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth2 login flow' })
@@ -168,6 +174,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
+  @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth2 callback URL' })
@@ -181,6 +188,7 @@ export class AuthController {
     return this.handleOAuthCallback(req);
   }
 
+  @Public()
   @UseGuards(AuthGuard(OAuthProvider.GITHUB))
   @Get('github')
   @ApiOperation({ summary: 'Initiate GitHub OAuth2 login flow' })
@@ -192,6 +200,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
+  @Public()
   @UseGuards(AuthGuard(OAuthProvider.GITHUB))
   @Get('github/callback')
   @ApiOperation({ summary: 'GitHub OAuth2 callback URL' })
@@ -208,6 +217,7 @@ export class AuthController {
     req.res.redirect(redirectUrl);
   }
 
+  @Public()
   @UseGuards(AuthGuard(OAuthProvider.LINKEDIN))
   @Get('linkedin')
   @ApiOperation({ summary: 'Initiate LinkedIn OAuth2 login flow' })
@@ -219,6 +229,7 @@ export class AuthController {
     // Passport strategy handles the redirect
   }
 
+  @Public()
   @UseGuards(AuthGuard(OAuthProvider.LINKEDIN))
   @Get('linkedin/callback')
   @ApiOperation({ summary: 'LinkedIn OAuth2 callback URL' })

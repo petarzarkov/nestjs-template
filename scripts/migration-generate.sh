@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-MIGRATIONS_DIR="./src/db/migrations"
+MIGRATIONS_DIR="./src/infra/db/migrations"
 
 # Check if a migration name was provided
 if [ -z "$1" ]; then
