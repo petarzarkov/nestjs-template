@@ -242,7 +242,7 @@ export class AuthService {
             name: displayName || user.email.split('@')[0],
             type: 'direct', // OAuth users are treated as direct registrations
           },
-          { emitToAdmins: true },
+          { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
         );
       }
 

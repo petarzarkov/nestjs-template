@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { Job, Worker } from 'bullmq';
@@ -5,12 +6,15 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { JOB_HANDLER_METADATA } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { EVENT_CONSTANTS } from '@/notifications/events/events';
 import type { JobHandlerOptions } from '../decorators/job-handler.decorator';
 import type { JobHandlerType } from '../types/queue-job.type';
 
 @Injectable()
 export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = [];
+  // Cache handlers so we don't scan metadata multiple times
+  private handlersCache: Map<string, Map<string, JobHandlerType>> | null = null;
 
   constructor(
     private readonly configService: AppConfigService,
@@ -22,12 +26,24 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
+    // If we are in the Worker Process, do nothing during init.
+    // The entry point for the worker is 'executeJob', not onModuleInit.
+    if (process.env.IS_JOB_WORKER === 'true') {
+      return;
+    }
+
     this.logger.log('Discovering job handlers...');
-    const handlersByQueue = this.#discoverHandlers();
+
+    // Main Process: Discover ALL handlers.
+    // We need to know about Background queues to spawn their supervisor Worker,
+    // and Foreground queues to run them inline.
+    this.handlersCache = this.#discoverHandlers(() => true);
+
     this.logger.log(
-      `Found ${handlersByQueue.size} queue(s) with handlers, starting workers...`,
+      `Found ${this.handlersCache.size} queue(s) with handlers, starting workers...`,
     );
-    this.#startWorkers(handlersByQueue);
+
+    this.#startWorkers(this.handlersCache);
   }
 
   async onModuleDestroy() {
@@ -36,7 +52,13 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('All job workers shut down');
   }
 
-  #discoverHandlers(): Map<string, Map<string, JobHandlerType>> {
+  /**
+   * Scans the app for methods decorated with @JobHandler
+   * @param queueFilter Optional predicate to filter which queues to register
+   */
+  #discoverHandlers(
+    queueFilter: (queue: string) => boolean = () => true,
+  ): Map<string, Map<string, JobHandlerType>> {
     const queueMap = new Map<string, Map<string, JobHandlerType>>();
 
     const providers = this.discoveryService.getProviders();
@@ -58,6 +80,11 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
         );
 
         if (metadata) {
+          // FILTERING: Skip queues that don't match our criteria
+          if (!queueFilter(metadata.queue)) {
+            continue;
+          }
+
           let handlers = queueMap.get(metadata.queue);
           if (!handlers) {
             handlers = new Map();
@@ -77,96 +104,74 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
 
   #startWorkers(queueMap: Map<string, Map<string, JobHandlerType>>) {
     const redisConfig = this.configService.getOrThrow('redis');
+    const extension = __filename.endsWith('.ts') ? 'ts' : 'js';
+    const processorPath = join(__dirname, `../job.processor.${extension}`);
 
     for (const [queueName, handlers] of queueMap) {
-      const worker = new Worker(
-        queueName,
-        async (job: Job) => {
-          const handler = handlers.get(job.name);
-          if (!handler) {
-            throw new Error(
-              `No handler found for job "${job.name}" in queue "${queueName}"`,
+      const isBackgroundJob =
+        queueName === EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS;
+
+      // STRATEGY SELECTION:
+      // If Background Queue -> Use File Path (Sandboxed Process)
+      // If Foreground Queue -> Use Inline Callback (Shared Process)
+      const processor = isBackgroundJob
+        ? processorPath
+        : async (job: Job) => {
+            const handler = handlers.get(job.name);
+            if (!handler) {
+              throw new Error(
+                `No handler found for job "${job.name}" in queue "${queueName}"`,
+              );
+            }
+
+            return this.contextService.runWithContext(
+              {
+                ...this.contextService.getContext(),
+                flow: 'bullmq',
+                context: 'JobDispatcher',
+                queue: queueName,
+                jobName: job.name,
+                jobId: job.id,
+                ...(job.data?.requestId && { requestId: job.data.requestId }),
+                ...(job.data?.metadata?.userId && {
+                  userId: job.data.metadata.userId,
+                }),
+              },
+              async () => {
+                const message = `Processing job ${job.name} (ID: ${job.id})`;
+                this.logger.verbose(message);
+                try {
+                  await handler(job);
+                } catch (error) {
+                  await job.log(
+                    `Failed: ${error instanceof Error ? error.message : error}`,
+                  );
+                  throw error;
+                }
+              },
             );
-          }
+          };
 
-          // Wrap handler execution in context for proper logging
-          return this.contextService.runWithContext(
-            {
-              ...this.contextService.getContext(),
-              flow: 'bullmq',
-              context: 'JobDispatcher',
-              queue: queueName,
-              jobName: job.name,
-              jobId: job.id,
-
-              ...(job.data?.requestId && { requestId: job.data.requestId }),
-              ...(job.data?.metadata?.userId && {
-                userId: job.data.metadata.userId,
-              }),
-            },
-            async () => {
-              const message = `Processing job ${job.name} (ID: ${job.id}) from queue ${queueName}, handler: ${handler.name}`;
-              this.logger.verbose(message);
-              await job.log(message);
-              try {
-                await handler(job);
-                // Log completion BEFORE the job is technically "finished" in Redis
-                await job.log(
-                  `Handler execution completed successfully for job ${job.id}`,
-                );
-              } catch (error) {
-                // Log error details to dashboard before throwing
-                await job.log(
-                  `Handler failed for job ${job.id}: ${error instanceof Error ? error.message : error}, stack: ${error instanceof Error ? error.stack : 'unknown'}`,
-                );
-                throw error;
-              }
-            },
-          );
+      const worker = new Worker(queueName, processor, {
+        connection: {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          ...(redisConfig.password && { password: redisConfig.password }),
+          db: redisConfig.db,
         },
-        {
-          connection: {
-            host: redisConfig.host,
-            port: redisConfig.port,
-            ...(redisConfig.password && { password: redisConfig.password }),
-            db: redisConfig.db,
-          },
-          concurrency: redisConfig.queues.concurrency,
-          limiter: {
-            max: redisConfig.queues.rateLimitMax,
-            duration: redisConfig.queues.rateLimitDuration,
-          },
+        concurrency: redisConfig.queues.concurrency,
+        limiter: {
+          max: redisConfig.queues.rateLimitMax,
+          duration: redisConfig.queues.rateLimitDuration,
         },
-      );
+      });
 
-      // Add event listeners for worker lifecycle
       worker.on('completed', job => {
-        this.logger.verbose(
-          `Job completed: ${job.id} for event type: ${job.data?.eventType}`,
-          {
-            jobId: job.id,
-            eventType: job.data?.eventType,
-            duration:
-              job.finishedOn && job.processedOn
-                ? job.finishedOn - job.processedOn
-                : 0,
-          },
-        );
+        this.logger.verbose(`Job completed: ${this.getJobId(job)}`);
       });
 
       worker.on('failed', (job, error) => {
-        this.logger.error(
-          job
-            ? `Job failed: ${job.id} for event type: ${job.data?.eventType}`
-            : 'Job failed',
-          {
-            jobId: job?.id,
-            eventType: job?.data?.eventType,
-            error,
-            attempt: job?.attemptsMade,
-            maxAttempts: job?.opts.attempts,
-          },
-        );
+        this.logger.error(`Job failed: ${this.getJobId(job)}`, { error });
       });
 
       worker.on('error', error => {
@@ -175,11 +180,40 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
 
       this.workers.push(worker);
       this.logger.log(
-        `Started worker for queue: ${queueName} with ${handlers.size} handlers`,
-        {
-          handlers: Array.from(handlers.keys()).join(', '),
-        },
+        `Started [${isBackgroundJob ? 'background' : 'foreground'}] worker for queue: ${queueName}`,
       );
     }
+  }
+
+  getJobId(job: Job | undefined) {
+    if (!job) {
+      return 'Unknown job';
+    }
+    return `${job.id} ${job.queueName}[${job.name}]`;
+  }
+
+  /**
+   * This method is called by the Sandboxed Processor (in the child process).
+   */
+  public async executeBackgroundJob(job: Job) {
+    // Lazy discovery inside the worker process
+    if (!this.handlersCache) {
+      // When running as a worker, we ONLY care about the Background Queue handlers.
+      // We can filter out everything else to keep the memory footprint cleaner.
+      this.handlersCache = this.#discoverHandlers(
+        queue => queue === EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
+      );
+    }
+
+    const handlers = this.handlersCache.get(job.queueName);
+    const handler = handlers?.get(job.name);
+
+    if (!handler) {
+      throw new Error(
+        `Handler not found for job '${job.name}' in queue '${job.queueName}' (Background Process)`,
+      );
+    }
+
+    return handler(job);
   }
 }

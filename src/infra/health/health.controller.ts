@@ -79,7 +79,10 @@ export class HealthController {
       commitMessage: this.serviceConfig.commitMessage,
       commitSha: this.serviceConfig.commitSha,
       tz: this.appConfig.timezone,
-      versions: process.versions,
+      versions: {
+        bun: process.versions.bun,
+        node: process.versions.node,
+      },
     };
   }
 

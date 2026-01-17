@@ -37,20 +37,40 @@ export class WsClient {
   /**
    * Wait for a specific event with timeout
    */
-  waitForEvent<T = unknown>(eventName: string, timeoutMs = 5000): Promise<T> {
+  waitForEvent<T = unknown>(
+    eventName: string,
+    timeoutMs = 5000,
+    predicate: (data: T) => boolean = () => true, // Default: accept any event
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         return reject(new Error('Socket not connected'));
       }
 
+      // Create the timeout
       const timeout = setTimeout(() => {
+        cleanup();
         reject(new Error(`Timeout waiting for event: ${eventName}`));
       }, timeoutMs);
 
-      this.socket.once(eventName, (data: T) => {
+      // Define the listener
+      const listener = (data: T) => {
+        // Only resolve if the data matches our criteria
+        if (predicate(data)) {
+          cleanup();
+          resolve(data);
+        }
+        // Otherwise, ignore this event and keep waiting
+      };
+
+      // Cleanup helper to remove listener and clear timeout
+      const cleanup = () => {
         clearTimeout(timeout);
-        resolve(data);
-      });
+        this.socket?.off(eventName, listener);
+      };
+
+      // Listen (use .on, not .once, so we can ignore non-matching events)
+      this.socket.on(eventName, listener);
     });
   }
 

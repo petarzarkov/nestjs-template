@@ -10,6 +10,7 @@ import {
   EVENT_CONSTANTS,
   type EventMap,
   type EventType,
+  type QueueType,
 } from '@/notifications/events/events';
 
 export interface PublishOptions extends JobsOptions {
@@ -19,15 +20,14 @@ export interface PublishOptions extends JobsOptions {
   /** Optional request ID for tracing */
   requestId?: string;
   /** Queue to publish to - defaults to PUBSUB */
-  queue?: (typeof EVENT_CONSTANTS.QUEUES)[keyof typeof EVENT_CONSTANTS.QUEUES];
+  queue?: QueueType;
 }
 
 @Injectable()
 export class JobPublisherService {
   private readonly queues: Map<string, Queue<BaseEvent<EventType>>>;
   private readonly JOB_FAILURE_DEFAULT_KEEP: KeepJobs = {
-    count: 1000, // Keep only the last 1000 successful jobs to save Redis memory
-    age: 60 * 60, // Or 1 hour, whichever comes first
+    count: 100, // Keep only the last 100 failed jobs to save Redis memory
   };
   private readonly JOB_DEFAULT_ATTEMPTS = 3;
   private readonly JOB_DEFAULT_BACKOFF: BackoffOptions = {
@@ -38,6 +38,8 @@ export class JobPublisherService {
   constructor(
     @InjectQueue(EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS)
     private readonly notificationsEventsQueue: Queue<BaseEvent<EventType>>,
+    @InjectQueue(EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS)
+    private readonly backgroundJobsQueue: Queue<BaseEvent<EventType>>,
     private readonly logger: ContextLogger,
     private readonly contextService: ContextService,
   ) {
@@ -46,6 +48,7 @@ export class JobPublisherService {
         EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
         this.notificationsEventsQueue,
       ],
+      [EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS, this.backgroundJobsQueue],
     ]);
   }
 
@@ -58,7 +61,6 @@ export class JobPublisherService {
       const queueName =
         options?.queue ?? EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS;
       const queue = this.queues.get(queueName);
-
       if (!queue) {
         this.logger.warn('Queue not available, skipping publish', {
           queue: queueName,
@@ -84,7 +86,9 @@ export class JobPublisherService {
           priority: options?.priority,
           delay: options?.delay,
           jobId: options?.jobId,
-          removeOnComplete: true,
+          removeOnComplete: {
+            count: 10,
+          },
           removeOnFail: options?.removeOnFail ?? this.JOB_FAILURE_DEFAULT_KEEP,
           attempts: options?.attempts ?? this.JOB_DEFAULT_ATTEMPTS,
           backoff: options?.backoff ?? this.JOB_DEFAULT_BACKOFF,

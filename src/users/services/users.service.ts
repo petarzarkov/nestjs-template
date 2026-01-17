@@ -82,7 +82,7 @@ export class UsersService {
         name: user.displayName || user.email.split('@')[0],
         type: 'direct',
       },
-      { emitToAdmins: true },
+      { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
     );
 
     return user;
@@ -123,7 +123,7 @@ export class UsersService {
         name: user.displayName || user.email.split('@')[0],
         type: 'invite',
       },
-      { emitToAdmins: true },
+      { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
     );
 
     return user;

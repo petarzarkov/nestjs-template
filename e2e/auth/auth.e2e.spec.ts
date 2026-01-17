@@ -124,11 +124,11 @@ describe('Auth (e2e)', () => {
       expect(response.status).toBe(201);
 
       // Wait for the WebSocket notification from BullMQ
-      // Flow: Register → JobPublisherService → BullMQ Queue → NotificationProcessor → WebSocket
+      // Flow: Register → JobPublisherService → BullMQ Background ProcessQueue → Background Worker Spawns → WebSocket Server from main process gets a redis emit from the background worker
       const notification = await ctx.ws.waitForEvent<{
         event: string;
         payload: { email: string; name: string; type: string };
-      }>('notification', 3000); // 3s timeout
+      }>('notification', 3000, data => data.payload.email === testEmail); // 3s timeout
 
       expect(notification).toBeDefined();
       expect(notification.event).toBe('user.registered');

@@ -13,7 +13,7 @@
     "prepare": "husky",
     "dev": "bun --watch src/main.ts",
     "start": "bun dist/main.js",
-    "build": "bun run nest build",
+    "build": "nest build && tsc-alias -p tsconfig.alias.json",
     "gen:env:docs": "bun ./scripts/gen-env-docs.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
@@ -58,6 +58,7 @@
     "@nestjs/websockets": "11.1.11",
     "@react-email/components": "1.0.2",
     "@socket.io/redis-adapter": "8.3.0",
+    "@socket.io/redis-emitter": "5.1.0",
     "ai": "6.0.5",
     "axios": "1.13.2",
     "bullmq": "5.66.4",
@@ -100,7 +101,8 @@
     "inquirer": "13.1.0",
     "lint-staged": "16.2.7",
     "socket.io-client": "4.8.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "tsc-alias": "1.8.16"
   },
   "lint-staged": {
     "*.ts": [

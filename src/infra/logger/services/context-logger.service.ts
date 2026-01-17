@@ -257,6 +257,7 @@ export class ContextLogger implements LoggerService {
     const logEntry: LogEntry = {
       level,
       timestamp: new Date().toISOString(),
+      pid: `${process.pid}-${process.env.IS_JOB_WORKER === 'true' ? 'child' : 'parent'}`,
       message,
       appId: this.appId,
       ...context,

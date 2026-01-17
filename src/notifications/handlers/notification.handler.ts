@@ -15,7 +15,7 @@ export class NotificationHandler {
   ) {}
 
   @JobHandler({
-    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+    queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
     name: EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
   })
   async handleUserRegistered(

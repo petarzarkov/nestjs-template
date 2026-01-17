@@ -25,3 +25,9 @@ export interface EventMap {
 }
 
 export type EventType = keyof EventMap;
+
+export type QueueType =
+  (typeof EVENT_CONSTANTS.QUEUES)[keyof typeof EVENT_CONSTANTS.QUEUES];
+
+export type RoutingKeyType =
+  (typeof EVENT_CONSTANTS.ROUTING_KEYS)[keyof typeof EVENT_CONSTANTS.ROUTING_KEYS];

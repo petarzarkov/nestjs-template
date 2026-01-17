@@ -9,6 +9,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Emitter } from '@socket.io/redis-emitter';
 import { ExtendedError, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { AIService } from '@/ai/services/ai.service';
@@ -18,6 +19,7 @@ import { AppConfigService } from '@/config/services/app.config.service';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { RedisService } from '@/infra/redis/services/redis.service';
 import { EventMap, EventType } from '@/notifications/events/events';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { UsersService } from '@/users/services/users.service';
@@ -26,6 +28,7 @@ import {
   ChatMessage,
   ExtendedSocket,
   WebSocketBaseMessage,
+  WebSocketEmitEvents,
   WSServer,
 } from './events.dto';
 
@@ -46,7 +49,11 @@ type MiddlewareFn = (socket: Socket, next: NextFn) => Promise<void>;
 @UsePipes(new ValidationPipe({ transform: true }))
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server!: WSServer;
+  server: WSServer | null = null; // Null in Worker Process
+
+  emitter: Emitter<WebSocketEmitEvents> | null = null; // Null in Main Process
+
+  io!: WSServer | Emitter<WebSocketEmitEvents>;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -55,7 +62,26 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly usersService: UsersService,
     private readonly contextService: ContextService,
     private readonly aiService: AIService,
+    private readonly redisService: RedisService,
   ) {}
+
+  onModuleInit() {
+    // Check if we are in the worker process (where server is null)
+    if (!this.server) {
+      const redisClient = this.redisService.newConnection('emitter', {
+        db: 4,
+      });
+
+      this.emitter = new Emitter(redisClient);
+      this.io = this.emitter;
+    } else {
+      this.io = this.server;
+    }
+
+    if (!this.io) {
+      throw new Error('Gateway IO not initialized');
+    }
+  }
 
   afterInit(server: WSServer) {
     server.use(this.#createContextMiddleware());
@@ -193,15 +219,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // Notify chat room that user joined
-    this.server.to(ROOMS.CHAT).emit('userJoined', {
+    this.io.to(ROOMS.CHAT).emit('userJoined', {
       username: user.displayName || user.email?.split('@')[0],
       timestamp: new Date(),
     });
 
     // Send user count
-    const chatRoom = this.server.sockets.adapter.rooms.get(ROOMS.CHAT);
+    const chatRoom = this.server?.sockets.adapter.rooms.get(ROOMS.CHAT);
     const userCount = chatRoom ? chatRoom.size : 0;
-    this.server.to(ROOMS.CHAT).emit('userCount', userCount);
+    this.io.to(ROOMS.CHAT).emit('userCount', userCount);
   }
 
   handleDisconnect(client: ExtendedSocket) {
@@ -214,15 +240,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify chat room that user left
     if (user) {
-      this.server.to(ROOMS.CHAT).emit('userLeft', {
+      this.io.to(ROOMS.CHAT).emit('userLeft', {
         username: user.email,
         timestamp: new Date(),
       });
 
       // Send updated user count
-      const chatRoom = this.server.sockets.adapter.rooms.get(ROOMS.CHAT);
+      const chatRoom = this.server?.sockets.adapter.rooms.get(ROOMS.CHAT);
       const userCount = chatRoom ? chatRoom.size : 0;
-      this.server.to(ROOMS.CHAT).emit('userCount', userCount);
+      this.io.to(ROOMS.CHAT).emit('userCount', userCount);
     }
   }
 
@@ -238,7 +264,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       timestamp: new Date(),
       picture: user.picture,
     };
-    this.server.to(ROOMS.CHAT).emit('message', chatMessage);
+    this.io.to(ROOMS.CHAT).emit('message', chatMessage);
     return { event: 'messageSent', data: { success: true } };
   }
 
@@ -339,7 +365,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
     );
 
-    this.server.to(rooms).emit('notification', {
+    this.io.to(rooms).emit('notification', {
       event: eventType,
       payload,
     });
@@ -349,7 +375,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.verbose(`Emitting to all`, {
       payload,
     });
-    this.server.emit('global_notification', payload);
+    this.io.emit('global_notification', payload);
   }
 
   #buildExtendedError(
