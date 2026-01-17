@@ -5,12 +5,12 @@ import type { BackoffOptions, JobsOptions, KeepJobs, Queue } from 'bullmq';
 import { SECOND } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
-import type { BaseEvent } from '../events/base-event.dto';
+import type { BaseEvent } from '../../../notifications/events/base-event.dto';
 import {
   EVENT_CONSTANTS,
   type EventMap,
   type EventType,
-} from '../events/events';
+} from '../../../notifications/events/events';
 
 export interface PublishOptions extends JobsOptions {
   userId?: string;
@@ -23,7 +23,7 @@ export interface PublishOptions extends JobsOptions {
 }
 
 @Injectable()
-export class EventPublisherService {
+export class JobPublisherService {
   private readonly queues: Map<string, Queue<BaseEvent<EventType>>>;
   private readonly JOB_FAILURE_DEFAULT_KEEP: KeepJobs = {
     count: 1000, // Keep only the last 1000 successful jobs to save Redis memory
@@ -49,7 +49,7 @@ export class EventPublisherService {
     ]);
   }
 
-  async publishEvent<T extends EventType>(
+  async publishJob<T extends EventType>(
     eventType: T,
     payload: EventMap[T],
     options?: PublishOptions,

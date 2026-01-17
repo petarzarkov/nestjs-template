@@ -2,10 +2,10 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
+import { JobPublisherService } from '../infra/queue/services/job-publisher.service';
 import { EmailModule } from './email/email.module';
 import { EVENT_CONSTANTS } from './events/events';
 import { EventsModule } from './events/events.module';
-import { EventPublisherService } from './services/event-publisher.service';
 import { NotificationHandlersService } from './services/notification-handlers.service';
 
 @Module({
@@ -37,7 +37,7 @@ import { NotificationHandlersService } from './services/notification-handlers.se
     EmailModule,
     EventsModule.forRoot(),
   ],
-  providers: [NotificationHandlersService, EventPublisherService],
-  exports: [EventPublisherService],
+  providers: [NotificationHandlersService, JobPublisherService],
+  exports: [JobPublisherService],
 })
 export class NotificationQueueModule {}

@@ -11,8 +11,8 @@ import { EntityManager } from 'typeorm';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { EventPublisherService } from '@/notifications/services/event-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -27,7 +27,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly passwordResetTokensRepository: PasswordResetTokensRepository,
     private readonly authProvidersRepository: AuthProvidersRepository,
-    private readonly eventPublisher: EventPublisherService,
+    private readonly jobPublisher: JobPublisherService,
     private readonly jwtService: JwtService,
     @InjectEntityManager() private readonly entityManager: EntityManager,
     private readonly logger: ContextLogger,
@@ -82,7 +82,7 @@ export class AuthService {
     );
 
     // Publish password reset event
-    await this.eventPublisher.publishEvent(
+    await this.jobPublisher.publishJob(
       EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
       {
         userId: user.id,
@@ -235,7 +235,7 @@ export class AuthService {
         user = result;
 
         // Publish user registered event
-        await this.eventPublisher.publishEvent(
+        await this.jobPublisher.publishJob(
           EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
           {
             email: user.email,

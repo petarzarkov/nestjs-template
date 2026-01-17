@@ -9,8 +9,8 @@ import { AuthProvider } from '@/auth/entity/auth-provider.entity';
 import { OAuthProvider } from '@/auth/enum/oauth-provider.enum';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { password as passwordUtil } from '@/core/utils/password.util';
+import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
 import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import { EventPublisherService } from '@/notifications/services/event-publisher.service';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -23,7 +23,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly invitesRepository: InvitesRepository,
-    private readonly eventPublisher: EventPublisherService,
+    private readonly jobPublisher: JobPublisherService,
     @InjectEntityManager() readonly entityManager: EntityManager,
   ) {}
 
@@ -75,7 +75,7 @@ export class UsersService {
     ]);
 
     // Publish user registered event
-    await this.eventPublisher.publishEvent(
+    await this.jobPublisher.publishJob(
       EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
@@ -116,7 +116,7 @@ export class UsersService {
       },
     );
 
-    await this.eventPublisher.publishEvent(
+    await this.jobPublisher.publishJob(
       EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
