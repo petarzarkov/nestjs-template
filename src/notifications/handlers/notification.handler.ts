@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { JobHandler } from '@/infra/queue/decorators/job-handler.decorator';
 import { type JobHandlerPayload } from '@/infra/queue/types/queue-job.type';
 import { EmailService } from '../email/services/email.service';
@@ -9,7 +8,6 @@ import { EventsGateway } from '../events/events.gateway';
 @Injectable()
 export class NotificationHandler {
   constructor(
-    private readonly logger: ContextLogger,
     private readonly emailService: EmailService,
     private readonly eventsGateway: EventsGateway,
   ) {}
@@ -30,8 +28,6 @@ export class NotificationHandler {
       eventType,
       payload,
     });
-
-    this.logger.verbose(`Job completed - ID: ${job.id}; EVENT: ${eventType}`);
   }
 
   @JobHandler({
@@ -50,8 +46,6 @@ export class NotificationHandler {
       eventType,
       payload,
     });
-
-    this.logger.verbose(`Job completed - ID: ${job.id}; EVENT: ${eventType}`);
   }
 
   @JobHandler({
@@ -63,12 +57,10 @@ export class NotificationHandler {
       typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET
     >,
   ): Promise<void> {
-    const { payload, eventType } = job.data;
+    const { payload } = job.data;
 
     await this.emailService.sendPasswordResetEmail(payload);
 
     // no WS event, or?
-
-    this.logger.verbose(`Job completed - ID: ${job.id}; EVENT: ${eventType}`);
   }
 }

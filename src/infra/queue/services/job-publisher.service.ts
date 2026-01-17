@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import type { BackoffOptions, JobsOptions, KeepJobs, Queue } from 'bullmq';
-import { SECOND } from '@/constants';
+import type { JobsOptions, Queue } from 'bullmq';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import type { BaseEvent } from '@/notifications/events/base-event.dto';
@@ -26,14 +25,6 @@ export interface PublishOptions extends JobsOptions {
 @Injectable()
 export class JobPublisherService {
   private readonly queues: Map<string, Queue<BaseEvent<EventType>>>;
-  private readonly JOB_FAILURE_DEFAULT_KEEP: KeepJobs = {
-    count: 100, // Keep only the last 100 failed jobs to save Redis memory
-  };
-  private readonly JOB_DEFAULT_ATTEMPTS = 3;
-  private readonly JOB_DEFAULT_BACKOFF: BackoffOptions = {
-    type: 'exponential',
-    delay: 1 * SECOND,
-  };
 
   constructor(
     @InjectQueue(EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS)
@@ -86,12 +77,6 @@ export class JobPublisherService {
           priority: options?.priority,
           delay: options?.delay,
           jobId: options?.jobId,
-          removeOnComplete: {
-            count: 10,
-          },
-          removeOnFail: options?.removeOnFail ?? this.JOB_FAILURE_DEFAULT_KEEP,
-          attempts: options?.attempts ?? this.JOB_DEFAULT_ATTEMPTS,
-          backoff: options?.backoff ?? this.JOB_DEFAULT_BACKOFF,
         },
       );
 

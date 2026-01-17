@@ -2,11 +2,7 @@ import { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Job } from 'bullmq';
 import { AppModule } from '@/app.module';
-import pkg from '../../../package.json';
-import {
-  bootstrapLogger,
-  ContextLogger,
-} from '../logger/services/context-logger.service';
+import { ContextLogger } from '../logger/services/context-logger.service';
 import { JobDispatcherService } from './services/job-dispatcher.service';
 
 // This persists as long as the child process is alive.
@@ -19,14 +15,9 @@ let app: INestApplicationContext | null = null;
 export default async function jobProcessor(job: Job) {
   process.env.IS_JOB_WORKER = 'true';
 
-  app = await NestFactory.createApplicationContext(AppModule, {
-    logger: bootstrapLogger(pkg),
-    abortOnError: false,
-  });
-
   if (!app) {
     app = await NestFactory.createApplicationContext(AppModule, {
-      logger: bootstrapLogger(pkg),
+      logger: ['fatal', 'error', 'warn'],
       abortOnError: false,
     });
 
@@ -43,7 +34,6 @@ export default async function jobProcessor(job: Job) {
 
   app.useLogger(logger);
   const jobDispatcher = app.get(JobDispatcherService);
-
   await job.log(
     `Started Background Job Processor: ${jobDispatcher.getJobId(job)}`,
   );
