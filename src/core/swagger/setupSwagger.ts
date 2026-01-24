@@ -55,8 +55,8 @@ export function setupSwagger(
       }) {
         if (
           response.ok &&
-          (response?.url?.includes(`${GLOBAL_PREFIX}/auth/login`) ||
-            response?.url?.includes(`${GLOBAL_PREFIX}/auth/register`))
+          (response?.url?.includes(`api/auth/login`) ||
+            response?.url?.includes(`api/auth/register`))
         ) {
           (
             window as unknown as Window & {

@@ -65,4 +65,4 @@ EXPOSE 3001
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # Start the application
-CMD ["bun", "dist/main.js"]
+CMD ["bun", "run", "start"]
