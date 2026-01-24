@@ -74,7 +74,7 @@ export class RedisService implements OnModuleDestroy {
 
     client.on('ready', () => {
       const db = client.options.db ?? 0;
-      this.logger.log(`Redis ${name} client ready (DB: ${db})`);
+      this.logger.verbose(`Redis ${name} client ready (DB: ${db})`);
     });
 
     client.on('error', err =>

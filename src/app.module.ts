@@ -19,7 +19,9 @@ import { DatabaseModule } from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
 import { LoggerModule } from './infra/logger/logger.module';
 import { QueueModule } from './infra/queue/queue.module';
+import { QueueDashboardModule } from './infra/queue/queue-dashboard.module';
 import { RedisModule } from './infra/redis/redis.module';
+import { RedisCacheThrottlerModule } from './infra/redis/redis-cache-throttler.module';
 import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
@@ -48,6 +50,7 @@ import { UsersModule } from './users/users.module';
     HelpersModule,
     DatabaseModule.forRoot(),
     RedisModule,
+    RedisCacheThrottlerModule,
     PaginationModule,
     LoggerModule,
     HealthModule,
@@ -55,6 +58,7 @@ import { UsersModule } from './users/users.module';
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,
+    QueueDashboardModule,
   ],
   providers: [
     HttpLoggingInterceptor,

@@ -1,8 +1,8 @@
 import { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Job } from 'bullmq';
-import { AppModule } from '@/app.module';
-import { ContextLogger } from '../logger/services/context-logger.service';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { JobModule } from './job.module';
 import { JobDispatcherService } from './services/job-dispatcher.service';
 
 // This persists as long as the child process is alive.
@@ -16,7 +16,7 @@ export default async function jobProcessor(job: Job) {
   process.env.IS_JOB_WORKER = 'true';
 
   if (!app) {
-    app = await NestFactory.createApplicationContext(AppModule, {
+    app = await NestFactory.createApplicationContext(JobModule, {
       logger: ['fatal', 'error', 'warn'],
       abortOnError: false,
     });
@@ -28,29 +28,27 @@ export default async function jobProcessor(job: Job) {
         await app.close();
       }
     });
+
+    const logger = app.get(ContextLogger);
+    app.enableShutdownHooks();
+    app.useLogger(logger);
+
+    logger.log(`Job worker initialized, first job: ${job.name} (${job.id})`);
   }
 
   const logger = app.get(ContextLogger);
 
-  app.useLogger(logger);
   const jobDispatcher = app.get(JobDispatcherService);
-  await job.log(
-    `Started Background Job Processor: ${jobDispatcher.getJobId(job)}`,
-  );
+  const jobId = jobDispatcher.getJobId(job);
+  const startMessage = `Started Background Job Processor: ${jobId}`;
+  await job.log(startMessage);
   try {
     const result = await jobDispatcher.executeBackgroundJob(job);
-    await job.log(
-      `Background Job processed successfully: ${jobDispatcher.getJobId(job)}`,
-    );
+    const successMessage = `Background Job processed successfully: ${jobId}`;
+    await job.log(successMessage);
     return result;
   } catch (error) {
-    logger.error(
-      `Failed to process Background Job: ${jobDispatcher.getJobId(job)}`,
-      {
-        job,
-        error,
-      },
-    );
+    logger.error(`Failed to process Background Job: ${jobId}`, { error });
     await job.log(
       `Failed to process job ${jobDispatcher.getJobId(job)}: ${error instanceof Error ? error.message : error}, stack: ${error instanceof Error ? error.stack : 'unknown'}`,
     );
