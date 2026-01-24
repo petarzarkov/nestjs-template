@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { HttpModule } from '@nestjs/axios';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AIModule } from './ai/ai.module';
@@ -64,8 +64,4 @@ import { UsersModule } from './users/users.module';
     HtmlBasicAuthMiddleware,
   ],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestMiddleware).forRoutes('*wildcard');
-  }
-}
+export class AppModule {}

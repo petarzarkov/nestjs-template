@@ -2,7 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import 'reflect-metadata';
-import pkgJson from '../package.json';
+import pkg from '../package.json';
 import { AppModule } from './app.module';
 import { AppEnv } from './config/enum/app-env.enum';
 import type { ValidatedConfig } from './config/env.validation';
@@ -11,11 +11,9 @@ import { GLOBAL_PREFIX } from './constants';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
+import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { setupSwagger } from './core/swagger/setupSwagger';
-import {
-  bootstrapLogger,
-  ContextLogger,
-} from './infra/logger/services/context-logger.service';
+import { ContextLogger } from './infra/logger/services/context-logger.service';
 import { RedisService } from './infra/redis/services/redis.service';
 import { SocketConfigAdapter } from './notifications/events/socket.adapter';
 
@@ -23,52 +21,71 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     forceCloseConnections: true,
     rawBody: true,
-    bufferLogs: false,
-    logger: bootstrapLogger(pkgJson),
+    logger: ['fatal', 'error', 'warn'],
   });
-  const configService = app.get(AppConfigService<ValidatedConfig>);
   const logger = app.get(ContextLogger);
+  app.useLogger(logger);
+
+  // Apply request middleware at Express level (before NestJS routing)
+  // This ensures context is set for ALL requests, including 404s
+  const requestMiddleware = app.get(RequestMiddleware);
+  app.use(requestMiddleware.use.bind(requestMiddleware));
 
   // Add global exception handling
-  process.on('uncaughtException', error => {
-    logger.fatal('Uncaught Exception', { err: error });
+  process.on('uncaughtException', (error, origin) => {
+    logger.fatal('Uncaught Exception', { err: error, origin });
     process.exit(1);
   });
-  process.on('unhandledRejection', (reason: unknown) => {
+  process.on('unhandledRejection', (reason, promise) => {
     const error = reason instanceof Error ? reason : new Error(String(reason));
-    logger.error('Unhandled Rejection', { err: error });
+    logger.error('Unhandled Rejection', { err: error, promise });
   });
 
-  app.useLogger(logger);
-  const httpLoggingInterceptor = app.get(HttpLoggingInterceptor);
-  const genericExceptionFilter = app.get(GenericExceptionFilter);
+  const configService = app.get(AppConfigService<ValidatedConfig>);
+  const appConfig = configService.getOrThrow('app');
+  if (appConfig.nodeEnv === 'production') {
+    app.enableShutdownHooks();
+  }
+
+  const corsConfig = configService.getOrThrow('cors');
+  const redisConfig = configService.getOrThrow('redis');
+  if (redisConfig) {
+    logger.log('Redis config', {
+      redisConfig,
+    });
+  }
+
   const typeOrmExceptionFilter = app.get(TypeOrmExceptionFilter);
-  const appConfig = configService.get('app');
+  const genericExceptionFilter = app.get(GenericExceptionFilter);
+  const httpLoggingInterceptor = app.get(HttpLoggingInterceptor);
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.useGlobalInterceptors(httpLoggingInterceptor);
   app.useGlobalFilters(genericExceptionFilter, typeOrmExceptionFilter);
-  app.set('trust proxy', true);
-  const corsOpts = {
-    origin: configService.get('cors.origin'),
-    credentials: appConfig.env === AppEnv.PRD,
-  };
-  app.enableCors(corsOpts);
 
-  // Only enable shutdown hooks in production to avoid hot reload issues
-  if (appConfig.nodeEnv === 'production') {
-    app.enableShutdownHooks();
-  }
+  // Global configuration
+  app.setGlobalPrefix(GLOBAL_PREFIX);
+
+  // Trust proxy for correct IP detection behind load balancers
+  app.set('trust proxy', true);
+
+  // CORS
+  app.enableCors({
+    origin: corsConfig.origin,
+    credentials: appConfig.env === AppEnv.PRD,
+  });
+
+  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
       transformOptions: { enableImplicitConversion: true },
-      whitelist: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
     }),
   );
 
-  const { title, swaggerPath } = setupSwagger(app, pkgJson, appConfig);
+  // Swagger documentation
+  const { title, swaggerPath } = setupSwagger(app, pkg, appConfig);
 
   const redisService = app.get(RedisService);
   app.useWebSocketAdapter(
@@ -81,13 +98,6 @@ async function bootstrap() {
 
   const wsConfig = configService.get('ws');
   const appUrl = await app.getUrl();
-
-  const redisConfig = configService.get('redis');
-  if (redisConfig) {
-    logger.log('Redis config', {
-      redisConfig,
-    });
-  }
 
   const wsUrl =
     appUrl
@@ -114,7 +124,7 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch(error => {
-  console.error('Failed to bootstrap application:', error);
+bootstrap().catch(err => {
+  console.error('Failed to start application:', err);
   process.exit(1);
 });

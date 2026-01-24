@@ -1,6 +1,5 @@
 import { Injectable, LoggerService } from '@nestjs/common';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
-import { PackageJson } from '@/config/PackageJson';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { LOGGER } from '@/constants';
 import { HelpersService } from '@/core/helpers/services/helpers.service';
@@ -25,7 +24,7 @@ const LOG_LEVELS: LogLevel[] = [
 export class ContextLogger implements LoggerService {
   private readonly logConfig: ValidatedServiceConfig['log'];
   private readonly appConfig: ValidatedServiceConfig['app'];
-  private readonly logLevel: LogLevel;
+  public readonly logLevel: LogLevel;
   private readonly isDevelopment: boolean;
   private readonly maskFields: string[];
   private readonly maxArrayLength: number;
@@ -339,6 +338,8 @@ export class ContextLogger implements LoggerService {
       flow: Color.brightGreen,
       method: Color.brightBlue,
       stack: Color.gray,
+      status: Color.brightYellow,
+      elapsed: Color.brightYellow,
     };
 
     return jsonString.replace(
@@ -374,6 +375,7 @@ export class ContextLogger implements LoggerService {
     return true;
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
   #findNestedError(
     obj: Record<string, unknown>,
     visited = new WeakSet(),
@@ -414,6 +416,7 @@ export class ContextLogger implements LoggerService {
     return null;
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
   #makeSafeForJson(value: unknown): unknown {
     if (value === null || value === undefined) {
       return value;
@@ -533,29 +536,3 @@ export class ContextLogger implements LoggerService {
     ];
   }
 }
-
-export const bootstrapLogger = (pkg: PackageJson) => {
-  return new ContextLogger(
-    {
-      getOrThrow: (key: keyof ValidatedServiceConfig) => {
-        if (key === 'app') {
-          return {
-            name: pkg.name,
-            version: pkg.version,
-            nodeEnv: process.env.NODE_ENV,
-            env: process.env.APP_ENV,
-          };
-        }
-        if (key === 'log') {
-          return {
-            level: LogLevel.DEBUG,
-          };
-        }
-
-        throw new Error(`Key ${key} not bootstraped`);
-      },
-    } as unknown as AppConfigService<ValidatedServiceConfig>,
-    new ContextService(),
-    new HelpersService(),
-  );
-};
