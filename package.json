@@ -12,6 +12,7 @@
   "scripts": {
     "prepare": "husky",
     "dev": "bun --watch src/main.ts",
+    "dev:nest": "nest start --watch --exec bun",
     "start": "bun dist/main.js",
     "build": "nest build && tsc-alias -p tsconfig.alias.json",
     "gen:env:docs": "bun ./scripts/gen-env-docs.ts",
