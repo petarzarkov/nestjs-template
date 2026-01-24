@@ -19,6 +19,7 @@
     "test:watch": "bun test --watch",
     "test:cov": "bun test --coverage",
     "test:e2e": "bun test --env-file=./e2e/.env --preload ./e2e/setup/preload.ts ./e2e/**/*.e2e.spec.ts",
+    "test:e2e:single": "bun test --timeout 30000 --env-file=./e2e/.env --preload ./e2e/preload.ts --bail",
     "email": "email dev --dir src/notifications/email/templates --port 3035",
     "email:export": "email export --dir src/notifications/email/templates",
     "lint": "biome check --write --unsafe .",

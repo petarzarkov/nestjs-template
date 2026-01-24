@@ -153,9 +153,9 @@ E2E test infrastructure:
 
 ### Migration Commands
 ```bash
-bun run migration:gen MyMigration  # Generate migration
-bun run migration:run              # Run migrations
-bun run migration:revert           # Revert last migration
+bun run mig:gen MyMigration  # Generate migration
+bun run mig:run              # Run migrations
+bun run mig:revert           # Revert last migration
 ```
 
 ---

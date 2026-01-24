@@ -29,7 +29,7 @@ cp .env.example .env
 # See env-vars.md for detailed configuration options
 
 # Run database migrations
-bun run migration:run
+bun run mig:run
 
 # Start development server
 bun dev
@@ -48,9 +48,9 @@ bun run email               # Run email server
 bun run email:export        # Export email templates
 bun run lint                # Lint code
 bun run format              # Format code
-bun run migration:gen $Name # Generate migration
-bun run migration:run       # Run migrations
-bun run migration:revert    # Revert last migration
+bun run mig:gen $Name # Generate migration
+bun run mig:run       # Run migrations
+bun run mig:revert    # Revert last migration
 bun run db:drop             # Drop db schema
 bun run create:admin        # Create a new admin user
 ```

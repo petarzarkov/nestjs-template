@@ -6,7 +6,7 @@ MIGRATIONS_DIR="./src/infra/db/migrations"
 # Check if a migration name was provided
 if [ -z "$1" ]; then
   echo "❌ Error: Please provide a name for the migration."
-  echo "Usage: bun run migration:gen <MigrationName>"
+  echo "Usage: bun run mig:gen <MigrationName>"
   exit 1
 fi
 
