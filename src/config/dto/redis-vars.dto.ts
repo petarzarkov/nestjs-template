@@ -57,8 +57,8 @@ export class RedisVars {
   @Min(1)
   @Max(100)
   @IsOptional()
-  @Transform(({ value }) => (value ? parseInt(value, 10) : 10))
-  REDIS_QUEUES_CONCURRENCY: number = 10;
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 3))
+  REDIS_QUEUES_CONCURRENCY: number = 3;
 
   @IsNumber()
   @Min(1)
@@ -73,6 +73,13 @@ export class RedisVars {
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : SECOND))
   REDIS_QUEUES_RATE_LIMIT_DURATION: number = SECOND;
+
+  @IsNumber()
+  @Min(10 * SECOND)
+  @Max(10 * MINUTE)
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 2 * MINUTE))
+  REDIS_QUEUES_JOB_TIMEOUT_MS: number = 2 * MINUTE;
 }
 
 export const getRedisConfig = (config: RedisVars) => {
@@ -85,6 +92,7 @@ export const getRedisConfig = (config: RedisVars) => {
       ttl: config.REDIS_CACHE_TTL,
     },
     queues: {
+      jobTimeoutMs: config.REDIS_QUEUES_JOB_TIMEOUT_MS,
       maxRetries: config.REDIS_QUEUES_MAX_RETRIES,
       retryDelayMs: config.REDIS_QUEUES_RETRY_DELAY_MS,
       concurrency: config.REDIS_QUEUES_CONCURRENCY,

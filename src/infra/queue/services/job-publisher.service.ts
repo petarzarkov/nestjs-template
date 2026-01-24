@@ -4,9 +4,9 @@ import { Injectable } from '@nestjs/common';
 import type { JobsOptions, Queue } from 'bullmq';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
-import type { BaseEvent } from '@/notifications/events/base-event.dto';
+import type { QueueJob } from '@/infra/queue/types/queue-job.type';
 import {
-  EVENT_CONSTANTS,
+  EVENTS,
   type EventMap,
   type EventType,
   type QueueType,
@@ -24,22 +24,19 @@ export interface PublishOptions extends JobsOptions {
 
 @Injectable()
 export class JobPublisherService {
-  private readonly queues: Map<string, Queue<BaseEvent<EventType>>>;
+  private readonly queues: Map<string, Queue<QueueJob<EventType>>>;
 
   constructor(
-    @InjectQueue(EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS)
-    private readonly notificationsEventsQueue: Queue<BaseEvent<EventType>>,
-    @InjectQueue(EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS)
-    private readonly backgroundJobsQueue: Queue<BaseEvent<EventType>>,
+    @InjectQueue(EVENTS.QUEUES.NOTIFICATIONS_EVENTS)
+    private readonly notificationsEventsQueue: Queue<QueueJob<EventType>>,
+    @InjectQueue(EVENTS.QUEUES.BACKGROUND_JOBS)
+    private readonly backgroundJobsQueue: Queue<QueueJob<EventType>>,
     private readonly logger: ContextLogger,
     private readonly contextService: ContextService,
   ) {
     this.queues = new Map([
-      [
-        EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-        this.notificationsEventsQueue,
-      ],
-      [EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS, this.backgroundJobsQueue],
+      [EVENTS.QUEUES.NOTIFICATIONS_EVENTS, this.notificationsEventsQueue],
+      [EVENTS.QUEUES.BACKGROUND_JOBS, this.backgroundJobsQueue],
     ]);
   }
 
@@ -49,8 +46,7 @@ export class JobPublisherService {
     options?: PublishOptions,
   ): Promise<{ jobId?: string }> {
     try {
-      const queueName =
-        options?.queue ?? EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS;
+      const queueName = options?.queue ?? EVENTS.QUEUES.NOTIFICATIONS_EVENTS;
       const queue = this.queues.get(queueName);
       if (!queue) {
         this.logger.warn('Queue not available, skipping publish', {

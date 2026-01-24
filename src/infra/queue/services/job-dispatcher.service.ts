@@ -3,17 +3,16 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { Job, Worker } from 'bullmq';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { JOB_HANDLER_METADATA } from '@/constants';
+import { JOB_HANDLER_METADATA, MINUTE, SECOND } from '@/constants';
 import { ContextService } from '@/infra/logger/services/context.service';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
-import type { JobHandlerOptions } from '../decorators/job-handler.decorator';
-import type { JobHandlerType } from '../types/queue-job.type';
+import type { JobHandlerOptions } from '@/infra/queue/decorators/job-handler.decorator';
+import type { JobHandlerType } from '@/infra/queue/types/queue-job.type';
+import { EVENTS } from '@/notifications/events/events';
 
 @Injectable()
 export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = [];
-  // Cache handlers so we don't scan metadata multiple times
   private handlersCache: Map<string, Map<string, JobHandlerType>> | null = null;
 
   constructor(
@@ -26,23 +25,10 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    // If we are in the Worker Process, do nothing during init.
-    // The entry point for the worker is 'executeJob', not onModuleInit.
     if (process.env.IS_JOB_WORKER === 'true') {
       return;
     }
-
-    this.logger.log('Discovering job handlers...');
-
-    // Main Process: Discover ALL handlers.
-    // We need to know about Background queues to spawn their supervisor Worker,
-    // and Foreground queues to run them inline.
     this.handlersCache = this.#discoverHandlers(() => true);
-
-    this.logger.log(
-      `Found ${this.handlersCache.size} queue(s) with handlers, starting workers...`,
-    );
-
     this.#startWorkers(this.handlersCache);
   }
 
@@ -53,14 +39,39 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Scans the app for methods decorated with @JobHandler
-   * @param queueFilter Optional predicate to filter which queues to register
+   * Wraps handler execution with a timeout to prevent jobs from hanging indefinitely.
+   * If the handler exceeds the timeout, the job will be failed with a timeout error.
    */
+  private async runWithTimeout(
+    job: Job,
+    handler: JobHandlerType,
+    timeoutMs: number,
+  ): Promise<unknown> {
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(
+          new Error(
+            `Job execution timed out after ${timeoutMs / 1000}s. Job may be hanging on external API call or database operation.`,
+          ),
+        );
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([handler(job), timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
+
   #discoverHandlers(
     queueFilter: (queue: string) => boolean = () => true,
   ): Map<string, Map<string, JobHandlerType>> {
     const queueMap = new Map<string, Map<string, JobHandlerType>>();
-
     const providers = this.discoveryService.getProviders();
     const controllers = this.discoveryService.getControllers();
 
@@ -80,10 +91,7 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
         );
 
         if (metadata) {
-          // FILTERING: Skip queues that don't match our criteria
-          if (!queueFilter(metadata.queue)) {
-            continue;
-          }
+          if (!queueFilter(metadata.queue)) continue;
 
           let handlers = queueMap.get(metadata.queue);
           if (!handlers) {
@@ -98,7 +106,6 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
         }
       }
     }
-
     return queueMap;
   }
 
@@ -108,12 +115,7 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     const processorPath = join(__dirname, `../job.processor.${extension}`);
 
     for (const [queueName, handlers] of queueMap) {
-      const isBackgroundJob =
-        queueName === EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS;
-
-      // STRATEGY SELECTION:
-      // If Background Queue -> Use File Path (Sandboxed Process)
-      // If Foreground Queue -> Use Inline Callback (Shared Process)
+      const isBackgroundJob = queueName === EVENTS.QUEUES.BACKGROUND_JOBS;
       const processor = isBackgroundJob
         ? processorPath
         : async (job: Job) => {
@@ -140,8 +142,13 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
               async () => {
                 const message = `Processing job ${job.name} (ID: ${job.id})`;
                 this.logger.verbose(message);
+
                 try {
-                  await handler(job);
+                  await this.runWithTimeout(
+                    job,
+                    handler,
+                    redisConfig.queues.jobTimeoutMs,
+                  );
                 } catch (error) {
                   await job.log(
                     `Failed: ${error instanceof Error ? error.message : error}`,
@@ -164,6 +171,9 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
           max: redisConfig.queues.rateLimitMax,
           duration: redisConfig.queues.rateLimitDuration,
         },
+        lockDuration: 1 * MINUTE,
+        stalledInterval: 30 * SECOND,
+        maxStalledCount: 2,
       });
 
       worker.on('completed', job => {
@@ -181,27 +191,32 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
       this.workers.push(worker);
       this.logger.log(
         `Started [${isBackgroundJob ? 'background' : 'foreground'}] worker for queue: ${queueName}`,
+        {
+          queueName,
+          handlers: Array.from(handlers.entries())
+            .map(
+              ([name, handler]) =>
+                `${name}: ${handler?.name?.replace('bound ', '')}`,
+            )
+            .join(', '),
+          worker: {
+            id: worker.id,
+            concurrency: worker.concurrency,
+          },
+        },
       );
     }
   }
 
   getJobId(job: Job | undefined) {
-    if (!job) {
-      return 'Unknown job';
-    }
+    if (!job) return 'Unknown job';
     return `${job.id} ${job.queueName}[${job.name}]`;
   }
 
-  /**
-   * This method is called by the Sandboxed Processor (in the child process).
-   */
   public async executeBackgroundJob(job: Job) {
-    // Lazy discovery inside the worker process
     if (!this.handlersCache) {
-      // When running as a worker, we ONLY care about the Background Queue handlers.
-      // We can filter out everything else to keep the memory footprint cleaner.
       this.handlersCache = this.#discoverHandlers(
-        queue => queue === EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
+        queue => queue === EVENTS.QUEUES.BACKGROUND_JOBS,
       );
     }
 
@@ -214,6 +229,7 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    return handler(job);
+    const redisConfig = this.configService.getOrThrow('redis');
+    return this.runWithTimeout(job, handler, redisConfig.queues.jobTimeoutMs);
   }
 }

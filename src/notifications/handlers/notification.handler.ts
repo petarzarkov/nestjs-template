@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JobHandler } from '@/infra/queue/decorators/job-handler.decorator';
 import { type JobHandlerPayload } from '@/infra/queue/types/queue-job.type';
 import { EmailService } from '../email/services/email.service';
-import { EVENT_CONSTANTS } from '../events/events';
+import { EVENTS } from '../events/events';
 import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
@@ -13,11 +13,11 @@ export class NotificationHandler {
   ) {}
 
   @JobHandler({
-    queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
-    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+    queue: EVENTS.QUEUES.BACKGROUND_JOBS,
+    name: EVENTS.ROUTING_KEYS.USER_REGISTERED,
   })
   async handleUserRegistered(
-    job: JobHandlerPayload<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED>,
+    job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_REGISTERED>,
   ): Promise<void> {
     const { payload, metadata, eventType } = job.data ?? {};
     await this.emailService.sendWelcomeEmail(payload);
@@ -31,11 +31,11 @@ export class NotificationHandler {
   }
 
   @JobHandler({
-    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+    queue: EVENTS.QUEUES.NOTIFICATIONS_EVENTS,
+    name: EVENTS.ROUTING_KEYS.USER_INVITED,
   })
   async handleUserInvited(
-    job: JobHandlerPayload<typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED>,
+    job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_INVITED>,
   ): Promise<void> {
     const { payload, metadata, eventType } = job.data ?? {};
 
@@ -49,13 +49,11 @@ export class NotificationHandler {
   }
 
   @JobHandler({
-    queue: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
-    name: EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
+    queue: EVENTS.QUEUES.NOTIFICATIONS_EVENTS,
+    name: EVENTS.ROUTING_KEYS.USER_PASSWORD_RESET,
   })
   async handlePasswordReset(
-    job: JobHandlerPayload<
-      typeof EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET
-    >,
+    job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_PASSWORD_RESET>,
   ): Promise<void> {
     const { payload } = job.data;
 

@@ -4,7 +4,7 @@ import type {
   RegisteredPayload,
 } from '@/notifications/dto/user-notifications.dto';
 
-export const EVENT_CONSTANTS = {
+export const EVENTS = {
   EXCHANGE: 'domain_events_exchange',
   QUEUES: {
     NOTIFICATIONS_EVENTS: 'notifications-events-queue',
@@ -19,15 +19,14 @@ export const EVENT_CONSTANTS = {
 } as const;
 
 export interface EventMap {
-  [EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED]: RegisteredPayload;
-  [EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED]: InvitePayload;
-  [EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET]: PasswordResetPayload;
+  [EVENTS.ROUTING_KEYS.USER_REGISTERED]: RegisteredPayload;
+  [EVENTS.ROUTING_KEYS.USER_INVITED]: InvitePayload;
+  [EVENTS.ROUTING_KEYS.USER_PASSWORD_RESET]: PasswordResetPayload;
 }
 
 export type EventType = keyof EventMap;
 
-export type QueueType =
-  (typeof EVENT_CONSTANTS.QUEUES)[keyof typeof EVENT_CONSTANTS.QUEUES];
+export type QueueType = (typeof EVENTS.QUEUES)[keyof typeof EVENTS.QUEUES];
 
 export type RoutingKeyType =
-  (typeof EVENT_CONSTANTS.ROUTING_KEYS)[keyof typeof EVENT_CONSTANTS.ROUTING_KEYS];
+  (typeof EVENTS.ROUTING_KEYS)[keyof typeof EVENTS.ROUTING_KEYS];

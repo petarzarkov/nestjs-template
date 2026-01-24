@@ -10,7 +10,7 @@ import { OAuthProvider } from '@/auth/enum/oauth-provider.enum';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EVENTS } from '@/notifications/events/events';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 import { InvitesRepository } from '@/users/invites/repos/invites.repository';
@@ -76,13 +76,13 @@ export class UsersService {
 
     // Publish user registered event
     await this.jobPublisher.publishJob(
-      EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+      EVENTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
         name: user.displayName || user.email.split('@')[0],
         type: 'direct',
       },
-      { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
+      { emitToAdmins: true, queue: EVENTS.QUEUES.BACKGROUND_JOBS },
     );
 
     return user;
@@ -117,13 +117,13 @@ export class UsersService {
     );
 
     await this.jobPublisher.publishJob(
-      EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+      EVENTS.ROUTING_KEYS.USER_REGISTERED,
       {
         email: user.email,
         name: user.displayName || user.email.split('@')[0],
         type: 'invite',
       },
-      { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
+      { emitToAdmins: true, queue: EVENTS.QUEUES.BACKGROUND_JOBS },
     );
 
     return user;

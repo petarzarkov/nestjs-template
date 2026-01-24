@@ -2,7 +2,7 @@ import * as crypto from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EVENTS } from '@/notifications/events/events';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
 import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
 import { Invite } from '@/users/invites/entity/invite.entity';
@@ -59,7 +59,7 @@ export class InvitesService {
 
       // Publish invite event
       await this.jobPublisher.publishJob(
-        EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+        EVENTS.ROUTING_KEYS.USER_INVITED,
         { invite: updatedInvite },
         { emitToAdmins: true },
       );
@@ -84,7 +84,7 @@ export class InvitesService {
 
     // Publish invite event
     await this.jobPublisher.publishJob(
-      EVENT_CONSTANTS.ROUTING_KEYS.USER_INVITED,
+      EVENTS.ROUTING_KEYS.USER_INVITED,
       { invite: savedInvite },
       { emitToAdmins: true },
     );

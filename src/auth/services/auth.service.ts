@@ -12,7 +12,7 @@ import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EVENTS } from '@/notifications/events/events';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
@@ -83,7 +83,7 @@ export class AuthService {
 
     // Publish password reset event
     await this.jobPublisher.publishJob(
-      EVENT_CONSTANTS.ROUTING_KEYS.USER_PASSWORD_RESET,
+      EVENTS.ROUTING_KEYS.USER_PASSWORD_RESET,
       {
         userId: user.id,
         email: user.email,
@@ -236,13 +236,13 @@ export class AuthService {
 
         // Publish user registered event
         await this.jobPublisher.publishJob(
-          EVENT_CONSTANTS.ROUTING_KEYS.USER_REGISTERED,
+          EVENTS.ROUTING_KEYS.USER_REGISTERED,
           {
             email: user.email,
             name: displayName || user.email.split('@')[0],
             type: 'direct', // OAuth users are treated as direct registrations
           },
-          { emitToAdmins: true, queue: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS },
+          { emitToAdmins: true, queue: EVENTS.QUEUES.BACKGROUND_JOBS },
         );
       }
 

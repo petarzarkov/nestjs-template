@@ -6,7 +6,7 @@ import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { HtmlBasicAuthMiddleware } from '@/core/middlewares/html-basic-auth.middleware';
-import { EVENT_CONSTANTS } from '@/notifications/events/events';
+import { EVENTS } from '@/notifications/events/events';
 import { JobDispatcherService } from './services/job-dispatcher.service';
 
 @Global()
@@ -14,7 +14,7 @@ import { JobDispatcherService } from './services/job-dispatcher.service';
   imports: [
     DiscoveryModule,
     BullModule.registerQueueAsync({
-      name: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+      name: EVENTS.QUEUES.NOTIFICATIONS_EVENTS,
       inject: [AppConfigService],
       useFactory: (configService: AppConfigService) => {
         const redisConfig = configService.getOrThrow('redis');
@@ -33,7 +33,7 @@ import { JobDispatcherService } from './services/job-dispatcher.service';
       },
     }),
     BullModule.registerQueueAsync({
-      name: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
+      name: EVENTS.QUEUES.BACKGROUND_JOBS,
       inject: [AppConfigService],
       useFactory: (configService: AppConfigService) => {
         const redisConfig = configService.getOrThrow('redis');
@@ -74,11 +74,11 @@ import { JobDispatcherService } from './services/job-dispatcher.service';
       },
     }),
     BullBoardModule.forFeature({
-      name: EVENT_CONSTANTS.QUEUES.NOTIFICATIONS_EVENTS,
+      name: EVENTS.QUEUES.NOTIFICATIONS_EVENTS,
       adapter: BullMQAdapter,
     }),
     BullBoardModule.forFeature({
-      name: EVENT_CONSTANTS.QUEUES.BACKGROUND_JOBS,
+      name: EVENTS.QUEUES.BACKGROUND_JOBS,
       adapter: BullMQAdapter,
     }),
   ],
