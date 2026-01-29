@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.5-alpine AS builder
+FROM oven/bun:1.3.7-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN rm -rf node_modules && \
 # ============================================
 # Production stage
 # ============================================
-FROM oven/bun:1.3.5-alpine AS production
+FROM oven/bun:1.3.7-alpine AS production
 
 # Install system dependencies and download RDS certificate
 RUN apk add --no-cache poppler-utils curl && \
