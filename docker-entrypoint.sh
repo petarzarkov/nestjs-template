@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Running database migrations for NODE_ENV: $NODE_ENV iiso service"
+echo "Running database migrations for NODE_ENV: $NODE_ENV template service"
 
 if [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "testing" ]; then
   bun run mig:run:prod

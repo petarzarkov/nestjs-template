@@ -61,6 +61,7 @@
     "@react-email/components": "1.0.6",
     "@socket.io/redis-adapter": "8.3.0",
     "@socket.io/redis-emitter": "5.1.0",
+    "@scalar/nestjs-api-reference": "1.0.23",
     "ai": "6.0.59",
     "axios": "1.13.4",
     "bullmq": "5.67.2",

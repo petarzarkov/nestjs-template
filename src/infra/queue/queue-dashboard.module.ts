@@ -18,7 +18,7 @@ import { EVENTS } from '@/notifications/events/events';
           adapter: ExpressAdapter,
           boardOptions: {
             uiConfig: {
-              boardTitle: 'IISO Queues',
+              boardTitle: 'Template Queues',
               boardLogo: {
                 path: logoUrl,
               },

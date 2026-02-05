@@ -1,11 +1,12 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { ValidatedConfig } from '@/config/env.validation';
 import { PackageJson } from '@/config/PackageJson';
 import { GLOBAL_PREFIX } from '@/constants';
 import { HtmlBasicAuthMiddleware } from '../middlewares/html-basic-auth.middleware';
 
-export function setupSwagger(
+export function setupDocs(
   app: INestApplication,
   pkg: PackageJson,
   appConfig: ValidatedConfig['app'],
@@ -48,6 +49,7 @@ export function setupSwagger(
       displayRequestDuration: true,
       tagsSorter: 'alpha',
       operationsSorter: 'method',
+      docExpansion: 'none',
       responseInterceptor: function setBearerOnLogin(response: {
         ok: boolean;
         url: string | string[];
@@ -55,8 +57,8 @@ export function setupSwagger(
       }) {
         if (
           response.ok &&
-          (response?.url?.includes(`api/auth/login`) ||
-            response?.url?.includes(`api/auth/register`))
+          (response?.url?.includes('/api/auth/login') ||
+            response?.url?.includes('/api/auth/register'))
         ) {
           (
             window as unknown as Window & {
@@ -71,5 +73,20 @@ export function setupSwagger(
     },
   });
 
-  return { title, swaggerPath: SWAGGER_PATH };
+  const SCALAR_PATH = `/${GLOBAL_PREFIX}/public`;
+  app.use(
+    SCALAR_PATH,
+    apiReference({
+      title: 'Template API',
+      slug: 'template-api',
+      tagsSorter: 'alpha',
+      operationsSorter: 'method',
+      pageTitle: 'Template API',
+      favicon: appConfig.logoUrl,
+      content: document,
+      hideModels: true,
+      hideClientButton: true,
+    }),
+  );
+  return { title, swaggerPath: SWAGGER_PATH, scalarPath: SCALAR_PATH };
 }

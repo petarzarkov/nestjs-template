@@ -8,11 +8,11 @@ import { AppEnv } from './config/enum/app-env.enum';
 import type { ValidatedConfig } from './config/env.validation';
 import { AppConfigService } from './config/services/app.config.service';
 import { GLOBAL_PREFIX } from './constants';
+import { setupDocs } from './core/docs/setupDocs';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
-import { setupSwagger } from './core/swagger/setupSwagger';
 import { ContextLogger } from './infra/logger/services/context-logger.service';
 import { RedisService } from './infra/redis/services/redis.service';
 import { SocketConfigAdapter } from './notifications/events/socket.adapter';
@@ -85,7 +85,7 @@ async function bootstrap() {
   );
 
   // Swagger documentation
-  const { title, swaggerPath } = setupSwagger(app, pkg, appConfig);
+  const { title, swaggerPath, scalarPath } = setupDocs(app, pkg, appConfig);
 
   const redisService = app.get(RedisService);
   app.useWebSocketAdapter(
@@ -110,18 +110,21 @@ async function bootstrap() {
   const sharingHttpServer =
     !wsConfig.port || wsConfig.port?.toString() === appPort.toString();
 
-  logger.log(`API ${title} service, docs at ${appUrl}${swaggerPath}`, {
-    versions: {
-      node: process.versions.node,
-      bun: process.versions.bun,
-      npm: process.versions.npm,
+  logger.log(
+    `API ${title} service, docs at ${appUrl}${swaggerPath} and scalar at ${appUrl}${scalarPath}`,
+    {
+      versions: {
+        node: process.versions.node,
+        bun: process.versions.bun,
+        npm: process.versions.npm,
+      },
+      queuesDashboard: `${appUrl}/${GLOBAL_PREFIX}/queues`,
+      ws: {
+        url: wsUrl,
+        sharingHttpServer: sharingHttpServer,
+      },
     },
-    queuesDashboard: `${appUrl}/${GLOBAL_PREFIX}/queues`,
-    ws: {
-      url: wsUrl,
-      sharingHttpServer: sharingHttpServer,
-    },
-  });
+  );
 }
 
 bootstrap().catch(err => {
