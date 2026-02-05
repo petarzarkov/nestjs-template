@@ -86,6 +86,12 @@ export function setupDocs(
       content: document,
       hideModels: true,
       hideClientButton: true,
+      defaultOpenAllTags: false,
+      expandAllModelSections: false,
+      expandAllResponses: false,
+      persistAuth: true,
+      telemetry: false,
+      theme: 'elysiajs',
     }),
   );
   return { title, swaggerPath: SWAGGER_PATH, scalarPath: SCALAR_PATH };
