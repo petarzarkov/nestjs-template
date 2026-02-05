@@ -92,6 +92,7 @@ export function setupDocs(
       persistAuth: true,
       telemetry: false,
       theme: 'elysiajs',
+      darkMode: true,
     }),
   );
   return { title, swaggerPath: SWAGGER_PATH, scalarPath: SCALAR_PATH };
