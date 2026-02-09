@@ -7,10 +7,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Auditable } from '@/core/decorators/auditable.decorator';
 import { IsUniqueEnumArrayDecorator } from '@/core/decorators/is-unique-enum.decorator';
 import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { UserRole } from '../enum/user-role.enum';
 
+@Auditable({ exclude: ['password'] })
 @Entity()
 export class User {
   @ApiProperty({

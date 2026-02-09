@@ -104,6 +104,9 @@ describe('Auth (e2e)', () => {
     });
 
     test('should trigger BullMQ job queue and receive WebSocket notification', async () => {
+      // Wait for throttle window to reset (short throttle: 10 req/1s)
+      await Bun.sleep(1100);
+
       // Connect admin WebSocket to listen for notifications
       const { accessToken } = await ctx.loginAsAdmin();
       ctx.ws.connect(accessToken, E2E.API_URL);

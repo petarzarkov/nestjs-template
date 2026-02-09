@@ -7,9 +7,11 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Auditable } from '@/core/decorators/auditable.decorator';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 
+@Auditable()
 @Entity()
 export class Invite {
   @ApiProperty()

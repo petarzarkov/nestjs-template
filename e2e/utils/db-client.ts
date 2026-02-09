@@ -1,5 +1,6 @@
 import type { Repository } from 'typeorm';
 import { DataSource } from 'typeorm';
+import { AuditLog } from '@/audit/entity/audit-log.entity';
 import { SnakeNamingStrategy } from '@/infra/db/strategies/snake-case.strategy';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
@@ -7,7 +8,7 @@ import { Invite } from '@/users/invites/entity/invite.entity';
 import { E2E } from '../constants';
 
 // Entity list for this template
-const ENTITIES = [User, Invite, PasswordResetToken];
+const ENTITIES = [User, Invite, PasswordResetToken, AuditLog];
 
 /**
  * E2E Database Client using TypeORM
@@ -77,6 +78,10 @@ export class DbClient {
 
   get passwordResetTokens(): Repository<PasswordResetToken> {
     return this.getRepository(PasswordResetToken);
+  }
+
+  get auditLogs(): Repository<AuditLog> {
+    return this.getRepository(AuditLog);
   }
 
   /**

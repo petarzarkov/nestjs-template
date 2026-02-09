@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { ContextService } from '@/infra/logger/services/context.service';
@@ -23,6 +23,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
     }
 
     const httpContext = context.switchToHttp();
+    const req = httpContext.getRequest<Request & { user?: { id?: string } }>();
     const resp = httpContext.getResponse<Response>();
     const instance = context.getClass();
     const handler = context.getHandler();
@@ -30,6 +31,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
     this.contextService.updateContext({
       context: `${instance.name}.${handler.name}`,
       flow: 'http',
+      ...(req.user?.id && { userId: req.user.id }),
     });
 
     return next.handle().pipe(
