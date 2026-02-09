@@ -6,12 +6,14 @@ import { ValidatedConfig, validateConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { HelpersModule } from '@/core/helpers/helpers.module';
 import { PaginationModule } from '@/core/pagination/pagination.module';
+import { FileModule } from '@/file/file.module';
 import { NotificationModule } from '@/notifications/notification.module';
 import { UsersModule } from '@/users/users.module';
 import { DatabaseModule } from '../db/database.module';
 import { HealthModule } from '../health/health.module';
 import { LoggerModule } from '../logger/logger.module';
 import { RedisModule } from '../redis/redis.module';
+import { RedisCacheThrottlerModule } from '../redis/redis-cache-throttler.module';
 import { QueueModule } from './queue.module';
 
 @Module({
@@ -39,6 +41,8 @@ import { QueueModule } from './queue.module';
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,
+    RedisCacheThrottlerModule,
+    FileModule,
   ],
   providers: [],
 })

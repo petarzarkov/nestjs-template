@@ -15,6 +15,7 @@ import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interce
 import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { PaginationModule } from './core/pagination/pagination.module';
+import { FileModule } from './file/file.module';
 import { DatabaseModule } from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
 import { LoggerModule } from './infra/logger/logger.module';
@@ -59,6 +60,7 @@ import { UsersModule } from './users/users.module';
     NotificationModule,
     QueueModule,
     QueueDashboardModule,
+    FileModule,
   ],
   providers: [
     HttpLoggingInterceptor,

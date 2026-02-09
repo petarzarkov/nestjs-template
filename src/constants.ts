@@ -36,6 +36,7 @@ export const FILES = {
   MIN_SIZE: 1024, // 1KB
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
   MIN_FILE_NAME_LENGTH: 6,
+  MAX_FILES: 6,
 } as const;
 
 export const PAGINATION = Object.freeze({

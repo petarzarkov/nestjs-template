@@ -11,8 +11,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AxiosError, AxiosRequestConfig } from 'axios';
+import imageSize, { types as imageTypes } from 'image-size';
 import { firstValueFrom } from 'rxjs';
 import { SECOND } from '@/constants';
+import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
 import { UrlHelper } from './url.helper';
@@ -299,5 +301,58 @@ export class HelpersService extends UrlHelper {
       !Array.isArray(obj) &&
       !(obj instanceof Error)
     );
+  }
+
+  isSupportedImageType(extension: string): boolean {
+    return imageTypes.includes(
+      extension as unknown as (typeof imageTypes)[number],
+    );
+  }
+
+  calculateImageSize(
+    file: {
+      id: string;
+      buffer: Buffer;
+      extension: string;
+      mimetype: string;
+    },
+    logger: ContextLogger,
+  ) {
+    // Only process files with valid image extensions
+    const isImageType = this.isSupportedImageType(file.extension);
+
+    if (!isImageType) {
+      logger?.log(`File ${file.id} is not a supported image type`, {
+        extension: file.extension,
+        supportedExtensions: imageTypes,
+        mimetype: file.mimetype,
+      });
+      return null;
+    }
+
+    try {
+      const dimensions = imageSize(file.buffer);
+      logger?.debug('Image size calculated', {
+        id: file.id,
+        dimensions,
+      });
+      return dimensions;
+    } catch (error) {
+      // Skip files that can't be processed (corrupted images, etc.)
+      logger?.warn(`Failed to calculate image size for file ${file.id}`, {
+        error,
+        extension: file.extension,
+        mimetype: file.mimetype,
+        bufferSize: file.buffer?.length || 0,
+        bufferStart:
+          file.buffer?.length > 0
+            ? file.buffer
+                .subarray(0, Math.min(16, file.buffer.length))
+                .toString('hex')
+            : 'empty',
+      });
+    }
+
+    return null;
   }
 }

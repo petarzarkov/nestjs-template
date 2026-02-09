@@ -5,18 +5,20 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AppConfigService } from '@/config/services/app.config.service';
+import { EnvThrottlerGuard } from './guards/env-throttler.guard';
+import { RedisModule } from './redis.module';
 import { KeyvIoredisAdapter } from './services/keyv-ioredis-adapter';
 import { RedisService } from './services/redis.service';
 
 @Global()
 @Module({
   imports: [
+    RedisModule,
     ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
       inject: [RedisService],
       useFactory: (redisService: RedisService) => {
-        const redisClient = redisService.newConnection('throttler', {
-          db: 2,
-        });
+        const redisClient = redisService.newConnection('throttler', { db: 2 });
         return {
           throttlers: [
             {
@@ -46,6 +48,7 @@ import { RedisService } from './services/redis.service';
       },
     }),
     CacheModule.registerAsync({
+      imports: [RedisModule],
       inject: [AppConfigService, RedisService],
       isGlobal: true,
       useFactory: async (
@@ -53,25 +56,21 @@ import { RedisService } from './services/redis.service';
         redisService: RedisService,
       ) => {
         const redisConfig = configService.getOrThrow('redis');
-        const redisClient = redisService.newConnection('rest-cache', {
-          db: 3,
-        });
-        const adapter = new KeyvIoredisAdapter(redisClient);
-
+        const redisClient = redisService.newConnection('rest-cache', { db: 3 });
         return {
           ttl: redisConfig.cache.ttl,
-          stores: [adapter],
+          stores: [new KeyvIoredisAdapter(redisClient)],
         };
       },
     }),
   ],
   providers: [
-    RedisService,
+    EnvThrottlerGuard,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
   ],
-  exports: [ThrottlerModule, CacheModule],
+  exports: [ThrottlerModule, CacheModule, EnvThrottlerGuard],
 })
 export class RedisCacheThrottlerModule {}

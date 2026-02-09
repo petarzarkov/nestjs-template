@@ -21,11 +21,11 @@ export class User {
   id!: string;
 
   @ApiProperty()
-  @Column({ type: 'text', unique: true })
+  @Column({ unique: true })
   @IsEmail()
   email!: string;
 
-  @Column({ type: 'text', select: false, nullable: true })
+  @Column({ select: false, nullable: true })
   @PasswordDecorator(true)
   password!: string | null;
 
@@ -41,7 +41,7 @@ export class User {
     description: 'Profile picture URL (from OAuth providers)',
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   @IsOptional()
   picture!: string | null;
 

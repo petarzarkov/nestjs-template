@@ -45,6 +45,12 @@ export const validateConfig = (config: Record<string, unknown>) => {
       GLOBAL_PREFIX,
     ),
     ai: getAIConfig(validatedConfig),
+    aws: {
+      s3BucketName: validatedConfig.AWS_S3_BUCKET_NAME,
+      region: validatedConfig.AWS_REGION,
+      accessKeyId: validatedConfig.AWS_ACCESS_KEY_ID,
+      secretAccessKey: validatedConfig.AWS_SECRET_ACCESS_KEY,
+    },
   } as const;
 };
 

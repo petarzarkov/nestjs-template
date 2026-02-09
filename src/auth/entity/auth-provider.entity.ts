@@ -57,6 +57,10 @@ export class AuthProvider {
   updatedAt!: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id', referencedColumnName: 'id' })
+  @JoinColumn({
+    name: 'user_id',
+    referencedColumnName: 'id',
+    foreignKeyConstraintName: 'FK_eb4fd6d0f3ad537effb4cb7505a',
+  })
   user!: User;
 }

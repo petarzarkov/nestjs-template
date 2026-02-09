@@ -13,6 +13,7 @@ const groupConfig: Record<string, string | string[]> = {
   RabbitMQ: 'RABBITMQ_',
   Redis: 'REDIS_',
   Email: 'EMAIL_',
+  AWS: 'AWS_',
   'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'],
   'Security & JWT': 'JWT_',
   WebSocket: 'WS_',
