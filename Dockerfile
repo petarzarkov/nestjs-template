@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.7-alpine AS builder
+FROM oven/bun:1.3.9-slim AS builder
 
 WORKDIR /app
 
@@ -16,16 +16,22 @@ RUN bun run build
 
 # Prune devDependencies for production
 RUN rm -rf node_modules && \
-    bun install --frozen-lockfile --production --ignore-scripts
+    bun install --frozen-lockfile --production
 
 # ============================================
 # Production stage
 # ============================================
-FROM oven/bun:1.3.7-alpine AS production
+FROM oven/bun:1.3.9-slim AS production
 
 # Install system dependencies and download RDS certificate
-RUN apk add --no-cache poppler-utils curl && \
-    curl -o /tmp/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+# TODO: Check if runtime dependencies for canvas are needed here later
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    poppler-utils \
+    curl \
+    ca-certificates && \
+    curl -o /tmp/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set environment
 ENV NODE_ENV=production
@@ -34,8 +40,8 @@ ENV TZ=UTC
 WORKDIR /app
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nestjs && \
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nestjs && \
     chown -R nestjs:nodejs /app && \
     chown nestjs:nodejs /tmp/rds-global-bundle.pem
 
