@@ -112,7 +112,8 @@
   },
   "lint-staged": {
     "*.ts": [
-      "biome check --write"
+      "bun run lint",
+      "bun run format"
     ]
   }
 }
