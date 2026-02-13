@@ -24,13 +24,8 @@ RUN rm -rf node_modules && \
 FROM oven/bun:1.3.9-slim AS production
 
 # Install system dependencies and download RDS certificate
-# TODO: Check if runtime dependencies for canvas are needed here later
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    poppler-utils \
-    curl \
-    ca-certificates && \
-    curl -o /tmp/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem && \
     rm -rf /var/lib/apt/lists/*
 
 # Set environment
