@@ -13,12 +13,17 @@ import { User } from './user.entity';
 
 @Entity()
 export class PasswordResetToken {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_password_reset_token',
+  })
   @IsUUID('4')
   id!: string;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'FK_password_reset_token_to_user',
+  })
   user!: User;
 
   @RelationId((token: PasswordResetToken) => token.user)

@@ -3,8 +3,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { Auditable } from '@/core/decorators/auditable.decorator';
@@ -13,16 +13,19 @@ import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
 
 @Auditable()
 @Entity()
+@Unique('UQ_invite_email', ['email'])
 export class Invite {
   @ApiProperty()
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_invite',
+  })
   id!: string;
 
   @ApiProperty()
-  @Column({ unique: true })
+  @Column()
   email!: string;
 
-  @Index({ unique: true })
+  @Unique('UQ_invite_invite_code', ['inviteCode'])
   @Column()
   inviteCode!: string;
 
@@ -30,6 +33,7 @@ export class Invite {
   @Column({
     type: 'enum',
     enum: UserRole,
+    enumName: 'user_role_enum',
   })
   role!: UserRole;
 
@@ -39,6 +43,7 @@ export class Invite {
   })
   @Column({
     type: 'enum',
+    enumName: 'invite_status_enum',
     enum: InviteStatus,
     default: InviteStatus.PENDING,
   })

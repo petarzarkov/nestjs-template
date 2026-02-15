@@ -6,14 +6,18 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '@/users/entity/user.entity';
 
 @Entity('files')
+@Unique('UQ_file_path', ['path'])
 export class FileEntity {
   @ApiProperty()
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_file',
+  })
   id!: string;
 
   @ApiProperty()
@@ -29,7 +33,7 @@ export class FileEntity {
   mimetype!: string;
 
   @ApiProperty()
-  @Column({ unique: true })
+  @Column()
   path!: string;
 
   @ApiProperty()
@@ -45,7 +49,7 @@ export class FileEntity {
   userId!: string;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_file_to_user' })
   user!: User;
 
   @ApiProperty()

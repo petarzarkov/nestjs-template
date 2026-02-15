@@ -11,31 +11,33 @@ import { AuditAction } from '../enum/audit-action.enum';
 @Entity('audit_log')
 export class AuditLog {
   @ApiProperty({ description: 'Audit log entry ID' })
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_audit_log',
+  })
   id!: string;
 
   @ApiPropertyOptional({
     description: 'User ID of the actor (null for system actions)',
   })
   @Column({ type: 'uuid', nullable: true })
-  @Index()
+  @Index('audit_actor_id_index')
   actorId!: string | null;
 
   @ApiProperty({ description: 'The action performed', enum: AuditAction })
-  @Column({ type: 'enum', enum: AuditAction })
-  @Index()
+  @Column({ type: 'enum', enum: AuditAction, enumName: 'audit_action_enum' })
+  @Index('audit_action_index')
   action!: AuditAction;
 
   @ApiProperty({
     description: 'Name of the audited entity (e.g., "User", "Invite")',
   })
   @Column({ type: 'varchar' })
-  @Index()
+  @Index('audit_entity_name_index')
   entityName!: string;
 
   @ApiProperty({ description: 'Primary key of the audited entity' })
   @Column({ type: 'varchar' })
-  @Index()
+  @Index('audit_entity_id_index')
   entityId!: string;
 
   @ApiPropertyOptional({

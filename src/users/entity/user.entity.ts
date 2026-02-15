@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { Auditable } from '@/core/decorators/auditable.decorator';
@@ -14,16 +15,19 @@ import { UserRole } from '../enum/user-role.enum';
 
 @Auditable({ exclude: ['password'] })
 @Entity()
+@Unique('UQ_user_email', ['email'])
 export class User {
   @ApiProperty({
     description: 'user ID',
   })
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_user',
+  })
   @IsUUID('4')
   id!: string;
 
   @ApiProperty()
-  @Column({ unique: true })
+  @Column()
   @IsEmail()
   email!: string;
 
@@ -49,6 +53,7 @@ export class User {
 
   @Column({
     type: 'enum',
+    enumName: 'user_role_enum',
     enum: UserRole,
     array: true,
   })

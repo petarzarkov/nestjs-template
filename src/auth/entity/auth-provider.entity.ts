@@ -13,16 +13,18 @@ import { User } from '@/users/entity/user.entity';
 import { OAuthProvider } from '../enum/oauth-provider.enum';
 
 @Entity('auth_providers')
-@Index(['provider', 'authProviderId'], {
+@Index('provider_auth_provider_id_index', ['provider', 'authProviderId'], {
   unique: true,
   where: '"auth_provider_id" IS NOT NULL',
 })
-@Index(['userId', 'provider'], { unique: true })
+@Index('user_provider_index', ['userId', 'provider'], { unique: true })
 export class AuthProvider {
   @ApiProperty({
     description: 'Auth provider ID',
   })
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_auth_provider',
+  })
   id!: string;
 
   @ApiProperty({
@@ -35,7 +37,11 @@ export class AuthProvider {
     description: 'OAuth provider name',
     enum: Object.values(OAuthProvider),
   })
-  @Column({ type: 'enum', enum: OAuthProvider })
+  @Column({
+    type: 'enum',
+    enum: OAuthProvider,
+    enumName: 'oauth_provider_enum',
+  })
   provider!: OAuthProvider;
 
   @ApiProperty({
@@ -60,7 +66,7 @@ export class AuthProvider {
   @JoinColumn({
     name: 'user_id',
     referencedColumnName: 'id',
-    foreignKeyConstraintName: 'FK_eb4fd6d0f3ad537effb4cb7505a',
+    foreignKeyConstraintName: 'FK_auth_provider_to_user',
   })
   user!: User;
 }

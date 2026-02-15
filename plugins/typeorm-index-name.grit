@@ -1,0 +1,6 @@
+engine biome(1.0)
+language js(typescript)
+
+`Index()` as $call where {
+  register_diagnostic(span=$call, severity="error", message="@Index() must have an explicit name as the first argument, e.g. @Index('my_column_index')")
+}

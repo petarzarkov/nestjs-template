@@ -1,0 +1,7 @@
+engine biome(1.0)
+language js(typescript)
+
+`JoinColumn($args)` as $call where {
+  not $args <: contains `foreignKeyConstraintName`,
+  register_diagnostic(span=$call, severity="error", message="@JoinColumn() must include foreignKeyConstraintName, e.g. @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_source_to_target' })")
+}

@@ -43,6 +43,15 @@ fi
 FILE_PATH="$MIGRATIONS_DIR/$LATEST_MIGRATION"
 echo "✅ Formatting migration file: $FILE_PATH"
 
+# Deduplicate shared enum types (TypeORM generates duplicates for shared enumName)
+bun ./scripts/dedup-migration-enums.ts "$FILE_PATH"
+
+# If the dedup script deleted the file (entirely phantom diffs), exit early
+if [ ! -f "$FILE_PATH" ]; then
+  echo "ℹ️  No real schema changes detected — no migration created."
+  exit 0
+fi
+
 # Run Biome on the generated migration file
 bun run biome format --write "$FILE_PATH"
 

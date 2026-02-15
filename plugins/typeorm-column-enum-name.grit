@@ -1,0 +1,8 @@
+engine biome(1.0)
+language js(typescript)
+
+`Column($args)` as $call where {
+  $args <: contains `type: 'enum'`,
+  not $args <: contains `enumName`,
+  register_diagnostic(span=$call, severity="error", message="@Column({ type: 'enum' }) must include enumName, e.g. @Column({ type: 'enum', enum: MyEnum, enumName: 'my_enum_name' })")
+}

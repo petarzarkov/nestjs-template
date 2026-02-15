@@ -18,7 +18,7 @@ This is a **NestJS monolith template** running on **Bun** as the runtime and pac
 - **Test Runner:** Bun test (`bun test`)
 - **TypeScript:** Native Bun execution (no ts-node/tsx), TypeScript 5.9, target ESNext, module NodeNext
 - **Password Hashing:** `Bun.password` API (not bcrypt) — see `src/core/utils/password.util.ts`
-- **Linting & Formatting:** Biome 2.x (`bun run lint`, `bun run format`) — single quotes, trailing commas, 80-char lines
+- **Linting & Formatting:** Biome 2.x (`bun run lint`, `bun run format`) — single quotes, trailing commas, 80-char lines, GritQL plugins in `plugins/` for TypeORM constraint naming enforcement
 - **Build:** `nest build` + `tsc-alias` for path alias resolution in dist
 
 ### Path Aliases
@@ -221,6 +221,25 @@ The application bootstrap registers these globally:
 - **Migrations** in `src/infra/db/migrations/`
 - **Data source config** in `src/infra/db/data-source-options.ts`
 - **Advisory locks** via `src/infra/db/lock/pg-lock.module.ts`
+
+### DB Constraint Naming Convention (enforced via Biome GritQL plugins)
+
+All database indexes, foreign keys, and enum types **must** have explicit names — never rely on TypeORM auto-generated names. This makes debugging migration errors and DB issues far easier.
+
+| Constraint Type | Pattern | Example |
+|-----------------|---------|---------|
+| **Foreign Key** | `FK_{source_table}_to_{target_table}` | `FK_auth_provider_to_user` |
+| **Index** | `{descriptive_columns}_index` | `audit_actor_id_index` |
+| **Unique Index** | `{descriptive_columns}_index` (with `{ unique: true }`) | `provider_auth_provider_id_index` |
+| **Enum Type** | `{snake_case_name}_enum` | `user_role_enum`, `invite_status_enum` |
+
+**Rules:**
+- `@Index()` — always pass the index name as the first string argument
+- `@JoinColumn()` — always include `foreignKeyConstraintName` property
+- `@Column({ type: 'enum' })` — always include `enumName` property
+- When two entities share the same TS enum, use the **same `enumName`** in both (e.g., `UserRole` → `'user_role_enum'` everywhere)
+
+These rules are enforced by GritQL plugins in `plugins/` and run as part of `bun run lint`.
 
 ### Entities (6)
 | Entity | Module | Key Fields |

@@ -60,6 +60,7 @@ bun dev
 - Migration system with generate, run, and revert commands
 - PostgreSQL advisory locks for distributed coordination
 - Automatic audit logging via `@Auditable()` entity decorator
+- Explicit naming for all DB constraints (FKs, indexes, enums) — enforced via Biome GritQL plugins
 
 ### Job Queue System
 - BullMQ queues backed by Redis for reliable async processing
@@ -102,7 +103,7 @@ bun dev
 - Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s)
 
 ### Developer Experience
-- Biome for linting and formatting (single quotes, trailing commas, 80-char lines)
+- Biome for linting and formatting with GritQL plugins for TypeORM constraint naming
 - Husky + lint-staged for pre-commit hooks
 - Swagger + Scalar API documentation with optional basic auth
 - `bun dev` with hot reload via `bun --watch`
