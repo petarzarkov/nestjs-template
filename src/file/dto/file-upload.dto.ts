@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ArrayMaxSize } from 'class-validator';
+import { FILES } from '@/constants';
 
 export class FileUploadDto {
   @ApiProperty({
@@ -10,5 +12,6 @@ export class FileUploadDto {
     description: 'File to be uploaded',
     required: true,
   })
+  @ArrayMaxSize(FILES.MAX_FILES)
   files!: Express.Multer.File[];
 }

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Delete,
   ForbiddenException,
@@ -22,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AppEnv } from '@/config/enum/app-env.enum';
-import { FILES, MINUTE } from '@/constants';
+import { MINUTE } from '@/constants';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { EnvThrottle } from '@/core/decorators/env-throttle.decorator';
@@ -133,13 +132,6 @@ export class FileController {
     })
     files: Express.Multer.File[],
   ): Promise<FileEntity[]> {
-    // FilesInterceptor works with maxCount as second argument, but the error message is not very helpful.
-    if (files.length > FILES.MAX_FILES) {
-      throw new BadRequestException(
-        `Too many files. Maximum allowed: ${FILES.MAX_FILES}`,
-      );
-    }
-
     return this.fileService.upload(user.id, files);
   }
 
