@@ -194,6 +194,7 @@ export class ContextLogger implements LoggerService {
     return { preparedMessage, invalidMessageInfo };
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
   #extractErrorAndExtra(
     params: unknown[],
     level: LogLevel,
@@ -203,15 +204,15 @@ export class ContextLogger implements LoggerService {
   } {
     let error: Error | null = null;
     const extra: LogEntry = {};
+    const isErrorLevel =
+      level === LogLevel.WARN ||
+      level === LogLevel.ERROR ||
+      level === LogLevel.FATAL;
 
     for (const param of params) {
       if (param instanceof Error) {
         error = param;
       } else if (typeof param === 'string') {
-        const isErrorLevel =
-          level === LogLevel.WARN ||
-          level === LogLevel.ERROR ||
-          level === LogLevel.FATAL;
         if (isErrorLevel) {
           error = new Error(param);
         } else {
@@ -225,6 +226,16 @@ export class ContextLogger implements LoggerService {
           Object.assign(extra, rest);
         } else if (param.error instanceof Error) {
           error = param.error;
+
+          const { error: _, ...rest } = param;
+          Object.assign(extra, rest);
+        } else if (isErrorLevel && typeof param.err === 'string') {
+          error = new Error(param.err);
+
+          const { err: _, ...rest } = param;
+          Object.assign(extra, rest);
+        } else if (isErrorLevel && typeof param.error === 'string') {
+          error = new Error(param.error);
 
           const { error: _, ...rest } = param;
           Object.assign(extra, rest);
@@ -449,7 +460,11 @@ export class ContextLogger implements LoggerService {
     }
 
     if (value instanceof Error) {
-      return value;
+      return {
+        name: value.name,
+        message: value.message,
+        stack: value.stack?.replace(/\n(\s+)?/g, ','),
+      };
     }
 
     if (typeof FormData !== 'undefined' && value instanceof FormData) {

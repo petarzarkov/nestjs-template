@@ -218,6 +218,32 @@ describe('ContextLogger', () => {
       expect(logData.error.message).toBe('Nested error');
     });
 
+    it('should handle { error: string } shorthand at error level', () => {
+      const error = 'Request failed with status 500';
+      logger.error('Some error', { error });
+
+      const logCall = (console.log as Mock<() => unknown>).mock.calls[0][0];
+      const logData = parseLogOutput(logCall);
+
+      expect(logData.level).toBe('error');
+      expect(logData.message).toBe('Some error');
+      expect(logData.error.message).toBe('Request failed with status 500');
+      expect(logData.error.name).toBe('Error');
+      expect(logData.error.stack).toBeDefined();
+    });
+
+    it('should handle { error: string } with additional properties at error level', () => {
+      logger.error('Some error', { error: 'Request failed', statusCode: 500 });
+
+      const logCall = (console.log as Mock<() => unknown>).mock.calls[0][0];
+      const logData = parseLogOutput(logCall);
+
+      expect(logData.level).toBe('error');
+      expect(logData.message).toBe('Some error');
+      expect(logData.error.message).toBe('Request failed');
+      expect(logData.statusCode).toBe(500);
+    });
+
     it('should handle string error messages', () => {
       logger.error('String error', 'This is a string error');
 
@@ -747,6 +773,26 @@ describe('ContextLogger', () => {
   });
 
   describe('JSON-safe sanitization', () => {
+    it('should properly serialize Error objects nested in extra data', () => {
+      const nestedData = {
+        operation: 'db-query',
+        details: {
+          query: 'SELECT * FROM users',
+          dbError: new Error('Connection refused'),
+        },
+      };
+
+      logger.log('Database operation failed', nestedData);
+
+      const logCall = (console.log as Mock<() => unknown>).mock.calls[0][0];
+      const logData = parseLogOutput(logCall);
+
+      // Nested Error should be serialized as { name, message, stack }, not empty {}
+      expect(logData.details.dbError).toBeDefined();
+      expect(logData.details.dbError.message).toBe('Connection refused');
+      expect(logData.details.dbError.name).toBe('Error');
+    });
+
     it('should handle functions safely', () => {
       function testFunction() {
         return 'test';
