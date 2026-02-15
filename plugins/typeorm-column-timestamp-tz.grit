@@ -1,0 +1,8 @@
+engine biome(1.0)
+language js(typescript)
+
+`Column($args)` as $call where {
+  $args <: contains `type: 'timestamp'`,
+  not $args <: contains `type: 'timestamptz'`,
+  register_diagnostic(span=$call, severity="error", message="@Column({ type: 'timestamp' }) should be type: 'timestamptz' to store dates with timezone")
+}

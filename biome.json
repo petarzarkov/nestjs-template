@@ -3,7 +3,11 @@
   "plugins": [
     "./plugins/typeorm-index-name.grit",
     "./plugins/typeorm-join-column-fk-name.grit",
-    "./plugins/typeorm-column-enum-name.grit"
+    "./plugins/typeorm-column-enum-name.grit",
+    "./plugins/typeorm-create-date-tz.grit",
+    "./plugins/typeorm-update-date-tz.grit",
+    "./plugins/typeorm-delete-date-tz.grit",
+    "./plugins/typeorm-column-timestamp-tz.grit"
   ],
   "vcs": {
     "enabled": true,
