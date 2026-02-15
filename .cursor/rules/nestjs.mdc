@@ -16,8 +16,14 @@ This is a **NestJS monolith template** running on **Bun** as the runtime and pac
 - **Runtime:** Bun (not Node.js)
 - **Package Manager:** Bun (`bun install`, `bun add`)
 - **Test Runner:** Bun test (`bun test`)
-- **TypeScript:** Native Bun execution (no ts-node/tsx)
-- **Password Hashing:** `Bun.password` API (not bcrypt)
+- **TypeScript:** Native Bun execution (no ts-node/tsx), TypeScript 5.9, target ESNext, module NodeNext
+- **Password Hashing:** `Bun.password` API (not bcrypt) — see `src/core/utils/password.util.ts`
+- **Linting & Formatting:** Biome 2.x (`bun run lint`, `bun run format`) — single quotes, trailing commas, 80-char lines
+- **Build:** `nest build` + `tsc-alias` for path alias resolution in dist
+
+### Path Aliases
+Configured in `tsconfig.json`:
+- `@/*` → `src/*`
 
 ---
 
@@ -25,61 +31,116 @@ This is a **NestJS monolith template** running on **Bun** as the runtime and pac
 
 ```
 src/
-├── main.ts                 # Application entry point
-├── app.module.ts           # Root module
-├── constants.ts            # Global constants (e.g., PASSWORD_HASH_ROUNDS)
-├── auth/                   # Authentication module
-│   ├── dto/                # Login, register DTOs
-│   ├── guards/             # JWT, local auth guards
-│   ├── strategies/         # Passport strategies
-│   └── services/           # AuthService
-├── config/                 # Configuration module
-│   ├── dto/                # Config DTOs with class-validator
-│   ├── enum/               # Config enums
-│   ├── services/           # AppConfigService
-│   ├── env.validation.ts   # Environment validation
-│   └── app.config.module.ts
-├── core/                   # Global/shared utilities (not a NestJS module)
-│   ├── decorators/         # Custom decorators (@CurrentUser, @ValidatedFiles)
-│   ├── filters/            # Exception filters (HttpExceptionFilter)
-│   ├── interceptors/       # Request/response interceptors
-│   ├── middlewares/        # HTTP middlewares
-│   ├── pagination/         # Pagination DTOs and utilities
-│   ├── pipes/              # Custom pipes
-│   ├── utils/              # Utility functions (password.util.ts)
-│   └── validators/         # Custom class-validator decorators
-├── db/                     # Database module
-│   ├── migrations/         # TypeORM migrations
-│   ├── strategies/         # Naming strategies (SnakeNamingStrategy)
-│   └── data-source-options.ts
-├── health/                 # Health check endpoints
-├── helpers/                # Helper services (dates, transformers)
-├── logger/                 # Logging module (ContextLoggerService)
-├── notifications/          # WebSocket gateway & events
-├── slack/                  # Slack integration
-├── swagger/                # Swagger/OpenAPI setup
-└── users/                  # Users domain module
-    ├── dto/                # User DTOs
-    ├── entity/             # User, PasswordResetToken entities
-    ├── enum/               # UserRole enum
-    ├── invites/            # Nested invites submodule
-    │   ├── dto/
-    │   ├── entity/
-    │   └── services/
-    ├── repos/              # Custom TypeORM repositories
-    ├── services/           # UsersService
-    ├── users.controller.ts
-    └── users.module.ts
+├── main.ts                    # Bootstrap: express app, global pipes/filters/interceptors, CORS, WS adapter
+├── app.module.ts              # Root module — imports all feature & infra modules
+├── constants.ts               # Global constants (LOGGER, FILES, PAGINATION, time units)
+├── config/                    # Environment configuration module
+│   ├── app.config.module.ts   # Dynamic config module (.forRoot)
+│   ├── services/app.config.service.ts  # Typed config access
+│   ├── env.validation.ts      # Config validation with class-transformer + class-validator
+│   ├── env-vars.dto.ts        # Raw env var DTO
+│   ├── dto/                   # Grouped config DTOs (service, db, redis, oauth, ai)
+│   └── enum/                  # AppEnv: local | dev | stage | prod
+├── core/                      # Global utilities (NOT a NestJS module)
+│   ├── decorators/            # @Public, @Roles, @CurrentUser, @ApiJwtAuth, @Auditable,
+│   │                          # @Password, @Email, @IsNullable, @IsUniqueEnum,
+│   │                          # @ValidatedFiles, @UUIDParam, @NoCache, @EnvThrottle
+│   ├── filters/               # GenericExceptionFilter, TypeOrmExceptionFilter
+│   ├── interceptors/          # HttpLoggingInterceptor
+│   ├── middlewares/           # RequestMiddleware (context+requestId), HtmlBasicAuthMiddleware (docs auth)
+│   ├── pagination/            # PaginationFactory, PageDto, PageMetaDto, PageOptionsDto
+│   ├── pipes/                 # UnionValidationPipe
+│   ├── validators/            # Custom class-validator decorators
+│   ├── helpers/               # HelpersModule (global helper services)
+│   ├── utils/                 # password.util (Bun.password wrapper)
+│   └── docs/                  # Swagger + Scalar API docs setup
+├── infra/                     # Infrastructure layer
+│   ├── db/                    # DatabaseModule (.forRoot), data-source-options, SnakeNamingStrategy
+│   │   ├── migrations/        # TypeORM migrations
+│   │   ├── strategies/        # SnakeNamingStrategy
+│   │   └── lock/              # PostgreSQL advisory lock module
+│   ├── logger/                # LoggerModule, ContextLogger, ContextService (AsyncLocalStorage)
+│   ├── health/                # HealthModule: /service/health, /service/up, /service/config
+│   ├── redis/                 # RedisModule, RedisCacheThrottlerModule, RedisService
+│   └── queue/                 # QueueModule, JobModule, JobProcessor, @JobHandler decorator
+│       ├── decorators/        # @JobHandler({ queue, name })
+│       ├── services/          # JobPublisherService, JobDispatcherService
+│       └── types/             # QueueJob type definitions
+├── auth/                      # AuthModule (.forRoot) — JWT + OAuth
+│   ├── auth.controller.ts     # /auth routes: login, register, password reset, OAuth callbacks
+│   ├── auth.service.ts        # Auth business logic, token creation
+│   ├── strategies/            # Passport: JwtStrategy, LocalStrategy, GoogleStrategy, GithubStrategy, LinkedInStrategy
+│   ├── guards/                # JwtAuthGuard (global), RolesGuard (global)
+│   ├── entity/                # AuthProvider entity (OAuth provider linking)
+│   ├── repos/                 # AuthProvidersRepository
+│   └── dto/                   # Login, Register, Password reset, OAuth DTOs
+├── users/                     # UsersModule
+│   ├── users.controller.ts    # /users routes
+│   ├── users.service.ts       # User CRUD
+│   ├── entity/                # User, PasswordResetToken entities
+│   ├── enum/                  # UserRole: admin | user
+│   ├── repos/                 # UsersRepository, PasswordResetTokensRepository
+│   ├── dto/                   # User DTOs
+│   └── invites/               # Nested InvitesModule submodule
+│       ├── invites.controller.ts
+│       ├── invites.service.ts
+│       ├── entity/            # Invite entity
+│       ├── enum/              # InviteStatus: pending | accepted | expired
+│       ├── repos/             # InvitesRepository
+│       └── dto/               # CreateInviteDto, ListInvitesDto
+├── audit/                     # AuditModule — automatic entity change logging
+│   ├── audit.controller.ts    # /audit routes
+│   ├── audit.service.ts       # Audit log queries
+│   ├── subscribers/           # TypeORM EntitySubscriber (auto INSERT/UPDATE/DELETE logging)
+│   ├── entity/                # AuditLog entity (JSONB old/new values)
+│   ├── enum/                  # AuditAction: INSERT | UPDATE | DELETE
+│   ├── repos/                 # AuditLogRepository
+│   └── dto/                   # AuditLogQueryDto
+├── file/                      # FileModule — file upload + S3
+│   ├── file.controller.ts     # /files routes: upload, list, download, delete
+│   ├── file.service.ts        # File operations
+│   ├── s3.service.ts          # AWS S3 integration (presigned URLs, bucket ops)
+│   ├── entity/                # FileEntity (name, size, dimensions, S3 path)
+│   ├── repos/                 # FileRepository
+│   ├── guards/                # MultipartFormDataGuard
+│   ├── validators/            # File size/name validators
+│   └── dto/                   # FileUploadDto, FileResponseDto
+├── notifications/             # NotificationModule — email + WS + Slack + queue handlers
+│   ├── notification.module.ts
+│   ├── notification-queue.module.ts  # Queue consumer module (JobModule)
+│   ├── handlers/              # NotificationHandler (@JobHandler methods)
+│   ├── email/                 # EmailModule, EmailService (Resend), React Email templates
+│   ├── events/                # EventsModule, EventsGateway (Socket.io), SocketConfigAdapter
+│   │   ├── events.ts          # EVENTS constant (queues, routing keys, EventMap types)
+│   │   └── events.dto.ts      # WebSocket message types
+│   ├── slack/                 # SlackModule, SlackService
+│   └── dto/                   # RegisteredPayload, InvitePayload, PasswordResetPayload
+└── ai/                        # AIModule (.forRoot) — multi-provider AI
+    ├── ai.controller.ts       # /ai routes: query, models
+    ├── ai.service.ts          # AI querying + streaming
+    ├── services/              # AIProviderService
+    ├── enum/                  # AIProvider: google | groq | openrouter
+    └── dto/                   # AI request/response DTOs
+
+e2e/                           # E2E tests
+├── setup/                     # preload.ts (DB setup), context.ts
+├── utils/                     # api-client.ts, db-client.ts, ws-client.ts
+├── constants.ts
+├── health/                    # health.e2e.spec.ts
+├── auth/                      # auth.e2e.spec.ts
+└── audit/                     # audit.e2e.spec.ts
 ```
 
 ---
 
-## **NestJS Guidelines**
+## **NestJS Architecture Guidelines**
 
-### Module Architecture
+### Module Pattern
 - **One module per domain/feature** (e.g., `users`, `auth`, `notifications`)
 - **One controller per main route**, additional controllers for sub-routes
 - **Nested submodules** for related features (e.g., `users/invites/`)
+- **Dynamic modules** use `.forRoot()` pattern (Auth, Database, AI, Config)
+- **Infrastructure modules** live under `src/infra/` (db, redis, queue, logger, health)
 
 ### Folder Conventions per Module
 | Folder | Purpose |
@@ -88,38 +149,222 @@ src/
 | `entity/` | TypeORM entities |
 | `enum/` | TypeScript enums |
 | `services/` | Business logic services |
+| `handlers/` | Job event handlers (decorated with `@JobHandler`) |
 | `repos/` | Custom TypeORM repositories (when needed) |
 | `guards/` | Module-specific guards |
 | `strategies/` | Passport strategies (auth module) |
+| `subscribers/` | TypeORM entity subscribers (audit module) |
+| `validators/` | Module-specific validators |
 
-### Core Module (`src/core/`)
-Not a NestJS module - contains **global utilities** imported directly:
-- `@core/decorators` - Custom parameter decorators
-- `@core/filters` - Exception filters (registered globally)
-- `@core/interceptors` - Response transformers
-- `@core/pipes` - Validation pipes
-- `@core/utils` - Utility functions (e.g., `password.util.ts`)
-- `@core/validators` - Custom class-validator decorators
+### Core Utilities (`src/core/`) — NOT a NestJS module
+Imported directly via `@/core/...`:
+- `@/core/decorators` — Custom parameter & metadata decorators
+- `@/core/filters` — Exception filters (registered globally in `main.ts`)
+- `@/core/interceptors` — HttpLoggingInterceptor (registered globally)
+- `@/core/middlewares` — RequestMiddleware (Express-level), HtmlBasicAuthMiddleware
+- `@/core/pagination` — PaginationFactory service, DTOs, module
+- `@/core/pipes` — UnionValidationPipe
+- `@/core/utils` — password.util (Bun.password wrapper)
+- `@/core/validators` — Custom class-validator decorators
+- `@/core/docs` — Swagger + Scalar API documentation setup
+- `@/core/helpers` — HelpersModule (global utilities)
 
-### Config Module
-- **Environment validation** in `env.validation.ts` using `class-validator`
-- **Typed config** via `AppConfigService` extending `ConfigService<ValidatedConfig, true>`
-- **DTOs** in `config/dto/` for grouped config (db, jwt, etc.)
+### Custom Decorators (`src/core/decorators/`)
+| Decorator | Purpose |
+|-----------|---------|
+| `@Public()` | Bypass JWT & Roles guards |
+| `@Roles(role)` / `@RequireAllRoles(roles)` | Role-based access control |
+| `@CurrentUser()` | Extract authenticated user from request |
+| `@ApiJwtAuth()` | Swagger JWT security annotation |
+| `@Auditable(options?)` | Mark entity for automatic audit logging |
+| `@Password()` | Password strength validation |
+| `@Email()` | Email format validation |
+| `@IsNullable()` | Allow null values in validation |
+| `@IsUniqueEnum()` | Ensure unique enum values in array |
+| `@ValidatedFiles(opts)` | File upload validation (size, name, count) |
+| `@UUIDParam(name)` | Parse + validate UUID route parameter |
+| `@NoCache()` | Disable caching for endpoint |
+| `@EnvThrottle(opts)` | Environment-aware rate limiting |
 
-```typescript
-// src/config/services/app-config.service.ts
-import { ConfigService } from '@nestjs/config';
-import { Path, PathValue } from '@nestjs/config/dist/types';
-import { ValidatedConfig } from '../env.validation';
+---
 
-export class AppConfigService extends ConfigService<ValidatedConfig, true> {
-  public override get<P extends Path<ValidatedConfig>>(
-    propertyPath: P,
-  ): PathValue<ValidatedConfig, P> {
-    return super.get(propertyPath, { infer: true });
-  }
-}
+## **Global Bootstrap (`src/main.ts`)**
+
+The application bootstrap registers these globally:
+1. `ContextLogger` — custom logger replacing NestJS default
+2. `RequestMiddleware` — Express-level middleware for request context (requestId, timestamps)
+3. `ValidationPipe` — global with `transform: true`, `forbidNonWhitelisted: true`
+4. `HttpLoggingInterceptor` — logs all HTTP requests/responses with timing
+5. `GenericExceptionFilter` + `TypeOrmExceptionFilter` — consistent error responses
+6. `SocketConfigAdapter` — Socket.io with Redis adapter
+7. CORS enabled, trust proxy, global prefix `api`
+8. API docs served at `/{GLOBAL_PREFIX}/docs` (Swagger) and Scalar
+
+---
+
+## **Config Module**
+
+- **Environment validation** in `env.validation.ts` using `class-transformer` + `class-validator`
+- **Typed config** via `AppConfigService<ValidatedConfig>` — access with `.get('db')`, `.getOrThrow('jwt')`, etc.
+- **Config DTOs** in `config/dto/`: `ServiceVarsDto`, `DbVarsDto`, `RedisVarsDto`, `OAuthVarsDto`, `AIVarsDto`
+- **Config groups**: `app`, `db`, `jwt`, `redis`, `oauth`, `ai`, `aws`, `cors`, `http`, `ws`
+- **Environments**: `local`, `dev`, `stage`, `prod` (`AppEnv` enum)
+
+---
+
+## **Database**
+
+### TypeORM Configuration
+- **PostgreSQL** via `pg` driver
+- **Entities** in `<module>/entity/` folders — auto-discovered
+- **SnakeNamingStrategy** — camelCase properties → snake_case columns
+- **Migrations** in `src/infra/db/migrations/`
+- **Data source config** in `src/infra/db/data-source-options.ts`
+- **Advisory locks** via `src/infra/db/lock/pg-lock.module.ts`
+
+### Entities (6)
+| Entity | Module | Key Fields |
+|--------|--------|------------|
+| `User` | users | id, email, name, role, isActive |
+| `PasswordResetToken` | users | token, userId, expiresAt |
+| `AuthProvider` | auth | provider, providerId, userId |
+| `Invite` | users/invites | email, status, invitedBy, token |
+| `AuditLog` | audit | entityName, action, oldValues (JSONB), newValues (JSONB), actorId |
+| `FileEntity` | file | name, size, mimeType, width, height, s3Key |
+
+### Migration Commands
+```bash
+bun run mig:gen MyMigration   # Generate migration from entity changes
+bun run mig:run               # Run pending migrations
+bun run mig:revert            # Revert last migration
+bun run db:drop               # Drop entire schema
 ```
+
+---
+
+## **Authentication & Authorization**
+
+### Passport Strategies
+- **LocalStrategy** — email/password login
+- **JwtStrategy** — JWT token validation (global guard)
+- **GoogleStrategy** — Google OAuth2
+- **GithubStrategy** — GitHub OAuth2
+- **LinkedInStrategy** — LinkedIn OAuth2
+
+### Guards (globally registered)
+- **JwtAuthGuard** — validates JWT on all routes (skip with `@Public()`)
+- **RolesGuard** — RBAC, use `@Roles(UserRole.ADMIN)` to restrict
+
+### Auth Endpoints (`/api/auth/`)
+- `POST /login` — local email/password
+- `POST /register` — new user or invite-based registration
+- `POST /forgotten-password` — request password reset
+- `POST /password-reset` — reset with token
+- `GET /google`, `/google/callback` — Google OAuth
+- `GET /github`, `/github/callback` — GitHub OAuth
+- `GET /linkedin`, `/linkedin/callback` — LinkedIn OAuth
+
+---
+
+## **Job Queue System (BullMQ + Redis)**
+
+### Queues
+- `notifications-events-queue` — email + WS notifications
+- `background-jobs-queue` — long-running background tasks
+
+### Job Handler Pattern
+```typescript
+@JobHandler({ queue: EVENTS.QUEUES.BACKGROUND_JOBS, name: EVENTS.ROUTING_KEYS.USER_REGISTERED })
+async handleUserRegistered(job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_REGISTERED>) { ... }
+```
+
+### Published Events (`src/notifications/events/events.ts`)
+| Routing Key | Payload | Action |
+|-------------|---------|--------|
+| `user.registered` | RegisteredPayload | Welcome email + WS notification |
+| `user.invited` | InvitePayload | Invite email + WS notification |
+| `user.password_reset` | PasswordResetPayload | Password reset email |
+
+### Publishing Jobs
+```typescript
+await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, { emitToAdmins: true });
+```
+
+### Queue Dashboard
+- Bull Board UI available at `/api/queues`
+
+---
+
+## **WebSocket (Socket.io + Redis Adapter)**
+
+- **EventsGateway** — JWT-authenticated Socket.io gateway
+- **Redis adapter** — multi-instance broadcast support
+- **Rooms**: `chat` (all users), `user_{id}` (private), `admins` (admin-only)
+- **Events**: `chatMessage` (broadcast), `aiRequest` (AI streaming)
+- **Config**: WS path and transports configurable via env vars
+
+---
+
+## **Logging (`src/infra/logger/`)**
+
+- **ContextLogger** — structured JSON logging with `AsyncLocalStorage`-based context
+- **ContextService** — preserves requestId, userId, method, event across async boundaries
+- **Features**: error serialization, sensitive field masking (password, jwt, token, secret, key, phone), circular reference handling, array truncation
+- **Log levels**: VERBOSE → DEBUG → LOG → WARN → ERROR → FATAL
+- **Filtered endpoints**: `/api/service/up`, `/api/service/health`, `/favicon.ico`
+
+---
+
+## **Redis**
+
+- **RedisModule** — IoRedis client wrapper
+- **RedisCacheThrottlerModule** — cache-manager + @nestjs/throttler with Redis storage
+- **Cache TTL**: configurable via `REDIS_CACHE_TTL` env var
+- **Throttle tiers**: short (10/1s), medium (50/10s), long (300/60s) — skipped for authenticated users
+
+---
+
+## **Notifications**
+
+- **Email**: Resend API + React Email templates (welcome, invite, password reset)
+- **WebSocket**: Socket.io gateway with JWT auth
+- **Slack**: SlackService for bot notifications
+- **Email dev server**: `bun run email` (port 3035)
+
+---
+
+## **File Management**
+
+- **S3Service** — AWS S3 upload, download, delete, presigned URLs
+- **FileService** — file operations with DB metadata tracking
+- **Validators**: size (1KB–10MB), name length (6+ chars), max 6 files
+- **Image dimensions**: extracted via `image-size` and stored
+
+---
+
+## **AI Integration**
+
+- **Providers**: Google Gemini, Groq, OpenRouter (`AIProvider` enum)
+- **Vercel AI SDK** (`ai` package) for unified provider interface
+- **REST**: `POST /api/ai/query`, `GET /api/ai/models`
+- **WebSocket streaming**: real-time AI responses via Socket.io `aiRequest` event
+- **Dynamic model discovery** from provider APIs with static fallbacks
+
+---
+
+## **Audit Logging**
+
+- **`@Auditable()` decorator** on entities — auto-tracks changes via TypeORM subscriber
+- **AuditLog entity** — stores entityName, action (INSERT/UPDATE/DELETE), oldValues, newValues (JSONB), actorId
+- **REST**: `GET /api/audit` — query audit logs with pagination
+
+---
+
+## **Health Checks**
+
+- `GET /api/service/health` — DB, memory, Redis health
+- `GET /api/service/up` — uptime in seconds
+- `GET /api/service/config` — version, env, commit info, feature status
 
 ---
 
@@ -127,61 +372,22 @@ export class AppConfigService extends ConfigService<ValidatedConfig, true> {
 
 ### Unit Tests (`src/**/*.spec.ts`)
 ```bash
-bun test          # Run all unit tests in src/
-bun test --watch  # Watch mode
+bun test              # Run all unit tests
+bun test --watch      # Watch mode
+bun test --coverage   # Coverage report
 ```
 
 ### E2E Tests (`e2e/**/*.e2e.spec.ts`)
 ```bash
-bun run test:e2e  # Runs with preload script for DB setup
+bun run test:e2e                                          # Run all E2E tests
+bun run test:e2e:single ./e2e/relative/path/to/test.e2e.ts  # Run single E2E test
 ```
 
-E2E test infrastructure:
-- `e2e/setup/preload.ts` - Global beforeAll/afterAll
-- `e2e/setup/context.ts` - TestContext singleton (API, DB, WS clients)
-- `e2e/utils/` - ApiClient, DbClient (TypeORM), WsClient (socket.io)
-- `e2e/constants.ts` - E2E environment config
-
----
-
-## **Database**
-
-### TypeORM Configuration
-- **Entities** in `<module>/entity/` folders
-- **SnakeNamingStrategy** for table/column names
-- **Migrations** in `src/db/migrations/`
-
-### Migration Commands
-```bash
-bun run mig:gen MyMigration  # Generate migration
-bun run mig:run              # Run migrations
-bun run mig:revert           # Revert last migration
-```
-
----
-
-## **Password Hashing**
-
-Use Bun's native password API via utility:
-
-```typescript
-import { password as passwordUtil } from '@/core/utils/password.util';
-
-// Hash
-const hash = await passwordUtil.hash(plaintext);
-
-// Verify
-const isValid = await passwordUtil.verify(plaintext, hash);
-```
-
----
-
-## **Path Aliases**
-
-Configured in `tsconfig.json`:
-- `@/*` → `src/*`
-- `@core/*` → `src/core/*`
-- `@config/*` → `src/config/*`
+### E2E Utilities (`e2e/utils/`)
+- `api-client.ts` — HTTP request helper
+- `db-client.ts` — direct DB access for setup/teardown
+- `ws-client.ts` — WebSocket client for gateway tests
+- `e2e/setup/preload.ts` — database setup before test suite
 
 ---
 
@@ -189,10 +395,38 @@ Configured in `tsconfig.json`:
 
 | Command | Description |
 |---------|-------------|
-| `bun dev` | Start dev server with hot reload |
-| `bun run build` | Build for production |
-| `bun start` | Start production build |
+| `bun dev` | Start dev server with hot reload (`bun --watch`) |
+| `bun run build` | Build for production (nest build + tsc-alias) |
+| `bun start` | Start production build (`bun dist/main.js`) |
 | `bun test` | Run unit tests |
-| `bun run test:e2e` | Run E2E tests |
-| `bun run lint` | Lint and fix |
-| `bun run format` | Format with Prettier |
+| `bun run test:e2e` | Run E2E tests with DB preload |
+| `bun run test:e2e:single <path>` | Run single E2E test |
+| `bun run lint` | Lint and fix with Biome |
+| `bun run format` | Format with Biome |
+| `bun run mig:gen <Name>` | Generate TypeORM migration |
+| `bun run mig:run` | Run pending migrations |
+| `bun run mig:revert` | Revert last migration |
+| `bun run db:drop` | Drop database schema |
+| `bun run create:admin` | Create admin user interactively |
+| `bun run email` | Start React Email preview server (port 3035) |
+| `bun run email:export` | Export email templates as HTML |
+| `bun run gen:env:docs` | Generate env vars documentation |
+
+---
+
+## **Key Constants (`src/constants.ts`)**
+
+- `GLOBAL_PREFIX = 'api'`
+- `PASSWORD_HASH_ROUNDS = 10`
+- `REQUEST_ID_HEADER_KEY = 'X-Request-Id'`
+- `FILES`: min 1KB, max 10MB, min name length 6, max 6 files
+- `PAGINATION`: default take 10, max 50, order by precedence [updatedAt, createdAt, id]
+- Time: `MILLISECOND`, `SECOND`, `MINUTE`, `HOUR`, `DAY` (all in ms)
+
+---
+
+## **Docker**
+
+- **docker-compose.yml** — PostgreSQL 17.5 (port 5438) + Redis 8.4 (port 6383)
+- **docker-compose.full.yml** — above + app backend container with health checks
+- **Dockerfile** — multi-stage build, `oven/bun:1.3.9-slim`, non-root user

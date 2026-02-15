@@ -31,7 +31,8 @@
     "mig:run:prod": "NODE_ENV=production bun ./node_modules/typeorm/cli.js -d dist/infra/db/data-source-options.js migration:run",
     "mig:revert": "bun run typeorm migration:revert",
     "db:drop": "bun run typeorm schema:drop",
-    "create:admin": "bun --env-file=.env ./scripts/create-admin.ts"
+    "create:admin": "bun --env-file=.env ./scripts/create-admin.ts",
+    "mod:cost": "bunx cost-of-modules --no-install --less"
   },
   "dependencies": {
     "@ai-sdk/google": "3.0.29",

@@ -8,8 +8,7 @@ dist
 # Development files
 .git
 .gitignore
-.env
-.env.*
+.env*
 !.env.example
 
 # IDE and editor
