@@ -42,12 +42,11 @@ export const FILES = {
 export const PAGINATION = Object.freeze({
   ORDER_BY_PRECEDENCE: Object.freeze(['updatedAt', 'createdAt', 'id']),
   DEFAULT_ORDER: PaginationOrder.DESC,
-  MIN_PAGE: 1,
-  DEFAULT_PAGE: 1,
   MIN_TAKE: 1,
   DEFAULT_TAKE: 10,
   MAX_TAKE: 50,
   MAX_SEARCH: 256,
+  MAX_CURSOR: 512,
 });
 
 export const STRING_LENGTH = {

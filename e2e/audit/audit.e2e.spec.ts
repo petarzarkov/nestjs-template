@@ -5,7 +5,13 @@ import { E2E_ADMIN, getTestContext } from '../setup/context';
 
 interface AuditLogResponse {
   data: AuditLog[];
-  meta: { page: number; take: number; itemCount: number; pageCount: number };
+  meta: {
+    take: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    nextCursor: string | null;
+    previousCursor: string | null;
+  };
 }
 
 describe('Audit Logs (e2e)', () => {
@@ -141,7 +147,7 @@ describe('Audit Logs (e2e)', () => {
   });
 
   describe('GET /api/audit-logs', () => {
-    test('should return paginated audit logs for admin', async () => {
+    test('should return cursor pagination meta on first page', async () => {
       await ctx.loginAsAdmin();
 
       const response = await ctx.api.get<AuditLogResponse>('/api/audit-logs');
@@ -150,10 +156,81 @@ describe('Audit Logs (e2e)', () => {
       expect(response.data).toHaveProperty('data');
       expect(response.data).toHaveProperty('meta');
       expect(Array.isArray(response.data.data)).toBe(true);
-      expect(response.data.meta).toHaveProperty('page');
       expect(response.data.meta).toHaveProperty('take');
-      expect(response.data.meta).toHaveProperty('itemCount');
-      expect(response.data.meta).toHaveProperty('pageCount');
+      expect(response.data.meta).toHaveProperty('hasNextPage');
+      expect(response.data.meta).toHaveProperty('hasPreviousPage');
+      expect(response.data.meta).toHaveProperty('nextCursor');
+      expect(response.data.meta).toHaveProperty('previousCursor');
+      // First page should never have a previous cursor
+      expect(response.data.meta.hasPreviousPage).toBe(false);
+      expect(response.data.meta.previousCursor).toBeNull();
+    });
+
+    test('should paginate forward using cursor with no duplicate IDs', async () => {
+      await ctx.loginAsAdmin();
+
+      const page1 = await ctx.api.get<AuditLogResponse>(
+        '/api/audit-logs?take=2',
+      );
+      expect(page1.status).toBe(200);
+      expect(page1.data.data.length).toBeLessThanOrEqual(2);
+
+      if (page1.data.meta.nextCursor) {
+        const page2 = await ctx.api.get<AuditLogResponse>(
+          `/api/audit-logs?take=2&cursor=${page1.data.meta.nextCursor}`,
+        );
+        expect(page2.status).toBe(200);
+        expect(page2.data.meta.hasPreviousPage).toBe(true);
+        expect(page2.data.meta.previousCursor).not.toBeNull();
+
+        // No overlap between pages
+        const page1Ids = new Set(page1.data.data.map(d => d.id));
+        for (const entry of page2.data.data) {
+          expect(page1Ids.has(entry.id)).toBe(false);
+        }
+      }
+    });
+
+    test('should navigate backward without overlapping page 2', async () => {
+      await ctx.loginAsAdmin();
+
+      const page1 = await ctx.api.get<AuditLogResponse>(
+        '/api/audit-logs?take=2',
+      );
+      expect(page1.status).toBe(200);
+      if (!page1.data.meta.nextCursor) return;
+
+      const page2 = await ctx.api.get<AuditLogResponse>(
+        `/api/audit-logs?take=2&cursor=${page1.data.meta.nextCursor}`,
+      );
+      expect(page2.status).toBe(200);
+      expect(page2.data.meta.previousCursor).not.toBeNull();
+
+      // Go backward from page 2
+      const backPage = await ctx.api.get<AuditLogResponse>(
+        `/api/audit-logs?take=2&cursor=${page2.data.meta.previousCursor}&direction=backward`,
+      );
+      expect(backPage.status).toBe(200);
+
+      // Backward page should not overlap with page 2
+      const page2Ids = new Set(page2.data.data.map(d => d.id));
+      for (const entry of backPage.data.data) {
+        expect(page2Ids.has(entry.id)).toBe(false);
+      }
+
+      // Backward page should indicate there is a next page
+      expect(backPage.data.meta.hasNextPage).toBe(true);
+      expect(backPage.data.meta.nextCursor).not.toBeNull();
+    });
+
+    test('should reject an invalid cursor', async () => {
+      await ctx.loginAsAdmin();
+
+      const response = await ctx.api.get<{ message: string }>(
+        '/api/audit-logs?cursor=not-a-valid-cursor',
+      );
+      expect(response.ok).toBe(false);
+      expect(response.status).toBe(400);
     });
 
     test('should filter audit logs by entityName', async () => {
@@ -192,7 +269,9 @@ describe('Audit Logs (e2e)', () => {
 
       expect(response.status).toBe(200);
       for (const entry of response.data.data) {
-        expect(entry.actorId).toBe(admin?.id);
+        // biome-ignore lint/style/noNonNullAssertion: sd
+        // biome-ignore lint/suspicious/noNonNullAssertedOptionalChain: sd
+        expect(entry.actorId).toBe(admin?.id!);
       }
     });
 

@@ -1,38 +1,40 @@
-import { ApiProperty } from '@nestjs/swagger';
-import type { PageOptionsDto } from './page-options.dto';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export interface CursorPageMetaParams {
+  take: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  nextCursor: string | null;
+  previousCursor: string | null;
+}
 
 export class PageMetaDto {
-  @ApiProperty()
-  readonly page: number;
-
   @ApiProperty()
   readonly take: number;
 
   @ApiProperty()
-  readonly itemCount: number;
-
-  @ApiProperty()
-  readonly pageCount: number;
+  readonly hasNextPage: boolean;
 
   @ApiProperty()
   readonly hasPreviousPage: boolean;
 
-  @ApiProperty()
-  readonly hasNextPage: boolean;
+  @ApiPropertyOptional({
+    description: 'Cursor to fetch the next page. Null if no next page.',
+    nullable: true,
+  })
+  readonly nextCursor: string | null;
 
-  constructor({
-    pageOptionsDto,
-    itemCount,
-  }: {
-    pageOptionsDto: PageOptionsDto;
-    itemCount: number;
-  }) {
-    this.page = pageOptionsDto.page;
-    this.take = pageOptionsDto.take;
-    this.itemCount = itemCount;
-    this.pageCount = Math.ceil(this.itemCount / this.take);
-    this.hasPreviousPage = this.page > 1;
+  @ApiPropertyOptional({
+    description: 'Cursor to fetch the previous page. Null if no previous page.',
+    nullable: true,
+  })
+  readonly previousCursor: string | null;
 
-    this.hasNextPage = this.page < this.pageCount;
+  constructor(params: CursorPageMetaParams) {
+    this.take = params.take;
+    this.hasNextPage = params.hasNextPage;
+    this.hasPreviousPage = params.hasPreviousPage;
+    this.nextCursor = params.nextCursor;
+    this.previousCursor = params.previousCursor;
   }
 }

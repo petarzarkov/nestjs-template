@@ -10,6 +10,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { PAGINATION } from '@/constants';
+import { PaginationDirection } from '../enum/pagination-direction.enum';
 import { PaginationOrder } from '../enum/pagination-order.enum';
 
 export class PageOptionsDto {
@@ -22,13 +23,23 @@ export class PageOptionsDto {
   readonly order?: PaginationOrder = PAGINATION.DEFAULT_ORDER;
 
   @ApiPropertyOptional({
-    minimum: PAGINATION.MIN_PAGE,
-    default: PAGINATION.DEFAULT_PAGE,
+    description:
+      'Opaque cursor for keyset pagination. Omit for the first page.',
+    maxLength: PAGINATION.MAX_CURSOR,
   })
-  @IsInt()
-  @Min(PAGINATION.MIN_PAGE)
+  @IsString()
   @IsOptional()
-  readonly page: number = PAGINATION.DEFAULT_PAGE;
+  @MaxLength(PAGINATION.MAX_CURSOR)
+  readonly cursor?: string;
+
+  @ApiPropertyOptional({
+    enum: PaginationDirection,
+    default: PaginationDirection.FORWARD,
+    description: 'Pagination direction relative to the cursor.',
+  })
+  @IsEnum(PaginationDirection)
+  @IsOptional()
+  readonly direction?: PaginationDirection = PaginationDirection.FORWARD;
 
   @ApiPropertyOptional({
     minimum: PAGINATION.MIN_TAKE,

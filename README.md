@@ -98,6 +98,14 @@ bun dev
 - Health check endpoints (DB, Redis, memory)
 - HTTP request/response logging with timing
 
+### Cursor-based Pagination
+- Keyset (cursor) pagination on all list endpoints — no offset/page numbers
+- Opaque Base64url-encoded cursors for stable, index-friendly paging
+- Bidirectional navigation (`forward` / `backward`)
+- `take+1` sentinel strategy (no COUNT queries)
+- Automatic sort key detection (`updatedAt` → `createdAt` → `id`)
+- PostgreSQL `date_trunc` precision alignment with JavaScript Date
+
 ### Caching & Rate Limiting
 - Redis-backed HTTP cache with configurable TTL
 - Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s)
@@ -175,13 +183,13 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 | `POST /api/auth/forgotten-password` | Request password reset |
 | `POST /api/auth/password-reset` | Reset password |
 | `GET /api/auth/{google,github,linkedin}` | OAuth login |
-| `GET /api/users` | List users |
+| `GET /api/users` | List users (cursor paginated) |
 | `GET /api/users/invites` | Manage invites |
 | `POST /api/ai/query` | AI query |
 | `GET /api/ai/models` | List AI models |
 | `POST /api/files` | Upload file |
-| `GET /api/files` | List files |
-| `GET /api/audit` | Query audit logs |
+| `GET /api/files` | List files (cursor paginated) |
+| `GET /api/audit` | Query audit logs (cursor paginated) |
 | `GET /api/service/health` | Health check (DB, Redis, memory) |
 | `GET /api/service/up` | Uptime check |
 | `GET /api/service/config` | Service configuration |

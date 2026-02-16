@@ -48,7 +48,7 @@ src/
 │   ├── filters/               # GenericExceptionFilter, TypeOrmExceptionFilter
 │   ├── interceptors/          # HttpLoggingInterceptor
 │   ├── middlewares/           # RequestMiddleware (context+requestId), HtmlBasicAuthMiddleware (docs auth)
-│   ├── pagination/            # PaginationFactory, PageDto, PageMetaDto, PageOptionsDto
+│   ├── pagination/            # Cursor-based pagination: PaginationFactory, PageDto, PageMetaDto, PageOptionsDto, cursor.util, PaginationDirection
 │   ├── pipes/                 # UnionValidationPipe
 │   ├── validators/            # Custom class-validator decorators
 │   ├── helpers/               # HelpersModule (global helper services)
@@ -128,7 +128,8 @@ e2e/                           # E2E tests
 ├── constants.ts
 ├── health/                    # health.e2e.spec.ts
 ├── auth/                      # auth.e2e.spec.ts
-└── audit/                     # audit.e2e.spec.ts
+├── users/                     # users.e2e.spec.ts (cursor pagination)
+└── audit/                     # audit.e2e.spec.ts (cursor pagination)
 ```
 
 ---
@@ -162,7 +163,7 @@ Imported directly via `@/core/...`:
 - `@/core/filters` — Exception filters (registered globally in `main.ts`)
 - `@/core/interceptors` — HttpLoggingInterceptor (registered globally)
 - `@/core/middlewares` — RequestMiddleware (Express-level), HtmlBasicAuthMiddleware
-- `@/core/pagination` — PaginationFactory service, DTOs, module
+- `@/core/pagination` — Cursor-based PaginationFactory service, DTOs, cursor utilities, module
 - `@/core/pipes` — UnionValidationPipe
 - `@/core/utils` — password.util (Bun.password wrapper)
 - `@/core/validators` — Custom class-validator decorators
@@ -379,6 +380,48 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, { em
 
 ---
 
+## **Pagination (Cursor / Keyset)**
+
+All paginated endpoints use **cursor-based (keyset) pagination** — no offset/page numbers. This is index-friendly and produces consistent results regardless of concurrent writes.
+
+### Query Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `take` | number | 10 | Items per page (1–50) |
+| `cursor` | string | — | Opaque cursor from a previous response (omit for first page) |
+| `direction` | `forward` \| `backward` | `forward` | Pagination direction |
+| `order` | `ASC` \| `DESC` | `DESC` | Sort order |
+| `search` | string | — | Optional search filter (endpoint-specific) |
+
+### Response Meta
+```json
+{
+  "data": [...],
+  "meta": {
+    "take": 10,
+    "hasNextPage": true,
+    "hasPreviousPage": false,
+    "nextCursor": "eyJzIjoiMjAyNS0wNi0wMVQxMjowMDowMC4wMDBaIiwiaSI6ImFiYzEyMyJ9",
+    "previousCursor": null
+  }
+}
+```
+
+### Cursor Format
+Base64url-encoded JSON: `{ "s": "<sort_column_ISO_date>", "i": "<entity_UUID>" }`. The `s` field is the boundary row's sort column value and `i` is the UUID tiebreaker. Invalid cursors return `400 Bad Request`.
+
+### How It Works (`PaginationFactory`)
+1. **Sort key resolution**: auto-detects `updatedAt` → `createdAt` → `id` from entity metadata (configurable via `orderBy` parameter)
+2. **Cursor WHERE clause**: compound condition `(sort_col < :val) OR (sort_col = :val AND id < :id)` for DESC (inverted for ASC/backward)
+3. **`take+1` sentinel**: fetches one extra row to determine `hasNextPage` without a COUNT query
+4. **Backward navigation**: inverts SQL ORDER BY, then reverses results in-app
+5. **Precision handling**: uses `date_trunc('milliseconds', ...)` in SQL to match JavaScript Date precision (PostgreSQL timestamps have microsecond precision)
+
+### Usage in Repositories
+All repositories call `paginationFactory.paginate(queryBuilder, pageOptionsDto)` — the cursor logic is fully encapsulated in the factory. No repository changes needed when switching sort keys or adding new paginated endpoints.
+
+---
+
 ## **Health Checks**
 
 - `GET /api/service/health` — DB, memory, Redis health
@@ -439,7 +482,7 @@ bun run test:e2e:single ./e2e/relative/path/to/test.e2e.ts  # Run single E2E tes
 - `PASSWORD_HASH_ROUNDS = 10`
 - `REQUEST_ID_HEADER_KEY = 'X-Request-Id'`
 - `FILES`: min 1KB, max 10MB, min name length 6, max 6 files
-- `PAGINATION`: default take 10, max 50, order by precedence [updatedAt, createdAt, id]
+- `PAGINATION`: default take 10, max 50, max cursor 512, order by precedence [updatedAt, createdAt, id]
 - Time: `MILLISECOND`, `SECOND`, `MINUTE`, `HOUR`, `DAY` (all in ms)
 
 ---

@@ -12,6 +12,8 @@ describe('Auth (e2e)', () => {
 
   describe('Login', () => {
     test('should login with valid credentials', async () => {
+      // Wait for throttle window to reset (short throttle: 10 req/1s)
+      await Bun.sleep(1100);
       const result = await ctx.loginAsAdmin();
 
       expect(result.accessToken).toBeDefined();
@@ -19,6 +21,7 @@ describe('Auth (e2e)', () => {
     });
 
     test('should reject invalid credentials', async () => {
+      await Bun.sleep(1100);
       const response = await ctx.api.post('/api/auth/login', {
         email: 'nonexistent@test.com',
         password: 'wrongpassword',
@@ -32,6 +35,7 @@ describe('Auth (e2e)', () => {
 
   describe('User Profile', () => {
     test('should get current user profile when authenticated', async () => {
+      await Bun.sleep(1100);
       await ctx.loginAsAdmin();
 
       const profile = await ctx.api.getMe();
@@ -53,6 +57,7 @@ describe('Auth (e2e)', () => {
 
   describe('WebSocket Connection', () => {
     test('should connect to WebSocket and receive connected event', async () => {
+      await Bun.sleep(1100);
       const { accessToken } = await ctx.loginAsAdmin();
 
       ctx.ws.connect(accessToken, E2E.API_URL);
