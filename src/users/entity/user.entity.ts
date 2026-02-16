@@ -44,7 +44,11 @@ export class User {
     description: 'Display name (from OAuth providers)',
     nullable: true,
   })
-  @Column({ type: 'text', nullable: true })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    length: 80,
+  })
   @IsOptional()
   displayName!: string | null;
 
@@ -52,7 +56,7 @@ export class User {
     description: 'Profile picture URL (from OAuth providers)',
     nullable: true,
   })
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'varchar', nullable: true, length: STRING_LENGTH.MEDIUM_MAX })
   @IsOptional()
   picture!: string | null;
 

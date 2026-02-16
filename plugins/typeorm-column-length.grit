@@ -8,11 +8,25 @@ or {
     register_diagnostic(span=$call, severity="error", message="@Column({ type: 'varchar' }) must include length, e.g. @Column({ type: 'varchar', length: 255 })")
   },
   `Column()` as $call where {
-    register_diagnostic(span=$call, severity="error", message="@Column() with no arguments defaults to varchar without a length constraint. Specify length, e.g. @Column({ length: 255 }), or use an explicit type like @Column({ type: 'text' })")
+    register_diagnostic(span=$call, severity="error", message="@Column() with no arguments defaults to varchar without a length constraint. Specify type and length, e.g. @Column({ type: 'varchar', length: 255 })")
   },
   `Column($args)` as $call where {
     $args <: contains `unique: true`,
     not $args <: contains `length`,
     register_diagnostic(span=$call, severity="error", message="@Column({ unique: true }) must include length, e.g. @Column({ unique: true, length: 255 })")
+  },
+  `Column($args)` as $call where {
+    $args <: contains `type: 'text'`,
+    register_diagnostic(span=$call, severity="error", message="@Column({ type: 'text' }) is not allowed. Use type: 'varchar' with an explicit length, e.g. @Column({ type: 'varchar', length: 255 })")
+  },
+  `Column('text', $...)` as $call where {
+    register_diagnostic(span=$call, severity="error", message="@Column('text') is not allowed. Use type: 'varchar' with an explicit length, e.g. @Column({ type: 'varchar', length: 255 })")
+  },
+  `Column('varchar', $opts)` as $call where {
+    not $opts <: contains `length`,
+    register_diagnostic(span=$call, severity="error", message="@Column('varchar') must include length, e.g. @Column({ type: 'varchar', length: 255 })")
+  },
+  `Column('varchar')` as $call where {
+    register_diagnostic(span=$call, severity="error", message="@Column('varchar') must include length, e.g. @Column({ type: 'varchar', length: 255 })")
   }
 }

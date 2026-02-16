@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { User } from '@/users/entity/user.entity';
 import { OAuthProvider } from '../enum/oauth-provider.enum';
 
@@ -48,10 +49,19 @@ export class AuthProvider {
     description: 'Provider-specific user ID (null for local auth)',
     nullable: true,
   })
-  @Column({ type: 'text', nullable: true })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    length: STRING_LENGTH.PASSWORD_HASH_MAX,
+  })
   authProviderId!: string | null;
 
-  @Column({ type: 'text', nullable: true, select: false })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    select: false,
+    length: STRING_LENGTH.PASSWORD_HASH_MAX,
+  })
   passwordHash!: string | null;
 
   @ApiProperty()
