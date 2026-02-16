@@ -17,6 +17,10 @@ or {
     not $args <: contains `foreignKeyConstraintName`,
     register_diagnostic(span=$call, severity="error", message="@JoinColumn() must include foreignKeyConstraintName, e.g. @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_source_to_target' })")
   },
+  `PrimaryGeneratedColumn($args)` as $call where {
+    not $args <: contains `primaryKeyConstraintName`,
+    register_diagnostic(span=$call, severity="error", message="@PrimaryGeneratedColumn() must include primaryKeyConstraintName, e.g. @PrimaryGeneratedColumn({ primaryKeyConstraintName: 'PK_my_db_entity' })")
+  },
   `Column($args)` as $call where {
     $args <: contains `type: 'enum'`,
     not $args <: contains `enumName`,
