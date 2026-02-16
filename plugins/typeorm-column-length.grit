@@ -1,0 +1,18 @@
+engine biome(1.0)
+language js(typescript)
+
+or {
+  `Column($args)` as $call where {
+    $args <: contains `type: 'varchar'`,
+    not $args <: contains `length`,
+    register_diagnostic(span=$call, severity="error", message="@Column({ type: 'varchar' }) must include length, e.g. @Column({ type: 'varchar', length: 255 })")
+  },
+  `Column()` as $call where {
+    register_diagnostic(span=$call, severity="error", message="@Column() with no arguments defaults to varchar without a length constraint. Specify length, e.g. @Column({ length: 255 }), or use an explicit type like @Column({ type: 'text' })")
+  },
+  `Column($args)` as $call where {
+    $args <: contains `unique: true`,
+    not $args <: contains `length`,
+    register_diagnostic(span=$call, severity="error", message="@Column({ unique: true }) must include length, e.g. @Column({ unique: true, length: 255 })")
+  }
+}

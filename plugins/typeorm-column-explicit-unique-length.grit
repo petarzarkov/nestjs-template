@@ -1,8 +1,0 @@
-engine biome(1.0)
-language js(typescript)
-
-`Column($args)` as $call where {
-  $args <: contains `unique: true`,
-  not $args <: contains `length`,
-  register_diagnostic(span=$call, severity="error", message="@Column({ unique: true }) must include length, e.g. @Column({ unique: true, length: 255 })")
-}

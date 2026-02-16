@@ -1,0 +1,22 @@
+engine biome(1.0)
+language js(typescript)
+
+or {
+  `CreateDateColumn($args)` as $call where {
+    not $args <: contains `type: 'timestamptz'`,
+    register_diagnostic(span=$call, severity="error", message="@CreateDateColumn() must include type: 'timestamptz' to store dates with timezone")
+  },
+  `UpdateDateColumn($args)` as $call where {
+    not $args <: contains `type: 'timestamptz'`,
+    register_diagnostic(span=$call, severity="error", message="@UpdateDateColumn() must include type: 'timestamptz' to store dates with timezone")
+  },
+  `DeleteDateColumn($args)` as $call where {
+    not $args <: contains `type: 'timestamptz'`,
+    register_diagnostic(span=$call, severity="error", message="@DeleteDateColumn() must include type: 'timestamptz' to store dates with timezone")
+  },
+  `Column($args)` as $call where {
+    $args <: contains `type: 'timestamp'`,
+    not $args <: contains `type: 'timestamptz'`,
+    register_diagnostic(span=$call, severity="error", message="@Column({ type: 'timestamp' }) should be type: 'timestamptz' to store dates with timezone")
+  }
+}

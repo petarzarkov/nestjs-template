@@ -1,16 +1,9 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.15/schema.json",
   "plugins": [
-    "./plugins/typeorm-index-name.grit",
-    "./plugins/typeorm-join-column-fk-name.grit",
-    "./plugins/typeorm-column-enum-name.grit",
-    "./plugins/typeorm-create-date-tz.grit",
-    "./plugins/typeorm-update-date-tz.grit",
-    "./plugins/typeorm-delete-date-tz.grit",
-    "./plugins/typeorm-column-timestamp-tz.grit",
-    "./plugins/typeorm-column-varchar-length.grit",
-    "./plugins/typeorm-column-explicit-varchar-length.grit",
-    "./plugins/typeorm-column-explicit-unique-length.grit"
+    "./plugins/typeorm-timestamptz.grit",
+    "./plugins/typeorm-column-length.grit",
+    "./plugins/typeorm-explicit-naming.grit"
   ],
   "vcs": {
     "enabled": true,

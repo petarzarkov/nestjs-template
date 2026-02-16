@@ -1,7 +1,0 @@
-engine biome(1.0)
-language js(typescript)
-
-`DeleteDateColumn($args)` as $call where {
-  not $args <: contains `type: 'timestamptz'`,
-  register_diagnostic(span=$call, severity="error", message="@DeleteDateColumn() must include type: 'timestamptz' to store dates with timezone")
-}

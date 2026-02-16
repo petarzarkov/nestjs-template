@@ -1,0 +1,25 @@
+engine biome(1.0)
+language js(typescript)
+
+or {
+  `Index($...)` as $call where {
+    not {
+      $call <: `Index($name, $...)` where {
+        $name <: or {
+          `"$_"`,
+          `'$_'`
+        }
+      }
+    },
+    register_diagnostic(span=$call, severity="error", message="@Index() must have an explicit name as the first argument, e.g. @Index('my_column_index')")
+  },
+  `JoinColumn($args)` as $call where {
+    not $args <: contains `foreignKeyConstraintName`,
+    register_diagnostic(span=$call, severity="error", message="@JoinColumn() must include foreignKeyConstraintName, e.g. @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_source_to_target' })")
+  },
+  `Column($args)` as $call where {
+    $args <: contains `type: 'enum'`,
+    not $args <: contains `enumName`,
+    register_diagnostic(span=$call, severity="error", message="@Column({ type: 'enum' }) must include enumName, e.g. @Column({ type: 'enum', enum: MyEnum, enumName: 'my_enum_name' })")
+  }
+}
