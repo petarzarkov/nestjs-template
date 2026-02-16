@@ -9,7 +9,8 @@
     "./plugins/typeorm-delete-date-tz.grit",
     "./plugins/typeorm-column-timestamp-tz.grit",
     "./plugins/typeorm-column-varchar-length.grit",
-    "./plugins/typeorm-column-explicit-varchar-length.grit"
+    "./plugins/typeorm-column-explicit-varchar-length.grit",
+    "./plugins/typeorm-column-explicit-unique-length.grit"
   ],
   "vcs": {
     "enabled": true,
