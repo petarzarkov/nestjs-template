@@ -1,7 +1,14 @@
 import { applyDecorators } from '@nestjs/common';
 import type { ApiPropertyOptions } from '@nestjs/swagger';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, NotContains } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+  NotContains,
+} from 'class-validator';
+import { STRING_LENGTH } from '@/constants';
 
 export const IsEmailDecorator = (
   optional = false,
@@ -16,11 +23,13 @@ export const IsEmailDecorator = (
       type: 'string',
       format: 'email',
       example: 'test@test.com',
+      maxLength: STRING_LENGTH.EMAIL_MAX,
     }),
     NotContains(' ', {
       message: 'Email address cannot contain spaces',
     }),
     IsEmail(),
+    MaxLength(STRING_LENGTH.EMAIL_MAX),
   ];
 
   decorators.push(optional ? IsOptional() : IsNotEmpty());

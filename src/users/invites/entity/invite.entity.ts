@@ -7,6 +7,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { Auditable } from '@/core/decorators/auditable.decorator';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { InviteStatus } from '@/users/invites/enum/invite-status.enum';
@@ -22,11 +23,11 @@ export class Invite {
   id!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.EMAIL_MAX })
   email!: string;
 
   @Unique('UQ_invite_invite_code', ['inviteCode'])
-  @Column()
+  @Column({ length: STRING_LENGTH.SHORT_MAX })
   inviteCode!: string;
 
   @ApiProperty({ enum: Object.values(UserRole), example: UserRole.USER })

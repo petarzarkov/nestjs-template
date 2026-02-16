@@ -1,0 +1,6 @@
+engine biome(1.0)
+language js(typescript)
+
+`Column()` as $call where {
+  register_diagnostic(span=$call, severity="error", message="@Column() with no arguments defaults to varchar without a length constraint. Specify length, e.g. @Column({ length: 255 }), or use an explicit type like @Column({ type: 'text' })")
+}

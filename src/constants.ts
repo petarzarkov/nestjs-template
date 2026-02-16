@@ -50,4 +50,16 @@ export const PAGINATION = Object.freeze({
   MAX_SEARCH: 256,
 });
 
+export const STRING_LENGTH = {
+  EMAIL_MAX: 254, // RFC 5321
+  PASSWORD_HASH_MAX: 128, // bcrypt ~60 chars + buffer
+  SHORT_MAX: 128, // tokens, IDs, codes
+  MEDIUM_MAX: 255, // names, entity names
+  PATH_MAX: 1024, // S3 paths, URLs
+  TEXT_MAX: 10_000, // AI prompts, long-form text
+  EXTENSION_MAX: 32, // file extensions
+  MIMETYPE_MAX: 128, // MIME types
+  MODEL_NAME_MAX: 256, // AI model identifiers
+} as const;
+
 export const JOB_HANDLER_METADATA = 'JOB_HANDLER_METADATA';

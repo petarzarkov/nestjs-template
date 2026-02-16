@@ -6,6 +6,7 @@ import {
   Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { AuditAction } from '../enum/audit-action.enum';
 
 @Entity('audit_log')
@@ -31,12 +32,12 @@ export class AuditLog {
   @ApiProperty({
     description: 'Name of the audited entity (e.g., "User", "Invite")',
   })
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', length: STRING_LENGTH.MEDIUM_MAX })
   @Index('audit_entity_name_index')
   entityName!: string;
 
   @ApiProperty({ description: 'Primary key of the audited entity' })
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', length: STRING_LENGTH.SHORT_MAX })
   @Index('audit_entity_id_index')
   entityId!: string;
 

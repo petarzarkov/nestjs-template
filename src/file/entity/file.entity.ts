@@ -9,6 +9,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { User } from '@/users/entity/user.entity';
 
 @Entity('files')
@@ -21,19 +22,19 @@ export class FileEntity {
   id!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.MEDIUM_MAX })
   name!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.EXTENSION_MAX })
   extension!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.MIMETYPE_MAX })
   mimetype!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.PATH_MAX })
   path!: string;
 
   @ApiProperty()

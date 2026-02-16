@@ -7,6 +7,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 import { PAGINATION } from '@/constants';
 import { PaginationOrder } from '../enum/pagination-order.enum';
@@ -44,6 +45,7 @@ export class PageOptionsDto {
   })
   @IsString()
   @IsOptional()
+  @MinLength(1)
   @MaxLength(PAGINATION.MAX_SEARCH)
   readonly search?: string;
 }

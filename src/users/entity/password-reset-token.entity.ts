@@ -9,6 +9,7 @@ import {
   RelationId,
   UpdateDateColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { User } from './user.entity';
 
 @Entity()
@@ -29,7 +30,7 @@ export class PasswordResetToken {
   @RelationId((token: PasswordResetToken) => token.user)
   userId!: string;
 
-  @Column()
+  @Column({ length: STRING_LENGTH.SHORT_MAX })
   @IsString()
   token!: string;
 

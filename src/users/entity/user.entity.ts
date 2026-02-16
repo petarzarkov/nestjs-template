@@ -8,6 +8,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { STRING_LENGTH } from '@/constants';
 import { Auditable } from '@/core/decorators/auditable.decorator';
 import { IsUniqueEnumArrayDecorator } from '@/core/decorators/is-unique-enum.decorator';
 import { PasswordDecorator } from '@/core/decorators/password.decorator';
@@ -27,11 +28,15 @@ export class User {
   id!: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ length: STRING_LENGTH.EMAIL_MAX })
   @IsEmail()
   email!: string;
 
-  @Column({ select: false, nullable: true })
+  @Column({
+    length: STRING_LENGTH.PASSWORD_HASH_MAX,
+    select: false,
+    nullable: true,
+  })
   @PasswordDecorator(true)
   password!: string | null;
 
