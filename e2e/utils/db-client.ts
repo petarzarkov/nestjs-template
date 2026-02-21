@@ -1,6 +1,7 @@
 import type { Repository } from 'typeorm';
 import { DataSource } from 'typeorm';
 import { AuditLog } from '@/audit/entity/audit-log.entity';
+import { Subscription } from '@/billing/entity/subscription.entity';
 import { SnakeNamingStrategy } from '@/infra/db/strategies/snake-case.strategy';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 import { User } from '@/users/entity/user.entity';
@@ -8,7 +9,7 @@ import { Invite } from '@/users/invites/entity/invite.entity';
 import { E2E } from '../constants';
 
 // Entity list for this template
-const ENTITIES = [User, Invite, PasswordResetToken, AuditLog];
+const ENTITIES = [User, Invite, PasswordResetToken, AuditLog, Subscription];
 
 /**
  * E2E Database Client using TypeORM
@@ -82,6 +83,10 @@ export class DbClient {
 
   get auditLogs(): Repository<AuditLog> {
     return this.getRepository(AuditLog);
+  }
+
+  get subscriptions(): Repository<Subscription> {
+    return this.getRepository(Subscription);
   }
 
   /**

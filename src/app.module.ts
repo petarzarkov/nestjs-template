@@ -6,6 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { AIModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { AppConfigModule } from './config/app.config.module';
 import { ValidatedConfig, validateConfig } from './config/env.validation';
 import { AppConfigService } from './config/services/app.config.service';
@@ -58,6 +59,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     UsersModule,
     AuditModule,
+    BillingModule,
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,

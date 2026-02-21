@@ -8,6 +8,7 @@ import { getDbConfig } from './dto/db-vars.dto';
 import { getOAuthConfig } from './dto/oauth-vars.dto';
 import { getRedisConfig } from './dto/redis-vars.dto';
 import { getServiceConfig } from './dto/service-vars.dto';
+import { getStripeConfig } from './dto/stripe-vars.dto';
 import { EnvVars } from './env-vars.dto';
 
 export const validateConfig = (config: Record<string, unknown>) => {
@@ -51,6 +52,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
       accessKeyId: validatedConfig.AWS_ACCESS_KEY_ID,
       secretAccessKey: validatedConfig.AWS_SECRET_ACCESS_KEY,
     },
+    stripe: getStripeConfig(validatedConfig),
   } as const;
 };
 
