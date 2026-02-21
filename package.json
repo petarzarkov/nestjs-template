@@ -32,7 +32,7 @@
     "mig:revert": "bun run typeorm migration:revert",
     "db:drop": "bun run typeorm schema:drop",
     "create:admin": "bun --env-file=.env ./scripts/create-admin.ts",
-    "mod:cost": "bunx cost-of-modules --no-install --less"
+    "mod:cost": "bunx @pzarkov/module-cost --less"
   },
   "dependencies": {
     "@ai-sdk/google": "3.0.30",
