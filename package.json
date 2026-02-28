@@ -64,7 +64,7 @@
     "@scalar/nestjs-api-reference": "1.0.27",
     "@socket.io/redis-adapter": "8.3.0",
     "@socket.io/redis-emitter": "5.1.0",
-    "ai": "6.0.97",
+    "vercel-ai": "npm:ai@6.0.97",
     "axios": "1.13.5",
     "bullmq": "5.69.4",
     "cache-manager": "7.2.8",

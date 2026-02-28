@@ -33,6 +33,7 @@ export class User {
   email!: string;
 
   @Column({
+    type: 'varchar',
     length: STRING_LENGTH.PASSWORD_HASH_MAX,
     select: false,
     nullable: true,
