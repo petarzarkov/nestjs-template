@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import type { JobsOptions, Queue } from 'bullmq';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import type { QueueJob } from '@/infra/queue/types/queue-job.type';
 import {
   EVENTS,

@@ -1,3 +1,4 @@
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import { Injectable } from '@nestjs/common';
 import {
   DataSource,
@@ -13,8 +14,6 @@ import {
   AUDITABLE_KEY,
   type AuditableOptions,
 } from '@/core/decorators/auditable.decorator';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { AuditLog } from '../entity/audit-log.entity';
 import { AuditAction } from '../enum/audit-action.enum';
 

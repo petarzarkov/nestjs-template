@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Readable } from 'node:stream';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HelpersService } from '@/core/helpers/services/helpers.service';
 import { FilesRepository } from '@/file/repos/file.repository';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { FileService } from './file.service';
 import { S3Service } from './s3.service';

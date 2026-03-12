@@ -1,10 +1,10 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-github2';
 import { VerifyCallback } from 'passport-oauth2';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { OAuthProvider } from '../enum/oauth-provider.enum';
 import { AuthService } from '../services/auth.service';
 

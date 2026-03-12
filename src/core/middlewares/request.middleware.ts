@@ -1,12 +1,12 @@
+import {
+  AsyncContext,
+  ContextLogger,
+  ContextService,
+} from '@arkv/nestjs-context-logger';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { v4, validate } from 'uuid';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
-import {
-  AsyncContext,
-  ContextService,
-} from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 
 @Injectable()
 export class RequestMiddleware implements NestMiddleware {

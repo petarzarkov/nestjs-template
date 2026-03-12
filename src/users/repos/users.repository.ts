@@ -1,10 +1,10 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, FindOneOptions, Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginationFactory } from '@/core/pagination/pagination.factory';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { GetUsersQueryDto } from '@/users/dto/user.dto';
 import { SanitizedUser, User } from '@/users/entity/user.entity';
 

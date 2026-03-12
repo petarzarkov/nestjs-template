@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   ForbiddenException,
   Injectable,
@@ -14,7 +15,6 @@ import {
 import { ListFilesQueryDto } from '@/file/dto/list-files-query.dto';
 import { FileEntity } from '@/file/entity/file.entity';
 import { FilesRepository } from '@/file/repos/file.repository';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { S3Service } from './s3.service';

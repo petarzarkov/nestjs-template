@@ -1,3 +1,4 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   BadRequestException,
   Controller,
@@ -12,7 +13,6 @@ import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { Public } from '@/core/decorators/public.decorator';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { CheckoutSessionResponseDto } from './dto/checkout-session.dto';
 import { PortalSessionResponseDto } from './dto/portal-session.dto';

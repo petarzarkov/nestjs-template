@@ -1,3 +1,4 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   Injectable,
   InternalServerErrorException,
@@ -6,7 +7,6 @@ import {
 import Stripe from 'stripe';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { Subscription } from '../entity/subscription.entity';
 import { SubscriptionStatus } from '../enum/subscription-status.enum';

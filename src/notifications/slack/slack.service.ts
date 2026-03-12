@@ -1,7 +1,7 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Injectable } from '@nestjs/common';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 
 @Injectable()
 export class SlackService {

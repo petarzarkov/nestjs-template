@@ -1,10 +1,10 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { generateText, streamText } from 'vercel-ai';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { AIProvider } from '../enum/ai-provider.enum';
 
 @Injectable()

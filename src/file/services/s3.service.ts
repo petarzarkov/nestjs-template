@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   DeleteObjectCommand,
   DeleteObjectCommandInput,
@@ -11,7 +12,6 @@ import {
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as mime from 'mime-types';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 
 export interface S3FileDto {
   fileId: string;

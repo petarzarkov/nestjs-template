@@ -1,3 +1,4 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   Controller,
   Delete,
@@ -40,7 +41,6 @@ import {
 import { FileUploadDto } from '@/file/dto/file-upload.dto';
 import { ListFilesQueryDto } from '@/file/dto/list-files-query.dto';
 import { FileEntity } from '@/file/entity/file.entity';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { EnvThrottlerGuard } from '@/infra/redis/guards/env-throttler.guard';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';

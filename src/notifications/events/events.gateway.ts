@@ -1,3 +1,4 @@
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import { HttpStatus, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -17,8 +18,6 @@ import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { RedisService } from '@/infra/redis/services/redis.service';
 import { EventMap, EventType } from '@/notifications/events/events';
 import { UserRole } from '@/users/enum/user-role.enum';

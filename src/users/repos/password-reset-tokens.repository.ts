@@ -1,7 +1,7 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
 
 @Injectable()

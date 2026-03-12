@@ -1,3 +1,4 @@
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import {
   HttpStatus,
   Injectable,
@@ -8,7 +9,6 @@ import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { HelpersService } from '@/core/helpers/services/helpers.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import {
   InvitePayload,
   PasswordResetPayload,

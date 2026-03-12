@@ -1,11 +1,10 @@
 import { join } from 'node:path';
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { Job, Worker } from 'bullmq';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { JOB_HANDLER_METADATA, MINUTE, SECOND } from '@/constants';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import type { JobHandlerOptions } from '@/infra/queue/decorators/job-handler.decorator';
 import type { JobHandlerType } from '@/infra/queue/types/queue-job.type';
 import { EVENTS } from '@/notifications/events/events';

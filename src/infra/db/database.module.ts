@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { DynamicModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
 import { DataSource } from 'typeorm';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
 import { SnakeNamingStrategy } from './strategies/snake-case.strategy';
 
 @Module({})

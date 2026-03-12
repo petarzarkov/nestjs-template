@@ -1,3 +1,4 @@
+import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { AIModule } from '@/ai/ai.module';
@@ -11,7 +12,6 @@ import { NotificationModule } from '@/notifications/notification.module';
 import { UsersModule } from '@/users/users.module';
 import { DatabaseModule } from '../db/database.module';
 import { HealthModule } from '../health/health.module';
-import { LoggerModule } from '../logger/logger.module';
 import { RedisModule } from '../redis/redis.module';
 import { RedisCacheThrottlerModule } from '../redis/redis-cache-throttler.module';
 import { QueueModule } from './queue.module';
@@ -34,7 +34,23 @@ import { QueueModule } from './queue.module';
     HelpersModule,
     DatabaseModule.forRoot(),
     RedisModule,
-    LoggerModule,
+    NestJsContextLoggerModule.forRootAsync({
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService<ValidatedConfig>) => {
+        const app = configService.getOrThrow('app');
+        const log = configService.getOrThrow('log');
+        return {
+          name: app.name,
+          version: app.version,
+          env: app.env,
+          isDevelopment: app.nodeEnv !== 'production',
+          level: log.level,
+          maskFields: log.maskFields,
+          filterEvents: log.filterEvents,
+          maxArrayLength: log.maxArrayLength,
+        };
+      },
+    }),
     HealthModule,
     PaginationModule,
     UsersModule,
