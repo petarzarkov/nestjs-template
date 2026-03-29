@@ -1,6 +1,6 @@
 services:
-  app-db:
-    container_name: app-db
+  app-template-db:
+    container_name: app-template-db
     image: public.ecr.aws/docker/library/postgres:17.5
     env_file:
       - .env
@@ -23,9 +23,9 @@ services:
       timeout: 5s
       retries: 10
 
-  app-redis:
+  app-template-redis:
     image: public.ecr.aws/docker/library/redis:8.4.0
-    container_name: app-redis
+    container_name: app-template-redis
     env_file:
       - .env
     ports:
