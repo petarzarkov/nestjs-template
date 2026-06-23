@@ -8,7 +8,7 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 |-------|-----------|
 | Runtime | [Bun](https://bun.sh) |
 | Framework | [NestJS 11](https://nestjs.com) |
-| Language | TypeScript 5.9 (strict, ESNext) |
+| Language | TypeScript (strict, ESNext) — [tsgo / TS 7 Native Preview](https://github.com/microsoft/typescript-go) for typechecking |
 | Database | PostgreSQL 17 + [TypeORM](https://typeorm.io) |
 | Cache & Queues | Redis 8 + [BullMQ](https://bullmq.io) |
 | Auth | Passport.js (JWT, Google, GitHub, LinkedIn) |
@@ -17,7 +17,7 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 | AI | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter) |
 | File Storage | AWS S3 |
 | API Docs | Swagger + [Scalar](https://scalar.com) |
-| Linting | [Biome](https://biomejs.dev) |
+| Linting & Formatting | [Oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) |
 | Testing | Bun test runner |
 
 ## Prerequisites
@@ -60,7 +60,7 @@ bun dev
 - Migration system with generate, run, and revert commands
 - PostgreSQL advisory locks for distributed coordination
 - Automatic audit logging via `@Auditable()` entity decorator
-- Explicit naming for all DB constraints (FKs, indexes, enums) — enforced via Biome GritQL plugins
+- Explicit naming for all DB constraints (FKs, indexes, enums) — enforced via a custom Oxlint plugin (`oxlint-plugins/`)
 
 ### Job Queue System
 - BullMQ queues backed by Redis for reliable async processing
@@ -111,7 +111,8 @@ bun dev
 - Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s)
 
 ### Developer Experience
-- Biome for linting and formatting with GritQL plugins for TypeORM constraint naming
+- Oxlint for linting (with a custom JS plugin for TypeORM constraint naming) and oxfmt for formatting
+- TypeScript 7 (`tsgo`, the native-preview compiler) for fast typechecking
 - Husky + lint-staged for pre-commit hooks
 - Swagger + Scalar API documentation with optional basic auth
 - `bun dev` with hot reload via `bun --watch`
@@ -142,8 +143,9 @@ bun run mig:revert                        # Revert last migration
 bun run db:drop                           # Drop schema
 
 # Code Quality
-bun run lint                              # Lint and fix with Biome
-bun run format                            # Format with Biome
+bun run lint                              # Lint and fix with Oxlint
+bun run format                            # Format with oxfmt
+bun run typecheck                         # Typecheck with tsgo (TypeScript 7)
 
 # Utilities
 bun run create:admin                      # Create admin user

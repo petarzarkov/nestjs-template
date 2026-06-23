@@ -14,7 +14,6 @@ export class RedisService implements OnModuleDestroy {
 
   newConnection(name: string, optionsOverride: RedisOptions = {}): Redis {
     if (this.managedClients.has(name)) {
-      // biome-ignore lint/style/noNonNullAssertion: we know the client has an entry in the map
       return this.managedClients.get(name)!;
     }
 

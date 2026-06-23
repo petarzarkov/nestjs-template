@@ -22,7 +22,6 @@ export class UsersRepository {
     const { search, suspended } = getUsersQueryDto;
 
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
-    // biome-ignore lint/suspicious/noDoubleEquals: false positive
     if (suspended != undefined) {
       queryBuilder.andWhere({
         suspended,

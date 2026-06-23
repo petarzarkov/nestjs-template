@@ -127,7 +127,6 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
   async createOrUpdateUserOAuth(
     authProviderId: string,
     provider: OAuthProvider,

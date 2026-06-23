@@ -43,7 +43,6 @@ function generateEnvDocs(): void {
   }
 
   console.log(`Found ${envFiles.length} .env.sample files:`);
-  // biome-ignore lint/suspicious/useIterableCallbackReturn: nn
   envFiles.forEach(file => console.log(`  - ${file}`));
 
   const allParsedVars: ParsedVariable[] = [];
@@ -113,7 +112,6 @@ function parseEnvFile(
 /**
  * Groups the parsed variables based on the groupConfig affixes.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: DOCS
 function groupVariables(
   vars: ParsedVariable[],
 ): Record<string, ParsedVariable[]> {

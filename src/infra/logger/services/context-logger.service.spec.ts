@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/nursery/noExcessiveLinesPerFile: unit test */
 import {
   afterEach,
   beforeEach,
@@ -19,7 +18,6 @@ import { ContextLogger } from './context-logger.service';
 
 // Helper function to clean ANSI color codes and parse JSON
 function parseLogOutput(logCall: string) {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: test code
   const cleanLog = logCall.replace(/\u001b\[[0-9;]*m/g, '');
   return JSON.parse(cleanLog);
 }
@@ -505,7 +503,6 @@ describe('ContextLogger', () => {
 
       const logCall = (console.log as Mock<() => unknown>).mock.calls[0][0];
       // Check if the output contains ANSI color codes
-      // biome-ignore lint/suspicious/noControlCharactersInRegex: test code
       expect(logCall).toMatch(/\u001b\[[0-9;]*m/);
     });
 

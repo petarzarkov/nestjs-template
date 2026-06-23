@@ -8,7 +8,6 @@ import {
   Preview,
   Text,
 } from '@react-email/components';
-// biome-ignore lint/correctness/noUnusedImports: File is a module
 import React from 'react';
 import { button, container, h1, main, text } from './email-styles';
 

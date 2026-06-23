@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "tabWidth": 2,
+  "printWidth": 80,
+  "endOfLine": "lf",
+  "singleQuote": true,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "arrowParens": "avoid",
+  "useTabs": false,
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "coverage/**",
+    ".tmp/**",
+    "public/**",
+    "bun.lock",
+    "**/*.md",
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.toml"
+  ]
+}

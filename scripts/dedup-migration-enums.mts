@@ -6,7 +6,7 @@
  * 2. Phantom enum recreation diffs (RENAME → CREATE → ALTER COLUMN → DROP old)
  *    generated even when enum values haven't changed
  *
- * Usage: bun ./scripts/dedup-migration-enums.ts <migration-file-path>
+ * Usage: bun ./scripts/dedup-migration-enums.mts <migration-file-path>
  */
 
 import { unlink } from 'node:fs/promises';
@@ -14,7 +14,7 @@ import { unlink } from 'node:fs/promises';
 const filePath = process.argv[2];
 
 if (!filePath) {
-  console.error('Usage: bun ./scripts/dedup-migration-enums.ts <file>');
+  console.error('Usage: bun ./scripts/dedup-migration-enums.mts <file>');
   process.exit(1);
 }
 

@@ -44,7 +44,7 @@ FILE_PATH="$MIGRATIONS_DIR/$LATEST_MIGRATION"
 echo "✅ Formatting migration file: $FILE_PATH"
 
 # Deduplicate shared enum types (TypeORM generates duplicates for shared enumName)
-bun ./scripts/dedup-migration-enums.ts "$FILE_PATH"
+bun ./scripts/dedup-migration-enums.mts "$FILE_PATH"
 
 # If the dedup script deleted the file (entirely phantom diffs), exit early
 if [ ! -f "$FILE_PATH" ]; then
@@ -52,7 +52,7 @@ if [ ! -f "$FILE_PATH" ]; then
   exit 0
 fi
 
-# Run Biome on the generated migration file
-bun run biome format --write "$FILE_PATH"
+# Format the generated migration file with oxfmt
+./node_modules/.bin/oxfmt "$FILE_PATH"
 
 echo "✅ Migration generated and formatted successfully!"

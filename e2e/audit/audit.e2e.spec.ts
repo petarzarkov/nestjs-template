@@ -269,8 +269,6 @@ describe('Audit Logs (e2e)', () => {
 
       expect(response.status).toBe(200);
       for (const entry of response.data.data) {
-        // biome-ignore lint/style/noNonNullAssertion: sd
-        // biome-ignore lint/suspicious/noNonNullAssertedOptionalChain: sd
         expect(entry.actorId).toBe(admin?.id!);
       }
     });

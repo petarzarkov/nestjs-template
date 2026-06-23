@@ -60,7 +60,6 @@ export class EmailService {
       );
       return;
     }
-    // biome-ignore lint/suspicious/noAssignInExpressions: false positive
     await (this.sendQueue = this.sendQueue.then(async () => {
       const now = Date.now();
       const waitMs = Math.max(0, this.minIntervalMs - (now - this.lastSentAt));
