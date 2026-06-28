@@ -47,6 +47,7 @@ export class HttpCacheInterceptor extends CacheInterceptor {
       return request.user.id;
     }
 
-    return super.trackBy(context);
+    const tracked = super.trackBy(context);
+    return typeof tracked === 'string' ? tracked : undefined;
   }
 }

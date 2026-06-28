@@ -99,4 +99,3 @@ networks:
   app-full:
     name: app-network-full
     driver: bridge
-

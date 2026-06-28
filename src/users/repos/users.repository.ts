@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, FindOneOptions, Repository } from 'typeorm';
-import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import {
+  type DeepPartial,
+  type FindOneOptions,
+  type QueryDeepPartialEntity,
+  Repository,
+} from 'typeorm';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginationFactory } from '@/core/pagination/pagination.factory';
 import { ContextLogger } from '@/infra/logger/services/context-logger.service';

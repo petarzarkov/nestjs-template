@@ -29,7 +29,7 @@ export class BillingService {
 
     this.stripeClient = stripeConfig.secretKey
       ? new Stripe(stripeConfig.secretKey, {
-          apiVersion: '2026-01-28.clover',
+          apiVersion: '2026-06-24.dahlia',
           typescript: true,
         })
       : null;

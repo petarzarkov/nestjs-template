@@ -8,7 +8,6 @@ import {
   type RemoveEvent,
   type UpdateEvent,
 } from 'typeorm';
-import type { ColumnMetadata } from 'typeorm/metadata/ColumnMetadata';
 import {
   AUDITABLE_KEY,
   type AuditableOptions,
@@ -19,6 +18,10 @@ import { AuditLog } from '../entity/audit-log.entity';
 import { AuditAction } from '../enum/audit-action.enum';
 
 type EntityClass = new (...args: never) => unknown;
+
+// TypeORM does not re-export ColumnMetadata from its package root, so derive it
+// from UpdateEvent instead of a deep import (unresolvable under `bundler`).
+type ColumnMetadata = UpdateEvent<unknown>['updatedColumns'][number];
 
 interface AuditValues {
   entityId: string;

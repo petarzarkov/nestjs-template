@@ -7,8 +7,8 @@
 root = "./src"
 
 # Coverage
-coverageDir = "coverage" 
-coverageReporter  = ["text", "lcov"]  # default ["text"]
+coverageDir = "coverage"
+coverageReporter = ["text", "lcov"] # default ["text"]
 # coverageThreshold = { lines = 0.7, functions = 0.6, statements = 0.7 }
 
 [test.reporter]

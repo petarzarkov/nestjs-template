@@ -15,10 +15,6 @@
     "coverage/**",
     ".tmp/**",
     "public/**",
-    "bun.lock",
-    "**/*.md",
-    "**/*.yml",
-    "**/*.yaml",
-    "**/*.toml"
+    "bun.lock"
   ]
 }

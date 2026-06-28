@@ -4,21 +4,21 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | [Bun](https://bun.sh) |
-| Framework | [NestJS 11](https://nestjs.com) |
-| Language | TypeScript (strict, ESNext) — [tsgo / TS 7 Native Preview](https://github.com/microsoft/typescript-go) for typechecking |
-| Database | PostgreSQL 17 + [TypeORM](https://typeorm.io) |
-| Cache & Queues | Redis 8 + [BullMQ](https://bullmq.io) |
-| Auth | Passport.js (JWT, Google, GitHub, LinkedIn) |
-| WebSockets | Socket.io with Redis adapter |
-| Email | [Resend](https://resend.com) + [React Email](https://react.email) |
-| AI | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter) |
-| File Storage | AWS S3 |
-| API Docs | Swagger + [Scalar](https://scalar.com) |
-| Linting & Formatting | [Oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) |
-| Testing | Bun test runner |
+| Layer                | Technology                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Runtime              | [Bun](https://bun.sh)                                                                                                   |
+| Framework            | [NestJS 11](https://nestjs.com)                                                                                         |
+| Language             | TypeScript (strict, ESNext) — [tsgo / TS 7 Native Preview](https://github.com/microsoft/typescript-go) for typechecking |
+| Database             | PostgreSQL 17 + [TypeORM](https://typeorm.io)                                                                           |
+| Cache & Queues       | Redis 8 + [BullMQ](https://bullmq.io)                                                                                   |
+| Auth                 | Passport.js (JWT, Google, GitHub, LinkedIn)                                                                             |
+| WebSockets           | Socket.io with Redis adapter                                                                                            |
+| Email                | [Resend](https://resend.com) + [React Email](https://react.email)                                                       |
+| AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                       |
+| File Storage         | AWS S3                                                                                                                  |
+| API Docs             | Swagger + [Scalar](https://scalar.com)                                                                                  |
+| Linting & Formatting | [Oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs)                                                                      |
+| Testing              | Bun test runner                                                                                                         |
 
 ## Prerequisites
 
@@ -48,6 +48,7 @@ bun dev
 ## Features
 
 ### Authentication & Authorization
+
 - JWT-based authentication with configurable expiration
 - OAuth2 providers: Google, GitHub, LinkedIn
 - OAuth account linking (multiple providers per user)
@@ -56,6 +57,7 @@ bun dev
 - Invite-based registration
 
 ### Database & ORM
+
 - TypeORM with PostgreSQL and automatic snake_case naming
 - Migration system with generate, run, and revert commands
 - PostgreSQL advisory locks for distributed coordination
@@ -63,6 +65,7 @@ bun dev
 - Explicit naming for all DB constraints (FKs, indexes, enums) — enforced via a custom Oxlint plugin (`oxlint-plugins/`)
 
 ### Job Queue System
+
 - BullMQ queues backed by Redis for reliable async processing
 - Declarative `@JobHandler()` decorator for job routing
 - Auto-discovery of handlers via NestJS `DiscoveryService`
@@ -70,28 +73,33 @@ bun dev
 - Configurable retries with exponential backoff
 
 ### Real-time Communication
+
 - Socket.io WebSocket gateway with JWT authentication
 - Redis adapter for multi-instance broadcast support
 - Room-based messaging: chat (all users), private (per user), admin-only
 - AI response streaming over WebSocket
 
 ### Email Notifications
+
 - Resend API integration
 - React Email templates with local preview server
 - Event-driven: welcome, invite, and password reset emails
 
 ### AI Integration
+
 - Unified interface via Vercel AI SDK
 - Providers: Google Gemini, Groq, OpenRouter
 - REST endpoint for queries + WebSocket streaming
 - Dynamic model discovery from provider APIs
 
 ### File Management
+
 - AWS S3 upload, download, delete with presigned URLs
 - File metadata persistence (name, size, MIME type, image dimensions)
 - Validation: size limits (1KB–10MB), name length, file count
 
 ### Observability
+
 - Structured JSON logging with `AsyncLocalStorage`-based context
 - Request ID propagation (`X-Request-Id` header)
 - Sensitive field masking in logs (password, jwt, token, secret)
@@ -99,6 +107,7 @@ bun dev
 - HTTP request/response logging with timing
 
 ### Cursor-based Pagination
+
 - Keyset (cursor) pagination on all list endpoints — no offset/page numbers
 - Opaque Base64url-encoded cursors for stable, index-friendly paging
 - Bidirectional navigation (`forward` / `backward`)
@@ -107,10 +116,12 @@ bun dev
 - PostgreSQL `date_trunc` precision alignment with JavaScript Date
 
 ### Caching & Rate Limiting
+
 - Redis-backed HTTP cache with configurable TTL
 - Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s)
 
 ### Developer Experience
+
 - Oxlint for linting (with a custom JS plugin for TypeORM constraint naming) and oxfmt for formatting
 - TypeScript 7 (`tsgo`, the native-preview compiler) for fast typechecking
 - Husky + lint-staged for pre-commit hooks
@@ -118,6 +129,7 @@ bun dev
 - `bun dev` with hot reload via `bun --watch`
 
 ### Integrations
+
 - **Slack**: Bot notifications with rich message formatting
 - **AWS S3**: File storage with presigned URL support
 
@@ -178,24 +190,24 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 
 ## API Endpoints
 
-| Route | Description |
-|-------|-------------|
-| `POST /api/auth/login` | Email/password login |
-| `POST /api/auth/register` | User registration |
-| `POST /api/auth/forgotten-password` | Request password reset |
-| `POST /api/auth/password-reset` | Reset password |
-| `GET /api/auth/{google,github,linkedin}` | OAuth login |
-| `GET /api/users` | List users (cursor paginated) |
-| `GET /api/users/invites` | Manage invites |
-| `POST /api/ai/query` | AI query |
-| `GET /api/ai/models` | List AI models |
-| `POST /api/files` | Upload file |
-| `GET /api/files` | List files (cursor paginated) |
-| `GET /api/audit` | Query audit logs (cursor paginated) |
-| `GET /api/service/health` | Health check (DB, Redis, memory) |
-| `GET /api/service/up` | Uptime check |
-| `GET /api/service/config` | Service configuration |
-| `GET /api/queues` | Bull Board queue dashboard |
+| Route                                    | Description                         |
+| ---------------------------------------- | ----------------------------------- |
+| `POST /api/auth/login`                   | Email/password login                |
+| `POST /api/auth/register`                | User registration                   |
+| `POST /api/auth/forgotten-password`      | Request password reset              |
+| `POST /api/auth/password-reset`          | Reset password                      |
+| `GET /api/auth/{google,github,linkedin}` | OAuth login                         |
+| `GET /api/users`                         | List users (cursor paginated)       |
+| `GET /api/users/invites`                 | Manage invites                      |
+| `POST /api/ai/query`                     | AI query                            |
+| `GET /api/ai/models`                     | List AI models                      |
+| `POST /api/files`                        | Upload file                         |
+| `GET /api/files`                         | List files (cursor paginated)       |
+| `GET /api/audit`                         | Query audit logs (cursor paginated) |
+| `GET /api/service/health`                | Health check (DB, Redis, memory)    |
+| `GET /api/service/up`                    | Uptime check                        |
+| `GET /api/service/config`                | Service configuration               |
+| `GET /api/queues`                        | Bull Board queue dashboard          |
 
 ## Health Endpoints
 
@@ -211,11 +223,13 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 ## Docker
 
 ### Development (infrastructure only)
+
 ```bash
 docker compose up -d                      # PostgreSQL + Redis
 ```
 
 ### Production (full stack)
+
 ```bash
 cp .env.example .env.full                 # Setup env
 docker compose -f docker-compose.full.yml --env-file .env.full up -d    # Start all
@@ -223,6 +237,7 @@ docker compose -f docker-compose.full.yml --env-file .env.full down     # Stop a
 ```
 
 To rebuild the backend only:
+
 ```bash
 docker compose -f docker-compose.full.yml --env-file .env.full build --no-cache app-backend-full
 docker compose -f docker-compose.full.yml --env-file .env.full up -d app-backend-full

@@ -13,6 +13,7 @@ Your task is to generate code, corrections, and refactorings that strictly compl
 This is a **NestJS monolith template** running on **Bun** as the runtime and package manager.
 
 ### Runtime & Tooling
+
 - **Runtime:** Bun (not Node.js)
 - **Package Manager:** Bun (`bun install`, `bun add`)
 - **Test Runner:** Bun test (`bun test`)
@@ -23,7 +24,9 @@ This is a **NestJS monolith template** running on **Bun** as the runtime and pac
 - **Build:** `nest build` + `tsc-alias` for path alias resolution in dist
 
 ### Path Aliases
+
 Configured in `tsconfig.json`:
+
 - `@/*` → `src/*`
 
 ---
@@ -138,6 +141,7 @@ e2e/                           # E2E tests
 ## **NestJS Architecture Guidelines**
 
 ### Module Pattern
+
 - **One module per domain/feature** (e.g., `users`, `auth`, `notifications`)
 - **One controller per main route**, additional controllers for sub-routes
 - **Nested submodules** for related features (e.g., `users/invites/`)
@@ -145,21 +149,24 @@ e2e/                           # E2E tests
 - **Infrastructure modules** live under `src/infra/` (db, redis, queue, logger, health)
 
 ### Folder Conventions per Module
-| Folder | Purpose |
-|--------|---------|
-| `dto/` | Request/response DTOs validated with `class-validator` |
-| `entity/` | TypeORM entities |
-| `enum/` | TypeScript enums |
-| `services/` | Business logic services |
-| `handlers/` | Job event handlers (decorated with `@JobHandler`) |
-| `repos/` | Custom TypeORM repositories (when needed) |
-| `guards/` | Module-specific guards |
-| `strategies/` | Passport strategies (auth module) |
-| `subscribers/` | TypeORM entity subscribers (audit module) |
-| `validators/` | Module-specific validators |
+
+| Folder         | Purpose                                                |
+| -------------- | ------------------------------------------------------ |
+| `dto/`         | Request/response DTOs validated with `class-validator` |
+| `entity/`      | TypeORM entities                                       |
+| `enum/`        | TypeScript enums                                       |
+| `services/`    | Business logic services                                |
+| `handlers/`    | Job event handlers (decorated with `@JobHandler`)      |
+| `repos/`       | Custom TypeORM repositories (when needed)              |
+| `guards/`      | Module-specific guards                                 |
+| `strategies/`  | Passport strategies (auth module)                      |
+| `subscribers/` | TypeORM entity subscribers (audit module)              |
+| `validators/`  | Module-specific validators                             |
 
 ### Core Utilities (`src/core/`) — NOT a NestJS module
+
 Imported directly via `@/core/...`:
+
 - `@/core/decorators` — Custom parameter & metadata decorators
 - `@/core/filters` — Exception filters (registered globally in `main.ts`)
 - `@/core/interceptors` — HttpLoggingInterceptor (registered globally)
@@ -172,27 +179,29 @@ Imported directly via `@/core/...`:
 - `@/core/helpers` — HelpersModule (global utilities)
 
 ### Custom Decorators (`src/core/decorators/`)
-| Decorator | Purpose |
-|-----------|---------|
-| `@Public()` | Bypass JWT & Roles guards |
-| `@Roles(role)` / `@RequireAllRoles(roles)` | Role-based access control |
-| `@CurrentUser()` | Extract authenticated user from request |
-| `@ApiJwtAuth()` | Swagger JWT security annotation |
-| `@Auditable(options?)` | Mark entity for automatic audit logging |
-| `@Password()` | Password strength validation |
-| `@Email()` | Email format validation |
-| `@IsNullable()` | Allow null values in validation |
-| `@IsUniqueEnum()` | Ensure unique enum values in array |
-| `@ValidatedFiles(opts)` | File upload validation (size, name, count) |
-| `@UUIDParam(name)` | Parse + validate UUID route parameter |
-| `@NoCache()` | Disable caching for endpoint |
-| `@EnvThrottle(opts)` | Environment-aware rate limiting |
+
+| Decorator                                  | Purpose                                    |
+| ------------------------------------------ | ------------------------------------------ |
+| `@Public()`                                | Bypass JWT & Roles guards                  |
+| `@Roles(role)` / `@RequireAllRoles(roles)` | Role-based access control                  |
+| `@CurrentUser()`                           | Extract authenticated user from request    |
+| `@ApiJwtAuth()`                            | Swagger JWT security annotation            |
+| `@Auditable(options?)`                     | Mark entity for automatic audit logging    |
+| `@Password()`                              | Password strength validation               |
+| `@Email()`                                 | Email format validation                    |
+| `@IsNullable()`                            | Allow null values in validation            |
+| `@IsUniqueEnum()`                          | Ensure unique enum values in array         |
+| `@ValidatedFiles(opts)`                    | File upload validation (size, name, count) |
+| `@UUIDParam(name)`                         | Parse + validate UUID route parameter      |
+| `@NoCache()`                               | Disable caching for endpoint               |
+| `@EnvThrottle(opts)`                       | Environment-aware rate limiting            |
 
 ---
 
 ## **Global Bootstrap (`src/main.ts`)**
 
 The application bootstrap registers these globally:
+
 1. `ContextLogger` — custom logger replacing NestJS default
 2. `RequestMiddleware` — Express-level middleware for request context (requestId, timestamps)
 3. `ValidationPipe` — global with `transform: true`, `forbidNonWhitelisted: true`
@@ -217,6 +226,7 @@ The application bootstrap registers these globally:
 ## **Database**
 
 ### TypeORM Configuration
+
 - **PostgreSQL** via `pg` driver
 - **Entities** in `<module>/entity/` folders — auto-discovered
 - **SnakeNamingStrategy** — camelCase properties → snake_case columns
@@ -228,14 +238,15 @@ The application bootstrap registers these globally:
 
 All database indexes, foreign keys, and enum types **must** have explicit names — never rely on TypeORM auto-generated names. This makes debugging migration errors and DB issues far easier.
 
-| Constraint Type | Pattern | Example |
-|-----------------|---------|---------|
-| **Foreign Key** | `FK_{source_table}_to_{target_table}` | `FK_auth_provider_to_user` |
-| **Index** | `{descriptive_columns}_index` | `audit_actor_id_index` |
-| **Unique Index** | `{descriptive_columns}_index` (with `{ unique: true }`) | `provider_auth_provider_id_index` |
-| **Enum Type** | `{snake_case_name}_enum` | `user_role_enum`, `invite_status_enum` |
+| Constraint Type  | Pattern                                                 | Example                                |
+| ---------------- | ------------------------------------------------------- | -------------------------------------- |
+| **Foreign Key**  | `FK_{source_table}_to_{target_table}`                   | `FK_auth_provider_to_user`             |
+| **Index**        | `{descriptive_columns}_index`                           | `audit_actor_id_index`                 |
+| **Unique Index** | `{descriptive_columns}_index` (with `{ unique: true }`) | `provider_auth_provider_id_index`      |
+| **Enum Type**    | `{snake_case_name}_enum`                                | `user_role_enum`, `invite_status_enum` |
 
 **Rules:**
+
 - `@Index()` — always pass the index name as the first string argument
 - `@JoinColumn()` — always include `foreignKeyConstraintName` property
 - `@Column({ type: 'enum' })` — always include `enumName` property
@@ -244,16 +255,18 @@ All database indexes, foreign keys, and enum types **must** have explicit names 
 These rules are enforced by the custom Oxlint plugin in `oxlint-plugins/eslint-plugin-typeorm.mjs` (rules `typeorm/explicit-naming`, `typeorm/timestamptz`, `typeorm/column-length`) and run as part of `bun run lint`.
 
 ### Entities (6)
-| Entity | Module | Key Fields |
-|--------|--------|------------|
-| `User` | users | id, email, name, role, isActive |
-| `PasswordResetToken` | users | token, userId, expiresAt |
-| `AuthProvider` | auth | provider, providerId, userId |
-| `Invite` | users/invites | email, status, invitedBy, token |
-| `AuditLog` | audit | entityName, action, oldValues (JSONB), newValues (JSONB), actorId |
-| `FileEntity` | file | name, size, mimeType, width, height, s3Key |
+
+| Entity               | Module        | Key Fields                                                        |
+| -------------------- | ------------- | ----------------------------------------------------------------- |
+| `User`               | users         | id, email, name, role, isActive                                   |
+| `PasswordResetToken` | users         | token, userId, expiresAt                                          |
+| `AuthProvider`       | auth          | provider, providerId, userId                                      |
+| `Invite`             | users/invites | email, status, invitedBy, token                                   |
+| `AuditLog`           | audit         | entityName, action, oldValues (JSONB), newValues (JSONB), actorId |
+| `FileEntity`         | file          | name, size, mimeType, width, height, s3Key                        |
 
 ### Migration Commands
+
 ```bash
 bun run mig:gen MyMigration   # Generate migration from entity changes
 bun run mig:run               # Run pending migrations
@@ -266,6 +279,7 @@ bun run db:drop               # Drop entire schema
 ## **Authentication & Authorization**
 
 ### Passport Strategies
+
 - **LocalStrategy** — email/password login
 - **JwtStrategy** — JWT token validation (global guard)
 - **GoogleStrategy** — Google OAuth2
@@ -273,10 +287,12 @@ bun run db:drop               # Drop entire schema
 - **LinkedInStrategy** — LinkedIn OAuth2
 
 ### Guards (globally registered)
+
 - **JwtAuthGuard** — validates JWT on all routes (skip with `@Public()`)
 - **RolesGuard** — RBAC, use `@Roles(UserRole.ADMIN)` to restrict
 
 ### Auth Endpoints (`/api/auth/`)
+
 - `POST /login` — local email/password
 - `POST /register` — new user or invite-based registration
 - `POST /forgotten-password` — request password reset
@@ -290,28 +306,35 @@ bun run db:drop               # Drop entire schema
 ## **Job Queue System (BullMQ + Redis)**
 
 ### Queues
+
 - `notifications-events-queue` — email + WS notifications
 - `background-jobs-queue` — long-running background tasks
 
 ### Job Handler Pattern
+
 ```typescript
 @JobHandler({ queue: EVENTS.QUEUES.BACKGROUND_JOBS, name: EVENTS.ROUTING_KEYS.USER_REGISTERED })
 async handleUserRegistered(job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_REGISTERED>) { ... }
 ```
 
 ### Published Events (`src/notifications/events/events.ts`)
-| Routing Key | Payload | Action |
-|-------------|---------|--------|
-| `user.registered` | RegisteredPayload | Welcome email + WS notification |
-| `user.invited` | InvitePayload | Invite email + WS notification |
-| `user.password_reset` | PasswordResetPayload | Password reset email |
+
+| Routing Key           | Payload              | Action                          |
+| --------------------- | -------------------- | ------------------------------- |
+| `user.registered`     | RegisteredPayload    | Welcome email + WS notification |
+| `user.invited`        | InvitePayload        | Invite email + WS notification  |
+| `user.password_reset` | PasswordResetPayload | Password reset email            |
 
 ### Publishing Jobs
+
 ```typescript
-await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, { emitToAdmins: true });
+await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
+  emitToAdmins: true,
+});
 ```
 
 ### Queue Dashboard
+
 - Bull Board UI available at `/api/queues`
 
 ---
@@ -386,15 +409,17 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, { em
 All paginated endpoints use **cursor-based (keyset) pagination** — no offset/page numbers. This is index-friendly and produces consistent results regardless of concurrent writes.
 
 ### Query Parameters
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `take` | number | 10 | Items per page (1–50) |
-| `cursor` | string | — | Opaque cursor from a previous response (omit for first page) |
-| `direction` | `forward` \| `backward` | `forward` | Pagination direction |
-| `order` | `ASC` \| `DESC` | `DESC` | Sort order |
-| `search` | string | — | Optional search filter (endpoint-specific) |
+
+| Parameter   | Type                    | Default   | Description                                                  |
+| ----------- | ----------------------- | --------- | ------------------------------------------------------------ |
+| `take`      | number                  | 10        | Items per page (1–50)                                        |
+| `cursor`    | string                  | —         | Opaque cursor from a previous response (omit for first page) |
+| `direction` | `forward` \| `backward` | `forward` | Pagination direction                                         |
+| `order`     | `ASC` \| `DESC`         | `DESC`    | Sort order                                                   |
+| `search`    | string                  | —         | Optional search filter (endpoint-specific)                   |
 
 ### Response Meta
+
 ```json
 {
   "data": [...],
@@ -409,9 +434,11 @@ All paginated endpoints use **cursor-based (keyset) pagination** — no offset/p
 ```
 
 ### Cursor Format
+
 Base64url-encoded JSON: `{ "s": "<sort_column_ISO_date>", "i": "<entity_UUID>" }`. The `s` field is the boundary row's sort column value and `i` is the UUID tiebreaker. Invalid cursors return `400 Bad Request`.
 
 ### How It Works (`PaginationFactory`)
+
 1. **Sort key resolution**: auto-detects `updatedAt` → `createdAt` → `id` from entity metadata (configurable via `orderBy` parameter)
 2. **Cursor WHERE clause**: compound condition `(sort_col < :val) OR (sort_col = :val AND id < :id)` for DESC (inverted for ASC/backward)
 3. **`take+1` sentinel**: fetches one extra row to determine `hasNextPage` without a COUNT query
@@ -419,6 +446,7 @@ Base64url-encoded JSON: `{ "s": "<sort_column_ISO_date>", "i": "<entity_UUID>" }
 5. **Precision handling**: uses `date_trunc('milliseconds', ...)` in SQL to match JavaScript Date precision (PostgreSQL timestamps have microsecond precision)
 
 ### Usage in Repositories
+
 All repositories call `paginationFactory.paginate(queryBuilder, pageOptionsDto)` — the cursor logic is fully encapsulated in the factory. No repository changes needed when switching sort keys or adding new paginated endpoints.
 
 ---
@@ -434,6 +462,7 @@ All repositories call `paginationFactory.paginate(queryBuilder, pageOptionsDto)`
 ## **Testing**
 
 ### Unit Tests (`src/**/*.spec.ts`)
+
 ```bash
 bun test              # Run all unit tests
 bun test --watch      # Watch mode
@@ -441,12 +470,14 @@ bun test --coverage   # Coverage report
 ```
 
 ### E2E Tests (`e2e/**/*.e2e.spec.ts`)
+
 ```bash
 bun run test:e2e                                          # Run all E2E tests
 bun run test:e2e:single ./e2e/relative/path/to/test.e2e.ts  # Run single E2E test
 ```
 
 ### E2E Utilities (`e2e/utils/`)
+
 - `api-client.ts` — HTTP request helper
 - `db-client.ts` — direct DB access for setup/teardown
 - `ws-client.ts` — WebSocket client for gateway tests
@@ -456,25 +487,25 @@ bun run test:e2e:single ./e2e/relative/path/to/test.e2e.ts  # Run single E2E tes
 
 ## **Scripts Reference**
 
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start dev server with hot reload (`bun --watch`) |
-| `bun run build` | Build for production (nest build + tsc-alias) |
-| `bun start` | Start production build (`bun dist/main.js`) |
-| `bun test` | Run unit tests |
-| `bun run test:e2e` | Run E2E tests with DB preload |
-| `bun run test:e2e:single <path>` | Run single E2E test |
-| `bun run lint` | Lint and fix with Oxlint |
-| `bun run format` | Format with oxfmt |
-| `bun run typecheck` | Typecheck with tsgo (TypeScript 7) |
-| `bun run mig:gen <Name>` | Generate TypeORM migration |
-| `bun run mig:run` | Run pending migrations |
-| `bun run mig:revert` | Revert last migration |
-| `bun run db:drop` | Drop database schema |
-| `bun run create:admin` | Create admin user interactively |
-| `bun run email` | Start React Email preview server (port 3035) |
-| `bun run email:export` | Export email templates as HTML |
-| `bun run gen:env:docs` | Generate env vars documentation |
+| Command                          | Description                                      |
+| -------------------------------- | ------------------------------------------------ |
+| `bun dev`                        | Start dev server with hot reload (`bun --watch`) |
+| `bun run build`                  | Build for production (nest build + tsc-alias)    |
+| `bun start`                      | Start production build (`bun dist/main.js`)      |
+| `bun test`                       | Run unit tests                                   |
+| `bun run test:e2e`               | Run E2E tests with DB preload                    |
+| `bun run test:e2e:single <path>` | Run single E2E test                              |
+| `bun run lint`                   | Lint and fix with Oxlint                         |
+| `bun run format`                 | Format with oxfmt                                |
+| `bun run typecheck`              | Typecheck with tsgo (TypeScript 7)               |
+| `bun run mig:gen <Name>`         | Generate TypeORM migration                       |
+| `bun run mig:run`                | Run pending migrations                           |
+| `bun run mig:revert`             | Revert last migration                            |
+| `bun run db:drop`                | Drop database schema                             |
+| `bun run create:admin`           | Create admin user interactively                  |
+| `bun run email`                  | Start React Email preview server (port 3035)     |
+| `bun run email:export`           | Export email templates as HTML                   |
+| `bun run gen:env:docs`           | Generate env vars documentation                  |
 
 ---
 

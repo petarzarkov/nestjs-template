@@ -43,20 +43,28 @@ class TestContext {
    * Ensure admin user exists for tests
    */
   private async ensureAdminUser(): Promise<void> {
+    const hashedPassword = await passwordUtil.hash(E2E_ADMIN.password);
     const existingUser = await this.db.getUserByEmail(E2E_ADMIN.email);
 
-    if (!existingUser) {
-      const hashedPassword = await passwordUtil.hash(E2E_ADMIN.password);
-
-      await this.db.users.save({
-        email: E2E_ADMIN.email,
+    if (existingUser) {
+      // Reset credentials so a stale admin row (e.g. seeded with a different
+      // password in a previous run) can never break authentication.
+      await this.db.users.update(existingUser.id, {
         password: hashedPassword,
         roles: E2E_ADMIN.roles,
         suspended: false,
       });
-
-      console.log(`✅ Created e2e admin user: ${E2E_ADMIN.email}`);
+      return;
     }
+
+    await this.db.users.save({
+      email: E2E_ADMIN.email,
+      password: hashedPassword,
+      roles: E2E_ADMIN.roles,
+      suspended: false,
+    });
+
+    console.log(`✅ Created e2e admin user: ${E2E_ADMIN.email}`);
   }
 
   async destroy(): Promise<void> {
