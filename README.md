@@ -17,6 +17,9 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 | AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                       |
 | File Storage         | AWS S3                                                                                                                  |
 | API Docs             | Swagger + [Scalar](https://scalar.com)                                                                                  |
+| Logging              | [@arkv/nestjs-context-logger](https://www.npmjs.com/package/@arkv/nestjs-context-logger) (structured, async-context)    |
+| Admin CMS            | [@arkv/nestjs-cms](https://www.npmjs.com/package/@arkv/nestjs-cms) (OpenAPI-driven admin UI)                            |
+| Build                | Bun-native transpile (`scripts/build.ts`)                                                                               |
 | Linting & Formatting | [Oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs)                                                                      |
 | Testing              | Bun test runner                                                                                                         |
 
@@ -98,9 +101,16 @@ bun dev
 - File metadata persistence (name, size, MIME type, image dimensions)
 - Validation: size limits (1KB–10MB), name length, file count
 
+### Admin CMS
+
+- OpenAPI-driven admin UI (`@arkv/nestjs-cms`) served at `/cms` — CRUD resources are generated from the Swagger document
+- Schema endpoint at `/cms/schema`; logs in against this API via the documented `/api/auth/login` endpoint
+- Zero hand-written admin pages: document an endpoint and it shows up
+
 ### Observability
 
-- Structured JSON logging with `AsyncLocalStorage`-based context
+- Structured JSON logging with `AsyncLocalStorage`-based context (`@arkv/nestjs-context-logger`)
+- `warn`/`error`/`fatal` go to stderr; everything else to stdout
 - Request ID propagation (`X-Request-Id` header)
 - Sensitive field masking in logs (password, jwt, token, secret)
 - Health check endpoints (DB, Redis, memory)
@@ -175,7 +185,7 @@ src/
 ├── constants.ts           # Global constants
 ├── config/                # Type-safe environment configuration
 ├── core/                  # Shared utilities (decorators, filters, interceptors, pagination, pipes)
-├── infra/                 # Infrastructure (database, redis, queue, logger, health)
+├── infra/                 # Infrastructure (database, redis, queue, health)
 ├── auth/                  # Authentication (JWT, OAuth strategies, guards)
 ├── users/                 # User management + invites submodule
 ├── audit/                 # Automatic entity audit logging
@@ -208,6 +218,7 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 | `GET /api/service/up`                    | Uptime check                        |
 | `GET /api/service/config`                | Service configuration               |
 | `GET /api/queues`                        | Bull Board queue dashboard          |
+| `GET /cms`                               | Admin CMS UI (OpenAPI-driven)       |
 
 ## Health Endpoints
 
@@ -217,7 +228,8 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 
 ## Documentation
 
-- **API Docs**: Swagger UI at `/api/docs` + Scalar at `/api/docs/scalar` (when running)
+- **API Docs**: Swagger UI at `/api/docs` + Scalar at `/api/public` (when running)
+- **Admin CMS**: OpenAPI-driven admin UI at `/cms`
 - **Environment Variables**: See [env-vars.md](./env-vars.md) for full configuration reference
 
 ## Docker

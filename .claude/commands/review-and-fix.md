@@ -26,7 +26,7 @@ diff against the rules in CLAUDE.md. Check for:
 - Roles typed as `string` / `string[]` where they should be `UserRole` /
   `UserRole[]`.
 - `console.log` instead of the injected `ContextLogger`
-  (`@/infra/logger/services/context-logger.service`).
+  (`@arkv/nestjs-context-logger`).
 - Ad-hoc thrown errors where a standard Nest exception fits
   (`NotFoundException`, `BadRequestException`, `ForbiddenException`, …);
   literal HTTP status codes (`401`, `404`) where `HttpStatus.*` should be used.

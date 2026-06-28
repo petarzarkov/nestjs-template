@@ -25,8 +25,7 @@ Add the variable to the appropriate config DTO:
 
 - Pick the matching group (`service-vars.dto.ts`, `db-vars.dto.ts`,
   `redis-vars.dto.ts`, `oauth-vars.dto.ts`, `ai-vars.dto.ts`, `aws-vars.dto.ts`,
-  `stripe-vars.dto.ts`, `ws-vars.dto.ts`). Create a new DTO only for a genuinely
-  new concern.
+  `ws-vars.dto.ts`). Create a new DTO only for a genuinely new concern.
 - Add the class-validator decorators:
   - Required: the type decorator (`@IsString()`, `@IsNumber()`, `@IsEnum(...)`,
     `@IsUrl()`, …) with no `@IsOptional()`. The `!` non-null assertion marks it
@@ -35,7 +34,7 @@ Add the variable to the appropriate config DTO:
     it a default (e.g. `HTTP_REQ_TIMEOUT: number = 30000`).
   - Use `@Transform(...)` for parsing (comma-lists, numbers, booleans).
 - If the value should be exposed to the app, map it in that DTO's
-  `getXConfig(...)` function (e.g. `getServiceConfig`, `getStripeConfig`) so it
+  `getXConfig(...)` function (e.g. `getServiceConfig`, `getAWSConfig`) so it
   surfaces under the typed `AppConfigService` config tree.
 - If you created a **new** DTO, add it to the `IntersectionType(...)` in
   [`src/config/env-vars.dto.ts`](../../src/config/env-vars.dto.ts) and wire its

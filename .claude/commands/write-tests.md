@@ -28,7 +28,7 @@ Ask (or infer from context) whether to write:
   via `{ provide: SomeService, useValue: { method: mock(...) } }`. Retrieve them
   back with `module.get(SomeService)` so you can assert on calls.
 - Always provide a mock `ContextLogger`
-  (`@/infra/logger/services/context-logger.service`) — most services inject it.
+  (`@arkv/nestjs-context-logger`) — most services inject it.
 - Reset mock call history in `afterEach` with `.mockClear()`
   (cast as `ReturnType<typeof mock>` when TS needs it). Never share mutable state
   between tests.

@@ -41,7 +41,7 @@ Then add `<Name>Module` to the `imports` array of
 [`src/app.module.ts`](../../src/app.module.ts) — among the other domain modules
 (`UsersModule`, `AuditModule`, `FileModule`, …), after the infrastructure
 modules (`DatabaseModule.forRoot()`, `RedisModule`, `PaginationModule`,
-`LoggerModule`, `HealthModule`).
+`NestJsContextLoggerModule.forRootAsync(...)`, `HealthModule`).
 
 Rules to follow:
 

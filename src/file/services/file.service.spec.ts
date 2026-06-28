@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Readable } from 'node:stream';
 import { Test, TestingModule } from '@nestjs/testing';
-import { HelpersService } from '@/core/helpers/services/helpers.service';
-import { FilesRepository } from '@/file/repos/file.repository';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
+import { HelpersService } from '@/core/helpers/services/helpers.service';
+import { FileEntity } from '@/file/entity/file.entity';
+import { FilesRepository } from '@/file/repos/file.repository';
+import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { FileService } from './file.service';
 import { S3Service } from './s3.service';
@@ -18,21 +20,20 @@ const createMockStream = (data: string = 'test') => {
 
 describe('FileService', () => {
   let service: FileService;
-  let s3Service = {
-    upsertFile: mock(() => undefined),
-    downloadFileByPath: mock(() => undefined),
-    deleteFileByPath: mock(() => undefined),
+  const s3Service = {
+    upsertFile: mock(),
+    downloadFileByPath: mock(),
+    deleteFileByPath: mock(),
   };
-  let filesRepository = {
-    create: mock(() => undefined),
-    save: mock(() => undefined),
-    findOne: mock(() => undefined),
-    remove: mock(() => undefined),
+  const filesRepository = {
+    create: mock(),
+    save: mock(),
+    findOne: mock(),
+    remove: mock(),
   };
-  let helpersService = {
-    isSupportedImageType: mock(() => undefined),
-    extractFilename: mock(() => undefined),
-    calculateImageSize: mock(() => undefined),
+  const helpersService = {
+    isSupportedImageType: mock(),
+    calculateImageSize: mock(),
   };
 
   beforeEach(async () => {
@@ -65,25 +66,19 @@ describe('FileService', () => {
     }).compile();
 
     service = module.get(FileService);
-    s3Service = module.get(S3Service);
-    filesRepository = module.get(FilesRepository);
-    helpersService = module.get(HelpersService);
   });
 
   afterEach(() => {
     // Clear mock call history between tests
-    (s3Service.upsertFile as ReturnType<typeof mock>).mockClear();
-    (s3Service.downloadFileByPath as ReturnType<typeof mock>).mockClear();
-    (s3Service.deleteFileByPath as ReturnType<typeof mock>).mockClear();
-    (filesRepository.create as ReturnType<typeof mock>).mockClear();
-    (filesRepository.save as ReturnType<typeof mock>).mockClear();
-    (filesRepository.findOne as ReturnType<typeof mock>).mockClear();
-    (filesRepository.remove as ReturnType<typeof mock>).mockClear();
-    (
-      helpersService.isSupportedImageType as ReturnType<typeof mock>
-    ).mockClear();
-    (helpersService.extractFilename as ReturnType<typeof mock>).mockClear();
-    (helpersService.calculateImageSize as ReturnType<typeof mock>).mockClear();
+    s3Service.upsertFile.mockClear();
+    s3Service.downloadFileByPath.mockClear();
+    s3Service.deleteFileByPath.mockClear();
+    filesRepository.create.mockClear();
+    filesRepository.save.mockClear();
+    filesRepository.findOne.mockClear();
+    filesRepository.remove.mockClear();
+    helpersService.isSupportedImageType.mockClear();
+    helpersService.calculateImageSize.mockClear();
   });
 
   describe('upload', () => {
@@ -226,7 +221,7 @@ describe('FileService', () => {
       });
 
       expect(filesRepository.save).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(mockEntities);
+      expect(result).toEqual(mockEntities as FileEntity[]);
     });
 
     it('should update existing files when uploading with same path (upsert)', async () => {
@@ -304,7 +299,7 @@ describe('FileService', () => {
         height: 200,
       });
 
-      expect(result).toEqual([updatedEntity]);
+      expect(result).toEqual([updatedEntity] as FileEntity[]);
     });
   });
 
@@ -414,7 +409,7 @@ describe('FileService', () => {
       await service.deleteById(fileId, {
         id: 'userId',
         roles: [UserRole.ADMIN],
-      });
+      } as SanitizedUser);
 
       expect(filesRepository.findOne).toHaveBeenCalledWith({
         where: { id: fileId },
@@ -431,7 +426,7 @@ describe('FileService', () => {
         service.deleteById(fileId, {
           id: 'userId',
           roles: [UserRole.ADMIN],
-        }),
+        } as SanitizedUser),
       ).rejects.toThrow('File with ID non-existent-id not found');
       expect(filesRepository.findOne).toHaveBeenCalledWith({
         where: { id: fileId },
