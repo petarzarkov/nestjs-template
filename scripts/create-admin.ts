@@ -36,26 +36,22 @@ async function createAdmin() {
 
     const { email, password } = answers;
 
-    const existing = await userRepository.findOne({
-      where: { email },
-    });
-    if (existing) {
-      console.log('Admin user already exists.');
-      await datasource.destroy();
-      return;
-    }
-
     const hashedPassword = await passwordUtil.hash(password);
 
-    const newUser = userRepository.create({
-      email,
-      password: hashedPassword,
-      roles: [UserRole.ADMIN],
-    });
+    // Upsert: if the admin already exists, reset its credentials so re-running
+    // this command is a reliable way to recover/rotate the admin password
+    // (a previously-seeded user keeps its old hash otherwise).
+    const existing = await userRepository.findOne({ where: { email } });
+    const user =
+      existing ?? userRepository.create({ email, roles: [UserRole.ADMIN] });
 
-    const result = await userRepository.save(newUser);
+    user.password = hashedPassword;
+    user.roles = [UserRole.ADMIN];
+    user.suspended = false;
 
-    console.log('User created.');
+    const result = await userRepository.save(user);
+
+    console.log(existing ? 'Admin user updated.' : 'User created.');
     console.table({
       id: result.id,
       email: result.email,
@@ -74,4 +70,4 @@ async function createAdmin() {
   }
 }
 
-createAdmin();
+await createAdmin();
