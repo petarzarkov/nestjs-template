@@ -9,7 +9,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { LogLevel } from '@/infra/logger/log-level.enum';
+import { LogLevel } from '@arkv/nestjs-context-logger';
 import { LOGGER, SECOND } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';

@@ -7,7 +7,7 @@ import { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-clas
 import { DataSource } from 'typeorm';
 import type { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { SnakeNamingStrategy } from './strategies/snake-case.strategy';
 
 @Module({})

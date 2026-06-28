@@ -4,9 +4,9 @@ import { v4, validate } from 'uuid';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import {
   AsyncContext,
+  ContextLogger,
   ContextService,
-} from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+} from '@arkv/nestjs-context-logger';
 
 @Injectable()
 export class RequestMiddleware implements NestMiddleware {

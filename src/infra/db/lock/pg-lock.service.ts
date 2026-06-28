@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 
 /**
  * Service for managing PostgreSQL advisory locks.

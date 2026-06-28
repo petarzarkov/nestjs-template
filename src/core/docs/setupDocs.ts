@@ -37,6 +37,9 @@ export function setupDocs(
       'bearerAuth',
     )
     .addSecurityRequirements('bearerAuth')
+    // Consumed by @arkv/nestjs-cms so its UI can authenticate against this API.
+    .addExtension('x-cms-login-endpoint', `/${GLOBAL_PREFIX}/auth/login`)
+    .addExtension('x-cms-token-path', 'accessToken')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
@@ -95,5 +98,10 @@ export function setupDocs(
       darkMode: true,
     }),
   );
-  return { title, swaggerPath: SWAGGER_PATH, scalarPath: SCALAR_PATH };
+  return {
+    title,
+    document,
+    swaggerPath: SWAGGER_PATH,
+    scalarPath: SCALAR_PATH,
+  };
 }

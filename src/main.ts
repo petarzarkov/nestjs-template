@@ -1,3 +1,5 @@
+import { NestJsCmsModule } from '@arkv/nestjs-cms';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -13,7 +15,6 @@ import { GenericExceptionFilter } from './core/filters/generic-exception.filter'
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
-import { ContextLogger } from './infra/logger/services/context-logger.service';
 import { RedisService } from './infra/redis/services/redis.service';
 import { SocketConfigAdapter } from './notifications/events/socket.adapter';
 
@@ -85,7 +86,18 @@ async function bootstrap() {
   );
 
   // Swagger documentation
-  const { title, swaggerPath, scalarPath } = setupDocs(app, pkg, appConfig);
+  const { title, document, swaggerPath, scalarPath } = setupDocs(
+    app,
+    pkg,
+    appConfig,
+  );
+
+  // Admin CMS UI driven by the OpenAPI document (mount after docs are built)
+  await NestJsCmsModule.setup(app, document, {
+    path: '/cms',
+    apiPrefix: `/${GLOBAL_PREFIX}`,
+    title,
+  });
 
   const redisService = app.get(RedisService);
   app.useWebSocketAdapter(

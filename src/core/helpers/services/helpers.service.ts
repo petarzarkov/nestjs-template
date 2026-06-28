@@ -14,7 +14,7 @@ import { AxiosError, AxiosRequestConfig } from 'axios';
 import imageSize, { types as imageTypes } from 'image-size';
 import { firstValueFrom } from 'rxjs';
 import { SECOND } from '@/constants';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
 import { UrlHelper } from './url.helper';

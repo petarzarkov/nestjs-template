@@ -1,7 +1,7 @@
 import { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Job } from 'bullmq';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { JobModule } from './job.module';
 import { JobDispatcherService } from './services/job-dispatcher.service';
 

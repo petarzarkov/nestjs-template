@@ -1,6 +1,6 @@
 import type { HttpService } from '@nestjs/axios';
 import type { AxiosError } from 'axios';
-import type { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import type { ContextLogger } from '@arkv/nestjs-context-logger';
 import type { HttpMethod } from './http-method.type';
 import type { ParamsType } from './params.type';
 import type { RetryOptions } from './retry-options.type';

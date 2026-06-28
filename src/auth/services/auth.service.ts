@@ -10,7 +10,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
 import { EVENTS } from '@/notifications/events/events';
 import { SanitizedUser, User } from '@/users/entity/user.entity';

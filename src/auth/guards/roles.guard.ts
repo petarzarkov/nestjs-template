@@ -5,7 +5,7 @@ import {
   REQUIRE_ALL_ROLES_KEY,
   ROLES_KEY,
 } from '@/core/decorators/roles.decorator';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 

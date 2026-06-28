@@ -7,8 +7,7 @@ import {
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {

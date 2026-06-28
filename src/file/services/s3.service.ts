@@ -11,7 +11,7 @@ import {
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as mime from 'mime-types';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 
 export interface S3FileDto {
   fileId: string;

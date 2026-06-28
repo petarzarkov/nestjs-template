@@ -12,8 +12,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { EntityNotFoundError, QueryFailedError, TypeORMError } from 'typeorm';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 
 interface ExceptionContext {
   status: HttpStatus;

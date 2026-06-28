@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { NestJsCmsModule } from '@arkv/nestjs-cms';
+import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -6,9 +8,9 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { AIModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
-import { BillingModule } from './billing/billing.module';
 import { AppConfigModule } from './config/app.config.module';
 import { ValidatedConfig, validateConfig } from './config/env.validation';
+import { loggerModuleAsyncOptions } from './config/logger.config';
 import { AppConfigService } from './config/services/app.config.service';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
@@ -20,7 +22,6 @@ import { PaginationModule } from './core/pagination/pagination.module';
 import { FileModule } from './file/file.module';
 import { DatabaseModule } from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
-import { LoggerModule } from './infra/logger/logger.module';
 import { QueueModule } from './infra/queue/queue.module';
 import { QueueDashboardModule } from './infra/queue/queue-dashboard.module';
 import { RedisModule } from './infra/redis/redis.module';
@@ -55,16 +56,18 @@ import { UsersModule } from './users/users.module';
     RedisModule,
     RedisCacheThrottlerModule,
     PaginationModule,
-    LoggerModule,
+    NestJsContextLoggerModule.forRootAsync(loggerModuleAsyncOptions),
     HealthModule,
     UsersModule,
     AuditModule,
-    BillingModule,
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,
     QueueDashboardModule,
     FileModule,
+    // Registers CmsSchemaService; the UI + schema routes are mounted in
+    // main.ts via NestJsCmsModule.setup(app, document, ...).
+    NestJsCmsModule.forRoot(),
   ],
   providers: [
     HttpLoggingInterceptor,

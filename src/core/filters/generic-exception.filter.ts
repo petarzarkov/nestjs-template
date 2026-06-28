@@ -7,8 +7,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ContextService } from '@/infra/logger/services/context.service';
-import { ContextLogger } from '@/infra/logger/services/context-logger.service';
+import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 
 /**
  * Generic exception filter that catches all types of exceptions
