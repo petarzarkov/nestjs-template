@@ -1,17 +1,10 @@
-import { IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
 
-export class AWSConfigVars {
-  @IsString()
-  AWS_S3_BUCKET_NAME!: string;
+export const awsVarsSchema = z.object({
+  AWS_S3_BUCKET_NAME: z.string(),
+  AWS_REGION: z.string(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+});
 
-  @IsString()
-  AWS_REGION!: string;
-
-  @IsString()
-  @IsOptional()
-  AWS_ACCESS_KEY_ID?: string;
-
-  @IsString()
-  @IsOptional()
-  AWS_SECRET_ACCESS_KEY?: string;
-}
+export type AWSConfigVars = z.infer<typeof awsVarsSchema>;

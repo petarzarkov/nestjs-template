@@ -9,9 +9,8 @@ import * as glob from 'glob';
  * The order of this object determines the order of sections in the output file.
  */
 const groupConfig: Record<string, string | string[]> = {
-  'PostgreSQL Database': 'POSTGRES_',
-  RabbitMQ: 'RABBITMQ_',
-  Redis: 'REDIS_',
+  Database: ['DB_TYPE', 'SQLITE_', 'POSTGRES_'],
+  Queue: 'QUEUE_',
   Email: 'EMAIL_',
   AWS: 'AWS_',
   'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'],

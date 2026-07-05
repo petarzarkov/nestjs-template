@@ -1,97 +1,44 @@
 import { ApiProperty, OmitType } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsOptional, IsUUID } from 'class-validator';
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  Unique,
-  UpdateDateColumn,
-} from 'typeorm';
-import { STRING_LENGTH } from '@/constants';
-import { Auditable } from '@/core/decorators/auditable.decorator';
-import { IsUniqueEnumArrayDecorator } from '@/core/decorators/is-unique-enum.decorator';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
 import { UserRole } from '../enum/user-role.enum';
 
-@Auditable({ exclude: ['password'] })
-@Entity()
-@Unique('UQ_user_email', ['email'])
+/**
+ * User response/row shape. Request validation lives in Zod DTOs
+ * (`@/users/dto/user.dto`); this class carries the Swagger metadata and is
+ * structurally compatible with a selected drizzle row.
+ */
 export class User {
-  @ApiProperty({
-    description: 'user ID',
-  })
-  @PrimaryGeneratedColumn('uuid', {
-    primaryKeyConstraintName: 'PK_user',
-  })
-  @IsUUID('4')
+  @ApiProperty({ description: 'user ID' })
   id!: string;
 
   @ApiProperty()
-  @Column({ length: STRING_LENGTH.EMAIL_MAX })
-  @IsEmail()
   email!: string;
 
-  @Column({
-    type: 'varchar',
-    length: STRING_LENGTH.PASSWORD_HASH_MAX,
-    select: false,
-    nullable: true,
-  })
-  @PasswordDecorator(true)
+  // Not exposed via Swagger (secret); stripped by sanitizeUser.
   password!: string | null;
 
-  @ApiProperty({
-    description: 'Display name (from OAuth providers)',
-    nullable: true,
-  })
-  @Column({
-    type: 'varchar',
-    nullable: true,
-    length: 80,
-  })
-  @IsOptional()
+  @ApiProperty({ nullable: true })
   displayName!: string | null;
 
-  @ApiProperty({
-    description: 'Profile picture URL (from OAuth providers)',
-    nullable: true,
-  })
-  @Column({ type: 'varchar', nullable: true, length: STRING_LENGTH.MEDIUM_MAX })
-  @IsOptional()
+  @ApiProperty({ nullable: true })
   picture!: string | null;
 
-  @Column({
-    type: 'enum',
-    enumName: 'user_role_enum',
-    enum: UserRole,
-    array: true,
-  })
-  @ApiProperty({
-    enum: Object.values(UserRole),
-    isArray: true,
-    example: [UserRole.USER],
-  })
-  @IsUniqueEnumArrayDecorator(UserRole)
+  @ApiProperty({ enum: Object.values(UserRole), isArray: true })
   roles!: UserRole[];
 
   @ApiProperty()
-  @Column({ type: 'boolean', default: false })
-  @IsBoolean()
   suspended!: boolean;
 
   @ApiProperty()
-  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
   @ApiProperty()
-  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
-
-  static sanitize(user: User): SanitizedUser {
-    const { password, ...sanitized } = user;
-    return sanitized;
-  }
 }
 
 export class SanitizedUser extends OmitType(User, ['password'] as const) {}
+
+/** Strip the password hash from a user row. */
+export const sanitizeUser = (user: User): SanitizedUser => {
+  const { password: _password, ...sanitized } = user;
+  return sanitized;
+};

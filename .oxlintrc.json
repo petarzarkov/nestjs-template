@@ -1,12 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript"],
-  "jsPlugins": [
-    {
-      "name": "typeorm",
-      "specifier": "./oxlint-plugins/eslint-plugin-typeorm.mjs"
-    }
-  ],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
   "categories": {
     "correctness": "error"
   },
@@ -22,14 +20,10 @@
         "caughtErrors": "none"
       }
     ],
-    "max-lines": ["error", { "max": 500, "skipBlankLines": true }],
-    "typeorm/explicit-naming": "error",
-    "typeorm/timestamptz": "error",
-    "typeorm/column-length": "error"
+    "max-lines": ["error", { "max": 500, "skipBlankLines": true }]
   },
   "ignorePatterns": [
     "**/dist/**",
-    "**/migrations/**",
     "**/*.d.ts",
     "**/*.spec.ts",
     "**/*.e2e.spec.ts",

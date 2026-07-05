@@ -1,6 +1,5 @@
 import { NestJsCmsModule } from '@arkv/nestjs-cms';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import 'reflect-metadata';
@@ -11,11 +10,11 @@ import type { ValidatedConfig } from './config/env.validation';
 import { AppConfigService } from './config/services/app.config.service';
 import { GLOBAL_PREFIX } from './constants';
 import { setupDocs } from './core/docs/setupDocs';
+import { DbExceptionFilter } from './core/filters/db-exception.filter';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
-import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
+import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
-import { RedisService } from './infra/redis/services/redis.service';
 import { SocketConfigAdapter } from './notifications/events/socket.adapter';
 
 async function bootstrap() {
@@ -49,20 +48,14 @@ async function bootstrap() {
   }
 
   const corsConfig = configService.getOrThrow('cors');
-  const redisConfig = configService.getOrThrow('redis');
-  if (redisConfig) {
-    logger.log('Redis config', {
-      redisConfig,
-    });
-  }
 
-  const typeOrmExceptionFilter = app.get(TypeOrmExceptionFilter);
+  const dbExceptionFilter = app.get(DbExceptionFilter);
   const genericExceptionFilter = app.get(GenericExceptionFilter);
   const httpLoggingInterceptor = app.get(HttpLoggingInterceptor);
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.useGlobalInterceptors(httpLoggingInterceptor);
-  app.useGlobalFilters(genericExceptionFilter, typeOrmExceptionFilter);
+  app.useGlobalFilters(genericExceptionFilter, dbExceptionFilter);
 
   // Global configuration
   app.setGlobalPrefix(GLOBAL_PREFIX);
@@ -76,20 +69,22 @@ async function bootstrap() {
     credentials: appConfig.env === AppEnv.PRD,
   });
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-      forbidNonWhitelisted: true,
-    }),
-  );
+  // Request validation is handled globally by the ZodValidationPipe
+  // (registered as APP_PIPE in AppModule).
 
   // Swagger documentation
   const { title, document, swaggerPath, scalarPath } = setupDocs(
     app,
     pkg,
     appConfig,
+  );
+
+  // Protect the queue dashboard (/api/queues) with basic auth in deployed envs.
+  const queuesPath = `/${GLOBAL_PREFIX}/queues`;
+  const htmlBasicAuthMiddleware = app.get(HtmlBasicAuthMiddleware);
+  app.use(
+    queuesPath,
+    htmlBasicAuthMiddleware.use.bind(htmlBasicAuthMiddleware),
   );
 
   // Admin CMS UI driven by the OpenAPI document (mount after docs are built)
@@ -99,12 +94,8 @@ async function bootstrap() {
     title,
   });
 
-  const redisService = app.get(RedisService);
-  app.useWebSocketAdapter(
-    new SocketConfigAdapter(app, configService, redisService),
-  );
+  app.useWebSocketAdapter(new SocketConfigAdapter(app, configService));
 
-  await app.startAllMicroservices();
   const appPort = configService.get('app.port');
   await app.listen(appPort, '0.0.0.0');
 
@@ -130,7 +121,7 @@ async function bootstrap() {
         bun: process.versions.bun,
         npm: process.versions.npm,
       },
-      queuesDashboard: `${appUrl}/${GLOBAL_PREFIX}/queues`,
+      queuesDashboard: `${appUrl}${queuesPath}`,
       ws: {
         url: wsUrl,
         sharingHttpServer: sharingHttpServer,

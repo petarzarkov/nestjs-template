@@ -1,47 +1,24 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { STRING_LENGTH } from '@/constants';
-import { PageOptionsDto } from '@/core/pagination/dto/page-options.dto';
+import { pageOptionsSchema } from '@/core/pagination/dto/page-options.dto';
 import { AuditAction } from '../enum/audit-action.enum';
 
-export class AuditLogQueryDto extends PageOptionsDto {
-  @ApiPropertyOptional({ description: 'Filter by actor user ID' })
-  @IsUUID('4')
-  @IsOptional()
-  actorId?: string;
+export const auditLogQuerySchema = pageOptionsSchema.extend({
+  actorId: z.uuid().optional().describe('Filter by actor user ID'),
+  action: z.enum(AuditAction).optional().describe('Filter by action type'),
+  entityName: z
+    .string()
+    .min(1)
+    .max(STRING_LENGTH.MEDIUM_MAX)
+    .optional()
+    .describe('Filter by entity name (e.g., "User")'),
+  entityId: z
+    .string()
+    .min(1)
+    .max(STRING_LENGTH.SHORT_MAX)
+    .optional()
+    .describe('Filter by entity ID'),
+});
 
-  @ApiPropertyOptional({
-    description: 'Filter by action type',
-    enum: AuditAction,
-  })
-  @IsEnum(AuditAction)
-  @IsOptional()
-  action?: AuditAction;
-
-  @ApiPropertyOptional({
-    description: 'Filter by entity name (e.g., "User")',
-    maxLength: STRING_LENGTH.MEDIUM_MAX,
-  })
-  @IsString()
-  @IsOptional()
-  @MinLength(1)
-  @MaxLength(STRING_LENGTH.MEDIUM_MAX)
-  entityName?: string;
-
-  @ApiPropertyOptional({
-    description: 'Filter by entity ID',
-    maxLength: STRING_LENGTH.SHORT_MAX,
-  })
-  @IsString()
-  @IsOptional()
-  @MinLength(1)
-  @MaxLength(STRING_LENGTH.SHORT_MAX)
-  entityId?: string;
-}
+export class AuditLogQueryDto extends createZodDto(auditLogQuerySchema) {}

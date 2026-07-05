@@ -1,6 +1,5 @@
-import * as crypto from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
 import { EVENTS } from '@/notifications/events/events';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
@@ -18,77 +17,40 @@ export class InvitesService {
     private readonly jobPublisher: JobPublisherService,
   ) {}
 
-  async findAll(query: ListInvitesQueryDto): Promise<Invite[]> {
-    if (query.statuses?.length) {
-      return this.invitesRepository.find({
-        where: {
-          status: In(query.statuses),
-        },
-      });
-    }
-
-    return this.invitesRepository.find({});
+  findAll(query: ListInvitesQueryDto): Invite[] {
+    return this.invitesRepository.findAll(query.statuses);
   }
 
   async create(createInviteDto: CreateInviteDto): Promise<Invite> {
     const { email, role } = createInviteDto;
 
-    const existingUser = await this.usersRepository.findOne({
-      where: { email },
-    });
+    const existingUser = this.usersRepository.findByEmail(email);
     if (existingUser) {
       throw new ConflictException(
         `User with email ${email} already registered.`,
       );
     }
 
-    // Check for any existing invite with this email
-    const existingInvite = await this.invitesRepository.findOne({
-      where: { email },
-    });
-
-    if (existingInvite) {
-      // Update the existing invite with new data
-      existingInvite.role = role;
-      existingInvite.status = InviteStatus.PENDING;
-      existingInvite.inviteCode = crypto.randomBytes(32).toString('hex');
-      existingInvite.expiresAt = new Date();
-      existingInvite.expiresAt.setDate(existingInvite.expiresAt.getDate() + 7);
-
-      const updatedInvite = await this.invitesRepository.save(existingInvite);
-
-      // Publish invite event
-      await this.jobPublisher.publishJob(
-        EVENTS.ROUTING_KEYS.USER_INVITED,
-        { invite: updatedInvite },
-        { emitToAdmins: true },
-      );
-
-      return updatedInvite;
-    }
-
-    // Create new invite if none exists
-    const inviteCode = crypto.randomBytes(32).toString('hex');
+    // Reuse an existing invite row for this email if present (keeps its id).
+    const existingInvite = this.invitesRepository.findByEmail(email);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    const inviteToCreate = this.invitesRepository.create({
+    const invite = this.invitesRepository.save({
+      id: existingInvite?.id,
       email,
-      inviteCode,
+      inviteCode: randomBytes(32).toString('hex'),
       role,
       expiresAt,
       status: InviteStatus.PENDING,
     });
 
-    const savedInvite = await this.invitesRepository.save(inviteToCreate);
-
-    // Publish invite event
     await this.jobPublisher.publishJob(
       EVENTS.ROUTING_KEYS.USER_INVITED,
-      { invite: savedInvite },
+      { invite },
       { emitToAdmins: true },
     );
 
-    return savedInvite;
+    return invite;
   }
 }

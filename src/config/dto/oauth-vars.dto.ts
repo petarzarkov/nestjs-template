@@ -1,41 +1,15 @@
-import { IntersectionType } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
 
-export class GoogleOAuthVars {
-  @IsString()
-  @IsOptional()
-  GOOGLE_OAUTH_CLIENT_ID?: string;
+export const oauthVarsSchema = z.object({
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
+  LINKEDIN_OAUTH_CLIENT_ID: z.string().optional(),
+  LINKEDIN_OAUTH_CLIENT_SECRET: z.string().optional(),
+});
 
-  @IsString()
-  @IsOptional()
-  GOOGLE_OAUTH_CLIENT_SECRET?: string;
-}
-
-export class GitHubOAuthVars {
-  @IsString()
-  @IsOptional()
-  GITHUB_OAUTH_CLIENT_ID?: string;
-
-  @IsString()
-  @IsOptional()
-  GITHUB_OAUTH_CLIENT_SECRET?: string;
-}
-
-export class LinkedInOAuthVars {
-  @IsString()
-  @IsOptional()
-  LINKEDIN_OAUTH_CLIENT_ID?: string;
-
-  @IsString()
-  @IsOptional()
-  LINKEDIN_OAUTH_CLIENT_SECRET?: string;
-}
-
-export class OAuthVars extends IntersectionType(
-  GoogleOAuthVars,
-  GitHubOAuthVars,
-  LinkedInOAuthVars,
-) {}
+export type OAuthVars = z.infer<typeof oauthVarsSchema>;
 
 export const getOAuthConfig = (
   config: OAuthVars,

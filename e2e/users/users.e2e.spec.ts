@@ -49,7 +49,7 @@ describe('Users Cursor Pagination (e2e)', () => {
         { email, password: 'TestPass123!' },
       );
       expect(res.status).toBe(201);
-      const user = await ctx.db.getUserByEmail(email);
+      const user = ctx.db.getUserByEmail(email);
       if (user) createdUserIds.push(user.id);
     }
 
@@ -80,8 +80,8 @@ describe('Users Cursor Pagination (e2e)', () => {
 
     // Clean up
     for (const id of createdUserIds) {
-      await ctx.db.auditLogs.delete({ entityId: id });
-      await ctx.db.users.delete({ id });
+      ctx.db.auditLogs.delete({ entityId: id });
+      ctx.db.users.delete({ id });
     }
     createdUserIds.length = 0;
   });
@@ -99,7 +99,7 @@ describe('Users Cursor Pagination (e2e)', () => {
         { email, password: 'TestPass123!' },
       );
       expect(res.status).toBe(201);
-      const user = await ctx.db.getUserByEmail(email);
+      const user = ctx.db.getUserByEmail(email);
       if (user) createdUserIds.push(user.id);
     }
 
@@ -135,8 +135,8 @@ describe('Users Cursor Pagination (e2e)', () => {
 
     // Clean up
     for (const id of createdUserIds) {
-      await ctx.db.auditLogs.delete({ entityId: id });
-      await ctx.db.users.delete({ id });
+      ctx.db.auditLogs.delete({ entityId: id });
+      ctx.db.users.delete({ id });
     }
     createdUserIds.length = 0;
   });

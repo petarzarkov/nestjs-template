@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import {
   ForbiddenException,
@@ -35,24 +34,22 @@ export class FileService {
     const upserted: FileEntity[] = [];
     for (const file of files) {
       const s3File = await this.s3Service.upsertFile({
-        fileId: randomUUID(),
+        fileId: crypto.randomUUID(),
         userId,
         file,
         context: 'files',
       });
 
-      const existing = await this.filesRepository.findOne({
-        where: {
-          extension: s3File.extension,
-          name: s3File.name,
-          userId,
-          size: file.size,
-        },
+      const existing = this.filesRepository.findExisting({
+        extension: s3File.extension,
+        name: s3File.name,
+        userId,
+        size: file.size,
       });
       const imageSize = this.helpersService.isSupportedImageType(
         s3File.extension,
       )
-        ? this.helpersService.calculateImageSize(
+        ? await this.helpersService.calculateImageSize(
             {
               id: s3File.fileId,
               buffer: file.buffer,
@@ -63,42 +60,33 @@ export class FileService {
           )
         : null;
 
+      const values = {
+        userId,
+        name: s3File.name,
+        extension: s3File.extension,
+        mimetype: s3File.mimetype,
+        path: s3File.path,
+        width: imageSize?.width ?? null,
+        height: imageSize?.height ?? null,
+        size: file.size,
+      };
+
       if (existing) {
-        const updatedFile = await this.filesRepository.save({
-          ...existing,
-          userId,
-          name: s3File.name,
-          extension: s3File.extension,
-          mimetype: s3File.mimetype,
-          path: s3File.path,
-          width: imageSize?.width ?? null,
-          height: imageSize?.height ?? null,
-          size: file.size,
-        });
-        upserted.push(updatedFile);
+        upserted.push(
+          this.filesRepository.save({ id: existing.id, ...values }),
+        );
       } else {
-        const created = this.filesRepository.create({
-          id: s3File.fileId,
-          userId,
-          path: s3File.path,
-          name: s3File.name,
-          extension: s3File.extension,
-          mimetype: s3File.mimetype,
-          width: imageSize?.width ?? null,
-          height: imageSize?.height ?? null,
-          size: file.size,
-        });
-        upserted.push(await this.filesRepository.save(created));
+        upserted.push(
+          this.filesRepository.create({ id: s3File.fileId, ...values }),
+        );
       }
     }
 
     return upserted;
   }
 
-  async findById(fileId: string): Promise<FileEntity> {
-    const fileEntity = await this.filesRepository.findOne({
-      where: { id: fileId },
-    });
+  findById(fileId: string): FileEntity {
+    const fileEntity = this.filesRepository.findById(fileId);
 
     if (!fileEntity) {
       throw new NotFoundException(`File with ID ${fileId} not found`);
@@ -114,7 +102,7 @@ export class FileService {
     contentLength?: number;
     createdBy: string;
   }> {
-    const fileEntity = await this.findById(fileId);
+    const fileEntity = this.findById(fileId);
 
     const downloadResult = await this.s3Service.downloadFileByPath(
       fileEntity.path,
@@ -133,7 +121,7 @@ export class FileService {
   }
 
   async deleteById(fileId: string, currentUser: SanitizedUser): Promise<void> {
-    const fileEntity = await this.findById(fileId);
+    const fileEntity = this.findById(fileId);
     if (
       fileEntity.userId !== currentUser.id &&
       !currentUser.roles.includes(UserRole.ADMIN)
@@ -143,21 +131,17 @@ export class FileService {
       );
     }
 
-    if (!fileEntity) {
-      throw new NotFoundException(`File with ID ${fileId} not found`);
-    }
-
     await this.s3Service.deleteFileByPath(fileEntity.path);
-    await this.filesRepository.remove(fileEntity);
+    this.filesRepository.deleteById(fileEntity.id);
   }
 
-  async findAllPaginated(
+  findAllPaginated(
     query: ListFilesQueryDto,
     currentUser: SanitizedUser,
-  ): Promise<PageDto<FileResponseDto | FileAdminResponseDto>> {
+  ): PageDto<FileResponseDto | FileAdminResponseDto> {
     const isAdmin = currentUser.roles.includes(UserRole.ADMIN);
 
-    const filesPage = await this.filesRepository.findAllPaginated(query, {
+    const filesPage = this.filesRepository.findAllPaginated(query, {
       userId: isAdmin ? undefined : currentUser.id,
       includeUserAndOrg: isAdmin,
     });
@@ -167,30 +151,16 @@ export class FileService {
     return new PageDto(data, filesPage.meta);
   }
 
-  async findByIdForUser(
+  findByIdForUser(
     fileId: string,
     currentUser: SanitizedUser,
-  ): Promise<FileResponseDto | FileAdminResponseDto> {
+  ): FileResponseDto | FileAdminResponseDto {
     const isAdmin = currentUser.roles.includes(UserRole.ADMIN);
 
-    const qb = this.filesRepository
-      .createQueryBuilder('file')
-      .leftJoinAndSelect('file.fund', 'fund')
-      .leftJoinAndSelect('file.strategy', 'strategy')
-      .where('file.id = :fileId', { fileId });
-
-    if (!isAdmin) {
-      qb.andWhere('file.userId = :userId', { userId: currentUser.id });
-    }
-
-    if (isAdmin) {
-      qb.leftJoinAndSelect('file.user', 'user').leftJoinAndSelect(
-        'user.organization',
-        'organization',
-      );
-    }
-
-    const file = await qb.getOne();
+    const file = this.filesRepository.findByIdForUser(
+      fileId,
+      isAdmin ? undefined : currentUser.id,
+    );
 
     if (!file) {
       throw new NotFoundException(`File with ID ${fileId} not found`);
@@ -203,11 +173,11 @@ export class FileService {
     file: FileEntity,
     includeAdminFields: boolean,
   ): FileResponseDto | FileAdminResponseDto {
-    const baseDto: FileResponseDto = {
+    const baseDto = {
       id: file.id,
       name: file.name,
       extension: file.extension,
-      size: file.size,
+      size: file.size ?? undefined,
       width: file.width,
       height: file.height,
       createdAt: file.createdAt,

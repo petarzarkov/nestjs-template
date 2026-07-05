@@ -1,185 +1,85 @@
-import { Transform } from 'class-transformer';
-import {
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsTimeZone,
-  Max,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { z } from 'zod';
 import { LogLevel } from '@arkv/nestjs-context-logger';
 import { LOGGER, SECOND } from '../../constants';
 import { AppEnv } from '../enum/app-env.enum';
 import { PackageJson } from '../PackageJson';
-import { WsVars } from './ws-vars.dto';
+import { wsVarsSchema } from './ws-vars.dto';
 
-export class ServiceVars extends WsVars {
-  /**
-   * @default "local"
-   */
-  @IsEnum(AppEnv)
-  @IsOptional()
-  APP_ENV: AppEnv = AppEnv.LOCAL;
+/** Comma-separated env string → trimmed array, with a fallback default. */
+const csv = (fallback: string[]) =>
+  z
+    .string()
+    .optional()
+    .transform(value =>
+      typeof value === 'string'
+        ? value.split(',').map(v => v.trim())
+        : fallback,
+    );
 
-  /**
-   * This should determine the behavior of the application
-   * @default "development"
-   * - expected to be 'production' on all deployed environments (dev, stage, prod)
-   * - expected to be 'testing' on testing environment
-   * - expected to be 'development' on local development environment
-   */
-  @IsString()
-  @IsOptional()
-  NODE_ENV: 'development' | 'testing' | 'production' = 'development';
-
-  /**
-   * @default "debug"
-   */
-  @IsEnum(LogLevel)
-  @IsOptional()
-  LOG_LEVEL: LogLevel = LogLevel.DEBUG;
-
-  @IsOptional()
-  @Transform(({ obj }) => {
-    if (typeof obj.LOG_MASK_FIELDS === 'string') {
-      return obj.LOG_MASK_FIELDS.split(',').map((field: string) =>
-        field.trim(),
-      );
+const timezone = z
+  .string()
+  .default('UTC')
+  .refine(tz => {
+    try {
+      new Intl.DateTimeFormat(undefined, { timeZone: tz });
+      return true;
+    } catch {
+      return false;
     }
-    return LOGGER.defaultMaskFields;
-  })
-  LOG_MASK_FIELDS?: string[];
+  }, 'Invalid IANA timezone');
 
-  @IsOptional()
-  @Transform(({ obj }) => {
-    if (typeof obj.LOG_FILTER_EVENTS === 'string') {
-      return obj.LOG_FILTER_EVENTS.split(',').map((field: string) =>
-        field.trim(),
-      );
-    }
-    return LOGGER.defaultFilterEvents;
-  })
-  LOG_FILTER_EVENTS?: string[];
+export const serviceVarsSchema = z.object({
+  ...wsVarsSchema.shape,
 
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(1000)
-  @Transform(({ obj }) => {
-    return obj.LOG_MAX_ARRAY_LENGTH ? Number(obj.LOG_MAX_ARRAY_LENGTH) : 1;
-  })
-  LOG_MAX_ARRAY_LENGTH?: number;
+  APP_ENV: z.enum(AppEnv).default(AppEnv.LOCAL),
+  NODE_ENV: z
+    .enum(['development', 'testing', 'production'])
+    .default('development'),
+  LOG_LEVEL: z.enum(LogLevel).default(LogLevel.DEBUG),
+  LOG_MASK_FIELDS: csv([...LOGGER.defaultMaskFields]),
+  LOG_FILTER_EVENTS: csv([...LOGGER.defaultFilterEvents]),
+  LOG_MAX_ARRAY_LENGTH: z.coerce.number().min(1).max(1000).default(1),
 
-  @IsNumber()
-  @Min(0)
-  @Max(65535)
-  API_PORT!: number;
+  API_PORT: z.coerce.number().min(0).max(65535),
+  BASIC_AUTH_TOKEN: z.string().optional(),
 
-  @ValidateIf((obj: ServiceVars) =>
-    [AppEnv.STG, AppEnv.PRD].includes(obj.APP_ENV),
-  )
-  @IsString({
-    message: 'BASIC_AUTH_TOKEN is required when APP_ENV is "stage" or "prod".',
-  })
-  BASIC_AUTH_TOKEN?: string;
+  HTTP_REQ_TIMEOUT: z.coerce.number().default(30000),
+  HTTP_REQ_MAX_REDIRECTS: z.coerce.number().default(5),
+  HTTP_REQ_MAX_RETRIES: z.coerce.number().default(3),
+  HTTP_REQ_RETRY_DELAY: z.coerce.number().default(SECOND),
 
-  // --- HTTP Client Configuration ---
-  @IsNumber()
-  @IsOptional()
-  HTTP_REQ_TIMEOUT: number = 30000;
+  SERVICE_ROUTE: z.string().default('service'),
+  HEALTH_ROUTE: z.string().default('health'),
+  LIVENESS_ROUTE: z.string().default('up'),
+  CONFIG_ROUTE: z.string().default('config'),
+  HEALTH_MAX_MEMORY_MB: z.coerce.number().default(2048),
+  HEALTH_SHUTDOWN_TIMEOUT_MS: z.coerce.number().default(10000),
+  SERVICE_COMMIT_SHA: z.string().optional(),
+  SERVICE_COMMIT_MESSAGE: z.string().optional(),
 
-  @IsNumber()
-  @IsOptional()
-  HTTP_REQ_MAX_REDIRECTS: number = 5;
+  SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_CHANNEL: z.string().default('C0948FPCD8W'),
 
-  @IsNumber()
-  @IsOptional()
-  HTTP_REQ_MAX_RETRIES: number = 3;
+  TZ: timezone,
 
-  @IsNumber()
-  @IsOptional()
-  HTTP_REQ_RETRY_DELAY: number = SECOND;
+  JWT_SECRET: z.string(),
+  JWT_EXPIRATION: z.coerce.number().min(1).max(604800).default(604800),
 
-  // --- Service Config ---
-  @IsString()
-  @IsOptional()
-  SERVICE_ROUTE: string = 'service';
+  CORS_ORIGIN: z.string().default('*'),
 
-  @IsString()
-  @IsOptional()
-  HEALTH_ROUTE: string = 'health';
+  EMAIL_API_KEY: z.string().optional(),
+  EMAIL_SENDER: z.string().optional(),
+  EMAIL_ADMIN: z.string().optional(),
 
-  @IsString()
-  @IsOptional()
-  LIVENESS_ROUTE: string = 'up';
+  WEB_URL: z.string().optional(),
+  LOGO_URL: z
+    .string()
+    .default(
+      'https://cdn.betterttv.net/emote/5590b223b344e2c42a9e28e3/1x.webp',
+    ),
+});
 
-  @IsString()
-  @IsOptional()
-  CONFIG_ROUTE: string = 'config';
-
-  @IsNumber()
-  @IsOptional()
-  HEALTH_MAX_MEMORY_MB: number = 2048;
-
-  @IsNumber()
-  @IsOptional()
-  HEALTH_SHUTDOWN_TIMEOUT_MS: number = 10000;
-
-  @IsString()
-  @IsOptional()
-  SERVICE_COMMIT_SHA?: string;
-
-  @IsString()
-  @IsOptional()
-  SERVICE_COMMIT_MESSAGE?: string;
-
-  @IsOptional()
-  @IsString()
-  SLACK_BOT_TOKEN?: string;
-
-  @IsString()
-  @IsOptional()
-  SLACK_CHANNEL?: string = 'C0948FPCD8W';
-
-  @IsTimeZone()
-  @IsOptional()
-  TZ: string = 'UTC';
-
-  @IsString()
-  JWT_SECRET!: string;
-
-  @IsNumber()
-  @Min(1)
-  @Max(604800)
-  JWT_EXPIRATION: number = 604800;
-
-  @IsString()
-  @IsOptional()
-  CORS_ORIGIN: string = '*';
-
-  @IsString()
-  @IsOptional()
-  EMAIL_API_KEY?: string;
-
-  @IsString()
-  @IsOptional()
-  EMAIL_SENDER?: string;
-
-  @IsString()
-  @IsOptional()
-  EMAIL_ADMIN?: string;
-
-  @IsString()
-  @IsOptional()
-  WEB_URL?: string;
-
-  @IsString()
-  @IsOptional()
-  LOGO_URL: string =
-    'https://cdn.betterttv.net/emote/5590b223b344e2c42a9e28e3/1x.webp';
-}
+export type ServiceVars = z.infer<typeof serviceVarsSchema>;
 
 export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
   return {
@@ -187,67 +87,27 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
     app: {
       webUrl: config.WEB_URL || `http://localhost:${config.API_PORT}`,
       name: pkg.name,
-      /**
-       * This should determine business logic and running environment.
-       * @default "local"
-       *
-       * expected to be 'local' on local development environment
-       * expected to be 'dev' on dev environment
-       * expected to be 'stage' on stage environment
-       * expected to be 'prod' on prod environment
-       */
       env: config.APP_ENV,
       nodeEnv: config.NODE_ENV,
       version: pkg.version,
       port: config.API_PORT,
       basicAuthToken: config.BASIC_AUTH_TOKEN,
-      /**
-       * @default "UTC"
-       *
-       * expected to be a valid timezone string
-       */
       timezone: config.TZ,
       logoUrl: config.LOGO_URL,
     },
     log: {
-      /**
-       * Sets the minimum log level (VERBOSE, DEBUG, LOG, WARN, ERROR, FATAL)
-       */
       level: config.LOG_LEVEL,
-      /**
-       * Comma-separated list of fields to mask in logs, e.g. `"token, jwt, password, secret, key"`
-       */
       maskFields: config.LOG_MASK_FIELDS,
-      /**
-       * Comma-separated list of events to filter out from the logs, e.g. `"/api/service/up, /api/service/health"`
-       */
       filterEvents: config.LOG_FILTER_EVENTS,
-      /**
-       * Maximum number of array items to include in logs before truncating
-       */
       maxArrayLength: config.LOG_MAX_ARRAY_LENGTH,
     },
     http: {
-      /**
-       * @default 10000
-       */
       timeout: config.HTTP_REQ_TIMEOUT,
       maxRedirects: config.HTTP_REQ_MAX_REDIRECTS,
-      /**
-       * @default 3
-       */
       maxRetries: config.HTTP_REQ_MAX_RETRIES,
-      /**
-       * @default 1000
-       */
       retryDelay: config.HTTP_REQ_RETRY_DELAY,
     },
     service: {
-      /**
-       * in mb
-       *
-       * @default 2048
-       */
       maxMemoryCheck: config.HEALTH_MAX_MEMORY_MB,
       gracefulShutdownTimeoutMs: config.HEALTH_SHUTDOWN_TIMEOUT_MS,
       routes: {

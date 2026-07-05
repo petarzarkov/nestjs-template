@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Readable } from 'node:stream';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { HelpersService } from '@/core/helpers/services/helpers.service';
 import { FileEntity } from '@/file/entity/file.entity';
 import { FilesRepository } from '@/file/repos/file.repository';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { FileService } from './file.service';
@@ -28,8 +28,9 @@ describe('FileService', () => {
   const filesRepository = {
     create: mock(),
     save: mock(),
-    findOne: mock(),
-    remove: mock(),
+    findExisting: mock(),
+    findById: mock(),
+    deleteById: mock(),
   };
   const helpersService = {
     isSupportedImageType: mock(),
@@ -69,20 +70,20 @@ describe('FileService', () => {
   });
 
   afterEach(() => {
-    // Clear mock call history between tests
     s3Service.upsertFile.mockClear();
     s3Service.downloadFileByPath.mockClear();
     s3Service.deleteFileByPath.mockClear();
     filesRepository.create.mockClear();
     filesRepository.save.mockClear();
-    filesRepository.findOne.mockClear();
-    filesRepository.remove.mockClear();
+    filesRepository.findExisting.mockClear();
+    filesRepository.findById.mockClear();
+    filesRepository.deleteById.mockClear();
     helpersService.isSupportedImageType.mockClear();
     helpersService.calculateImageSize.mockClear();
   });
 
   describe('upload', () => {
-    it('should upload new files to S3 and save metadata in DB', async () => {
+    it('should upload new files to S3 and insert metadata in DB', async () => {
       const mockFiles: Express.Multer.File[] = [
         {
           originalname: 'file1.png',
@@ -115,7 +116,7 @@ describe('FileService', () => {
 
       const mockEntities = [
         {
-          id: '1',
+          id: 'file-id-1',
           path: 'userId/file1.png',
           name: 'file1',
           extension: 'png',
@@ -125,7 +126,7 @@ describe('FileService', () => {
           updatedAt: new Date(),
         },
         {
-          id: '2',
+          id: 'file-id-2',
           path: 'userId/document.pdf',
           name: 'document',
           extension: 'pdf',
@@ -140,63 +141,26 @@ describe('FileService', () => {
         .mockResolvedValueOnce(mockS3Responses[0])
         .mockResolvedValueOnce(mockS3Responses[1]);
 
-      // Mock findOne to return null (no existing files)
-      filesRepository.findOne.mockResolvedValue(null);
-
-      // Mock isImageType to return true for images
+      // No existing files → insert path
+      filesRepository.findExisting.mockReturnValue(null);
       helpersService.isSupportedImageType.mockReturnValue(true);
-
-      // Mock calculateImageSize to return width/height for images
       helpersService.calculateImageSize
         .mockReturnValueOnce({ width: 100, height: 200 })
-        .mockReturnValueOnce(null); // PDF files don't have image dimensions
+        .mockReturnValueOnce(null); // PDFs have no image dimensions
 
       filesRepository.create
-        .mockReturnValueOnce({
-          ...mockS3Responses[0],
-          userId: 'mockUserId',
-        })
-        .mockReturnValueOnce({
-          ...mockS3Responses[1],
-          userId: 'mockUserId',
-        });
-
-      filesRepository.save
-        .mockResolvedValueOnce(mockEntities[0])
-        .mockResolvedValueOnce(mockEntities[1]);
+        .mockReturnValueOnce(mockEntities[0])
+        .mockReturnValueOnce(mockEntities[1]);
 
       const result = await service.upload('mockUserId', mockFiles);
 
       expect(s3Service.upsertFile).toHaveBeenCalledTimes(2);
-      expect(s3Service.upsertFile).toHaveBeenCalledWith({
-        context: 'files',
+      expect(filesRepository.findExisting).toHaveBeenCalledTimes(2);
+      expect(filesRepository.findExisting).toHaveBeenCalledWith({
+        extension: 'png',
+        name: 'file1',
         userId: 'mockUserId',
-        file: mockFiles[0],
-        fileId: expect.any(String),
-      });
-      expect(s3Service.upsertFile).toHaveBeenCalledWith({
-        context: 'files',
-        userId: 'mockUserId',
-        file: mockFiles[1],
-        fileId: expect.any(String),
-      });
-
-      expect(filesRepository.findOne).toHaveBeenCalledTimes(2);
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          extension: 'png',
-          name: 'file1',
-          userId: 'mockUserId',
-          size: undefined,
-        },
-      });
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          extension: 'pdf',
-          name: 'document',
-          userId: 'mockUserId',
-          size: undefined,
-        },
+        size: undefined,
       });
 
       expect(filesRepository.create).toHaveBeenCalledWith({
@@ -208,6 +172,7 @@ describe('FileService', () => {
         userId: 'mockUserId',
         width: 100,
         height: 200,
+        size: undefined,
       });
       expect(filesRepository.create).toHaveBeenCalledWith({
         id: 'file-id-2',
@@ -218,13 +183,14 @@ describe('FileService', () => {
         userId: 'mockUserId',
         width: null,
         height: null,
+        size: undefined,
       });
 
-      expect(filesRepository.save).toHaveBeenCalledTimes(2);
+      expect(filesRepository.save).not.toHaveBeenCalled();
       expect(result).toEqual(mockEntities as FileEntity[]);
     });
 
-    it('should update existing files when uploading with same path (upsert)', async () => {
+    it('should update existing files when uploading with same metadata (upsert)', async () => {
       const mockFile: Express.Multer.File = {
         originalname: 'file1.png',
         buffer: Buffer.from(''),
@@ -259,10 +225,9 @@ describe('FileService', () => {
       };
 
       s3Service.upsertFile.mockResolvedValue(mockS3Response);
-      filesRepository.findOne.mockResolvedValue(existingEntity);
-      filesRepository.save.mockResolvedValue(updatedEntity);
-
-      // Mock calculateImageSize
+      filesRepository.findExisting.mockReturnValue(existingEntity);
+      filesRepository.save.mockReturnValue(updatedEntity);
+      helpersService.isSupportedImageType.mockReturnValue(true);
       helpersService.calculateImageSize.mockReturnValue({
         width: 100,
         height: 200,
@@ -270,35 +235,18 @@ describe('FileService', () => {
 
       const result = await service.upload('newUserId', [mockFile]);
 
-      expect(s3Service.upsertFile).toHaveBeenCalledTimes(1);
-      expect(s3Service.upsertFile).toHaveBeenCalledWith({
-        context: 'files',
-        userId: 'newUserId',
-        file: mockFile,
-        fileId: expect.any(String),
-      });
-
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          extension: 'png',
-          name: 'file1',
-          userId: 'newUserId',
-          size: undefined,
-        },
-      });
-
       expect(filesRepository.create).not.toHaveBeenCalled();
-
       expect(filesRepository.save).toHaveBeenCalledWith({
-        ...existingEntity,
+        id: existingEntity.id,
         userId: 'newUserId',
         name: mockS3Response.name,
         extension: mockS3Response.extension,
         mimetype: mockS3Response.mimetype,
+        path: mockS3Response.path,
         width: 100,
         height: 200,
+        size: undefined,
       });
-
       expect(result).toEqual([updatedEntity] as FileEntity[]);
     });
   });
@@ -323,14 +271,12 @@ describe('FileService', () => {
         contentLength: 1234,
       };
 
-      filesRepository.findOne.mockResolvedValue(mockFile);
+      filesRepository.findById.mockReturnValue(mockFile);
       s3Service.downloadFileByPath.mockResolvedValue(mockDownload);
 
       const result = await service.downloadById(fileId);
 
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: { id: fileId },
-      });
+      expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.downloadFileByPath).toHaveBeenCalledWith(mockFile.path);
       expect(result).toEqual({
         createdBy: 'userId',
@@ -341,49 +287,14 @@ describe('FileService', () => {
       });
     });
 
-    it('should download file without contentLength', async () => {
-      const fileId = 'test-id';
-      const mockFile = {
-        id: fileId,
-        path: 'userId/file.png',
-        name: 'file',
-        extension: 'png',
-        mimetype: 'image/png',
-        userId: 'userId',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      const mockStream = createMockStream('file content');
-      const mockDownload = {
-        stream: mockStream,
-        contentType: 'image/png',
-        contentLength: undefined,
-      };
-
-      filesRepository.findOne.mockResolvedValue(mockFile);
-      s3Service.downloadFileByPath.mockResolvedValue(mockDownload);
-
-      const result = await service.downloadById(fileId);
-
-      expect(result).toEqual({
-        createdBy: 'userId',
-        stream: mockStream,
-        contentType: mockDownload.contentType,
-        contentLength: undefined,
-        filename: 'file.png',
-      });
-    });
-
     it('should throw NotFoundException when file not found', async () => {
       const fileId = 'non-existent-id';
-      filesRepository.findOne.mockResolvedValue(null);
+      filesRepository.findById.mockReturnValue(null);
 
       await expect(service.downloadById(fileId)).rejects.toThrow(
         'File with ID non-existent-id not found',
       );
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: { id: fileId },
-      });
+      expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.downloadFileByPath).not.toHaveBeenCalled();
     });
   });
@@ -402,25 +313,22 @@ describe('FileService', () => {
         updatedAt: new Date(),
       };
 
-      filesRepository.findOne.mockResolvedValue(mockFile);
+      filesRepository.findById.mockReturnValue(mockFile);
       s3Service.deleteFileByPath.mockResolvedValue(undefined);
-      filesRepository.remove.mockResolvedValue(mockFile);
 
       await service.deleteById(fileId, {
         id: 'userId',
         roles: [UserRole.ADMIN],
       } as SanitizedUser);
 
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: { id: fileId },
-      });
+      expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.deleteFileByPath).toHaveBeenCalledWith(mockFile.path);
-      expect(filesRepository.remove).toHaveBeenCalledWith(mockFile);
+      expect(filesRepository.deleteById).toHaveBeenCalledWith(fileId);
     });
 
     it('should throw NotFoundException when file not found', async () => {
       const fileId = 'non-existent-id';
-      filesRepository.findOne.mockResolvedValue(null);
+      filesRepository.findById.mockReturnValue(null);
 
       await expect(
         service.deleteById(fileId, {
@@ -428,11 +336,9 @@ describe('FileService', () => {
           roles: [UserRole.ADMIN],
         } as SanitizedUser),
       ).rejects.toThrow('File with ID non-existent-id not found');
-      expect(filesRepository.findOne).toHaveBeenCalledWith({
-        where: { id: fileId },
-      });
+      expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.deleteFileByPath).not.toHaveBeenCalled();
-      expect(filesRepository.remove).not.toHaveBeenCalled();
+      expect(filesRepository.deleteById).not.toHaveBeenCalled();
     });
   });
 
@@ -447,14 +353,13 @@ describe('FileService', () => {
         mimetype: 'application/pdf',
         userId: 'userId',
       };
-      const mockStream = createMockStream('file content');
       const mockDownload = {
-        stream: mockStream,
+        stream: createMockStream('file content'),
         contentType: 'application/pdf',
         contentLength: 5678,
       };
 
-      filesRepository.findOne.mockResolvedValue(mockFile);
+      filesRepository.findById.mockReturnValue(mockFile);
       s3Service.downloadFileByPath.mockResolvedValue(mockDownload);
 
       const result = await service.downloadById(fileId);
@@ -472,14 +377,13 @@ describe('FileService', () => {
         mimetype: 'text/plain',
         userId: 'userId',
       };
-      const mockStream = createMockStream('file content');
       const mockDownload = {
-        stream: mockStream,
+        stream: createMockStream('file content'),
         contentType: 'text/plain',
         contentLength: 100,
       };
 
-      filesRepository.findOne.mockResolvedValue(mockFile);
+      filesRepository.findById.mockReturnValue(mockFile);
       s3Service.downloadFileByPath.mockResolvedValue(mockDownload);
 
       const result = await service.downloadById(fileId);

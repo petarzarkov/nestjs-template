@@ -1,20 +1,23 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, Length, Matches } from 'class-validator';
-import { IsEmailDecorator } from '@/core/decorators/email.decorator';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { emailSchema, passwordSchema } from '@/core/zod/schemas';
 
-export class RequestPasswordResetDto {
-  @IsEmailDecorator()
-  email!: string;
-}
+export const requestPasswordResetSchema = z
+  .object({ email: emailSchema })
+  .meta({ id: 'RequestPasswordReset' });
 
-export class PasswordResetDto {
-  @ApiProperty()
-  @IsNotEmpty()
-  @Matches(/^[a-f0-9]+$/i, { message: 'Reset token must be a hex string' })
-  @Length(64, 64, { message: 'Reset token must be exactly 64 characters' })
-  resetToken!: string;
+export class RequestPasswordResetDto extends createZodDto(
+  requestPasswordResetSchema,
+) {}
 
-  @PasswordDecorator()
-  newPassword!: string;
-}
+export const passwordResetSchema = z
+  .object({
+    resetToken: z
+      .string()
+      .length(64, 'Reset token must be exactly 64 characters')
+      .regex(/^[a-f0-9]+$/i, 'Reset token must be a hex string'),
+    newPassword: passwordSchema,
+  })
+  .meta({ id: 'PasswordReset' });
+
+export class PasswordResetDto extends createZodDto(passwordResetSchema) {}

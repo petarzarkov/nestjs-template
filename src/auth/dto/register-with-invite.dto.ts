@@ -1,19 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { STRING_LENGTH } from '@/constants';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
+import { passwordSchema } from '@/core/zod/schemas';
 
-export class RegisterWithInviteDto {
-  @PasswordDecorator()
-  password!: string;
-
-  @ApiProperty({
-    description: 'A valid invitation token.',
-    example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-    maxLength: STRING_LENGTH.SHORT_MAX,
+export const registerWithInviteSchema = z
+  .object({
+    password: passwordSchema,
+    invitationToken: z
+      .string()
+      .min(1)
+      .max(STRING_LENGTH.SHORT_MAX)
+      .describe('A valid invitation token.'),
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(STRING_LENGTH.SHORT_MAX)
-  invitationToken!: string;
-}
+  .meta({ id: 'RegisterWithInviteDto' });
+
+export class RegisterWithInviteDto extends createZodDto(
+  registerWithInviteSchema,
+) {}

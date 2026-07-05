@@ -1,17 +1,18 @@
-import { Controller, Get, HttpStatus } from '@nestjs/common';
-import { Transport } from '@nestjs/microservices';
+import { Controller, Get, HttpStatus, Inject } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
+  HealthCheckError,
   HealthCheckService,
   HealthIndicatorFunction,
+  HealthIndicatorResult,
   MemoryHealthIndicator,
-  MicroserviceHealthIndicator,
-  TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
+import { sql } from 'drizzle-orm';
 import { ValidatedServiceConfig } from '@/config/dto/service-vars.dto';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { Public } from '@/core/decorators/public.decorator';
+import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 
 @ApiTags('service')
 @Controller('service')
@@ -23,15 +24,13 @@ export class HealthController {
   constructor(
     private configService: AppConfigService,
     private health: HealthCheckService,
-    private db: TypeOrmHealthIndicator,
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
     private memory: MemoryHealthIndicator,
-    private microservice: MicroserviceHealthIndicator,
   ) {
     this.appConfig = this.configService.getOrThrow('app');
     this.serviceConfig = this.configService.getOrThrow('service');
-    const redisConfig = this.configService.get('redis');
 
-    this.checks.push(() => this.db.pingCheck('db'));
+    this.checks.push(() => this.checkDb());
 
     this.checks.push(() =>
       this.memory.checkHeap(
@@ -39,19 +38,16 @@ export class HealthController {
         this.serviceConfig.maxMemoryCheck * 1024 * 1024,
       ),
     );
+  }
 
-    // Add Redis health check if Redis is configured
-    if (redisConfig?.host) {
-      this.checks.push(() =>
-        this.microservice.pingCheck('redis', {
-          transport: Transport.REDIS,
-          options: {
-            host: redisConfig.host,
-            port: redisConfig.port,
-            password: redisConfig.password,
-          },
-        }),
-      );
+  private checkDb(): HealthIndicatorResult {
+    try {
+      this.db.get(sql`select 1`);
+      return { db: { status: 'up' } };
+    } catch (error) {
+      throw new HealthCheckError('Database check failed', {
+        db: { status: 'down', message: (error as Error).message },
+      });
     }
   }
 
