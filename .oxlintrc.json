@@ -25,8 +25,9 @@
   "ignorePatterns": [
     "**/dist/**",
     "**/*.d.ts",
-    "**/*.spec.ts",
-    "**/*.e2e.spec.ts",
+    "**/*.test.ts",
+    "**/*.int.ts",
+    "**/*.e2e.ts",
     "coverage/**",
     "node_modules/**",
     ".tmp/**",

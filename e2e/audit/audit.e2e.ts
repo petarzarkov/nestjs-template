@@ -268,8 +268,9 @@ describe('Audit Logs (e2e)', () => {
       );
 
       expect(response.status).toBe(200);
+      expect(admin).toBeTruthy();
       for (const entry of response.data.data) {
-        expect(entry.actorId).toBe(admin?.id!);
+        expect(entry.actorId).toBe(admin?.id ?? null);
       }
     });
 

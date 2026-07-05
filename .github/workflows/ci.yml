@@ -41,5 +41,5 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Run Tests Coverage
-        run: bun test:cov
+      - name: Run Unit & Integration Tests (coverage)
+        run: bun run test:cov

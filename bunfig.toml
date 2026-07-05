@@ -1,14 +1,23 @@
 # Bun configuration
 # https://bun.sh/docs/runtime/bunfig
 
+# Test taxonomy by file extension:
+#   - Unit:        src/**/*.test.ts  (pure, mocked deps, no I/O)
+#   - Integration: src/**/*.int.ts   (real in-memory SQLite)
+#   - E2E:         e2e/**/*.e2e.ts   (live server)
+#
+# `bun test` (bare) only auto-discovers *.test.ts / *.spec.ts — i.e. the unit
+# suite. Integration (*.int.ts) and e2e (*.e2e.ts) are NOT auto-discovered, so
+# the test / test:cov / test:int / test:e2e scripts route through
+# scripts/test.ts, which resolves the globs with Bun.Glob and passes explicit
+# file paths to `bun test`. `root` below scopes any bare `bun test` (test:watch).
 [test]
-# Only run tests in src/ directory by default
-# Use `bun run test:e2e` for e2e tests with proper setup
 root = "./src"
 
 # Coverage
 coverageDir = "coverage"
 coverageReporter = ["text", "lcov"] # default ["text"]
+coverageSkipTestFiles = true # keep test files out of coverage stats
 # coverageThreshold = { lines = 0.7, functions = 0.6, statements = 0.7 }
 
 [test.reporter]

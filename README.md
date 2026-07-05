@@ -164,12 +164,14 @@ bun dev                                   # Dev server with hot reload
 bun run build                             # Build for production (Bun transpile)
 bun start                                 # Start production build
 
-# Testing
-bun test                                  # Run unit tests
-bun test --watch                          # Watch mode
-bun test --coverage                       # Coverage report
-bun run test:e2e                          # Run E2E tests (throwaway SQLite DB)
-bun run test:e2e:single ./e2e/path.ts     # Run single E2E test
+# Testing — unit (*.test.ts) + integration (*.int.ts, in-memory SQLite) live in src/
+bun run test                              # Run unit + integration
+bun run test:unit                         # Unit only (*.test.ts)
+bun run test:int                          # Integration only (*.int.ts)
+bun test --watch                          # Watch mode (unit)
+bun run test:cov                          # Coverage (unit + integration)
+bun run test:e2e                          # Run E2E tests (*.e2e.ts, live server + throwaway SQLite DB)
+bun run test:e2e:single ./e2e/path.e2e.ts # Run single E2E test
 
 # Database
 bun run mig:gen                           # Generate a Drizzle migration from schema changes
