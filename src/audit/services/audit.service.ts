@@ -8,7 +8,7 @@ import { AuditLogRepository } from '../repos/audit-log.repository';
 export class AuditService {
   constructor(private readonly auditLogRepository: AuditLogRepository) {}
 
-  async getAuditLogs(queryDto: AuditLogQueryDto): Promise<PageDto<AuditLog>> {
+  getAuditLogs(queryDto: AuditLogQueryDto): PageDto<AuditLog> {
     return this.auditLogRepository.findPaginated(queryDto);
   }
 }

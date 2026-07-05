@@ -1,39 +1,23 @@
-import { Transform } from 'class-transformer';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
 
-export class WsVars {
-  @IsNumber()
-  @IsOptional()
-  WS_CONNECT_TIMEOUT: number = 50000;
+const csvOf = <T extends string>(fallback: T[]) =>
+  z
+    .string()
+    .optional()
+    .transform(value =>
+      typeof value === 'string'
+        ? (value.split(',').map(v => v.trim()) as T[])
+        : fallback,
+    );
 
-  @IsNumber()
-  @IsOptional()
-  WS_PING_INTERVAL: number = 25000;
+export const wsVarsSchema = z.object({
+  WS_CONNECT_TIMEOUT: z.coerce.number().default(50000),
+  WS_PING_INTERVAL: z.coerce.number().default(25000),
+  WS_PING_TIMEOUT: z.coerce.number().default(5000),
+  WS_CLEANUP_EMPTY_CHILD_NAMESPACES: z.stringbool().default(true),
+  WS_PATH: z.string().default('/ws'),
+  WS_PORT: z.coerce.number().optional(),
+  WS_TRANSPORTS: csvOf<'websocket' | 'polling'>(['websocket']),
+});
 
-  @IsNumber()
-  @IsOptional()
-  WS_PING_TIMEOUT: number = 5000;
-
-  @IsBoolean()
-  @IsOptional()
-  WS_CLEANUP_EMPTY_CHILD_NAMESPACES: boolean = true;
-
-  @IsString()
-  @IsOptional()
-  WS_PATH: string = '/ws';
-
-  @IsNumber()
-  @IsOptional()
-  WS_PORT?: number;
-
-  @IsOptional()
-  @Transform(({ obj }) => {
-    if (typeof obj.WS_TRANSPORTS === 'string') {
-      return obj.WS_TRANSPORTS.split(',').map(
-        (transport: 'websocket' | 'polling') => transport.trim(),
-      );
-    }
-    return ['websocket'];
-  })
-  WS_TRANSPORTS: ('websocket' | 'polling')[] = ['websocket'];
-}
+export type WsVars = z.infer<typeof wsVarsSchema>;

@@ -1,13 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Running database migrations for NODE_ENV: $NODE_ENV template service"
-
-if [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "testing" ]; then
-  bun run mig:run:prod
-else
-  bun run mig:run
-fi
-
-echo "Migrations completed. Starting application..."
+# Schema migrations (and audit triggers) are applied automatically on boot by
+# the app itself (see src/infra/db/client.ts) — no separate migration step.
+echo "Starting NestJS template service (NODE_ENV: $NODE_ENV)..."
 exec "$@"

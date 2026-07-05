@@ -11,7 +11,7 @@ RUN bun install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application (transpiles src + copies migration SQL to dist)
 RUN bun run build
 
 # Prune devDependencies for production
@@ -21,11 +21,11 @@ RUN rm -rf node_modules && \
 # ============================================
 # Production stage
 # ============================================
-FROM oven/bun:1.3.9-slim AS production
+FROM oven/bun:1.3.11-slim AS production
 
-# Install system dependencies and download RDS certificate
+# curl is used by the container healthcheck
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Set environment
@@ -36,9 +36,7 @@ WORKDIR /app
 
 # Create non-root user for security
 RUN groupadd -g 1001 nodejs && \
-    useradd -r -u 1001 -g nodejs nestjs && \
-    chown -R nestjs:nodejs /app && \
-    chown nestjs:nodejs /tmp/rds-global-bundle.pem
+    useradd -r -u 1001 -g nodejs nestjs
 
 # Copy built application from builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
@@ -46,9 +44,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nestjs:nodejs --chmod=755 /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Copy RDS certificate
-RUN cp /tmp/rds-global-bundle.pem ./rds-global-bundle.pem && \
-    chown nestjs:nodejs ./rds-global-bundle.pem
+# SQLite DB + bunqueue storage live here — mount a volume to persist across
+# container restarts.
+RUN mkdir -p /app/data && chown -R nestjs:nodejs /app
+ENV SQLITE_DB_PATH=/app/data/app.db
+ENV QUEUE_DATA_PATH=/app/data/queue
 
 # Switch to non-root user
 USER nestjs
@@ -65,5 +65,5 @@ EXPOSE 3001
 # Entrypoint script
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
-# Start the application
+# Start the application (schema migrations auto-apply on boot)
 CMD ["bun", "run", "start"]

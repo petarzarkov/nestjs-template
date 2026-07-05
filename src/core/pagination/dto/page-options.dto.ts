@@ -1,62 +1,27 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { PAGINATION } from '@/constants';
 import { PaginationDirection } from '../enum/pagination-direction.enum';
 import { PaginationOrder } from '../enum/pagination-order.enum';
 
-export class PageOptionsDto {
-  @ApiPropertyOptional({
-    enum: PaginationOrder,
-    default: PAGINATION.DEFAULT_ORDER,
-  })
-  @IsEnum(PaginationOrder)
-  @IsOptional()
-  readonly order?: PaginationOrder = PAGINATION.DEFAULT_ORDER;
+export const pageOptionsSchema = z.object({
+  order: z.enum(PaginationOrder).default(PAGINATION.DEFAULT_ORDER),
+  cursor: z
+    .string()
+    .max(PAGINATION.MAX_CURSOR)
+    .optional()
+    .describe('Opaque cursor for keyset pagination. Omit for the first page.'),
+  direction: z
+    .enum(PaginationDirection)
+    .default(PaginationDirection.FORWARD)
+    .describe('Pagination direction relative to the cursor.'),
+  take: z.coerce
+    .number()
+    .int()
+    .min(PAGINATION.MIN_TAKE)
+    .max(PAGINATION.MAX_TAKE)
+    .default(PAGINATION.DEFAULT_TAKE),
+  search: z.string().min(1).max(PAGINATION.MAX_SEARCH).optional(),
+});
 
-  @ApiPropertyOptional({
-    description:
-      'Opaque cursor for keyset pagination. Omit for the first page.',
-    maxLength: PAGINATION.MAX_CURSOR,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(PAGINATION.MAX_CURSOR)
-  readonly cursor?: string;
-
-  @ApiPropertyOptional({
-    enum: PaginationDirection,
-    default: PaginationDirection.FORWARD,
-    description: 'Pagination direction relative to the cursor.',
-  })
-  @IsEnum(PaginationDirection)
-  @IsOptional()
-  readonly direction?: PaginationDirection = PaginationDirection.FORWARD;
-
-  @ApiPropertyOptional({
-    minimum: PAGINATION.MIN_TAKE,
-    default: PAGINATION.DEFAULT_TAKE,
-  })
-  @IsInt()
-  @Min(PAGINATION.MIN_TAKE)
-  @Max(PAGINATION.MAX_TAKE)
-  @IsOptional()
-  readonly take: number = PAGINATION.DEFAULT_TAKE;
-
-  @ApiPropertyOptional({
-    maxLength: PAGINATION.MAX_SEARCH,
-  })
-  @IsString()
-  @IsOptional()
-  @MinLength(1)
-  @MaxLength(PAGINATION.MAX_SEARCH)
-  readonly search?: string;
-}
+export class PageOptionsDto extends createZodDto(pageOptionsSchema) {}

@@ -11,11 +11,8 @@ export function getE2EConfig() {
     API_URL: process.env.E2E_API_URL || 'http://localhost:2999',
     WS_URL: process.env.E2E_WS_URL || 'ws://localhost:2999/ws',
     DB: {
-      HOST: process.env.E2E_DB_HOST || 'localhost',
-      PORT: parseInt(process.env.E2E_DB_PORT || '5438', 10),
-      NAME: process.env.E2E_DB || 'pgdb',
-      USER: process.env.E2E_DB_USER || 'postgres',
-      PASS: process.env.E2E_DB_PASS || 'postgres',
+      // SQLite file shared with the app-under-test (must match its SQLITE_DB_PATH).
+      PATH: process.env.SQLITE_DB_PATH || './.tmp/e2e.db',
     },
     TEST_PASSWORD: process.env.E2E_TEST_PASSWORD || 'Test123$',
   };

@@ -1,10 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
-export class AuthResponseDto {
-  @ApiProperty({
-    description: 'jwt token',
-  })
-  @IsString()
-  accessToken!: string;
-}
+export const authResponseSchema = z
+  .object({ accessToken: z.string().describe('jwt token') })
+  .meta({ id: 'AuthResponse' });
+
+export class AuthResponseDto extends createZodDto(authResponseSchema) {}

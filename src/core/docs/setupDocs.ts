@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { ValidatedConfig } from '@/config/env.validation';
 import { PackageJson } from '@/config/PackageJson';
 import { GLOBAL_PREFIX } from '@/constants';
@@ -42,7 +43,11 @@ export function setupDocs(
     .addExtension('x-cms-token-path', 'accessToken')
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  // cleanupOpenApiDoc resolves the Zod-generated schemas (nestjs-zod) into a
+  // clean OpenAPI document, consumed by Swagger, Scalar, and the CMS.
+  const document = cleanupOpenApiDoc(
+    SwaggerModule.createDocument(app, swaggerConfig),
+  );
   SwaggerModule.setup(SWAGGER_PATH, app, document, {
     customSiteTitle: title,
     customCss: '.swagger-ui .topbar { display: none }',

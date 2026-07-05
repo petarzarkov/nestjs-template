@@ -1,43 +1,37 @@
 import { randomUUID } from 'node:crypto';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import type { JobsOptions, Queue } from 'bullmq';
 import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
-import type { QueueJob } from '@/infra/queue/types/queue-job.type';
 import {
   EVENTS,
   type EventMap,
   type EventType,
   type QueueType,
 } from '@/notifications/events/events';
+import { JobDispatcherService } from './job-dispatcher.service';
 
-export interface PublishOptions extends JobsOptions {
+export interface PublishOptions {
   userId?: string;
   /** Whether to emit the event to admin users via WebSocket */
   emitToAdmins?: boolean;
   /** Optional request ID for tracing */
   requestId?: string;
-  /** Queue to publish to - defaults to PUBSUB */
+  /** Queue to publish to - defaults to NOTIFICATIONS_EVENTS */
   queue?: QueueType;
+  /** Job priority (higher = processed sooner) */
+  priority?: number;
+  /** Delay in ms before the job becomes processable */
+  delay?: number;
+  /** Explicit job id (also used for deduplication) */
+  jobId?: string;
 }
 
 @Injectable()
 export class JobPublisherService {
-  private readonly queues: Map<string, Queue<QueueJob<EventType>>>;
-
   constructor(
-    @InjectQueue(EVENTS.QUEUES.NOTIFICATIONS_EVENTS)
-    private readonly notificationsEventsQueue: Queue<QueueJob<EventType>>,
-    @InjectQueue(EVENTS.QUEUES.BACKGROUND_JOBS)
-    private readonly backgroundJobsQueue: Queue<QueueJob<EventType>>,
+    private readonly dispatcher: JobDispatcherService,
     private readonly logger: ContextLogger,
     private readonly contextService: ContextService,
-  ) {
-    this.queues = new Map([
-      [EVENTS.QUEUES.NOTIFICATIONS_EVENTS, this.notificationsEventsQueue],
-      [EVENTS.QUEUES.BACKGROUND_JOBS, this.backgroundJobsQueue],
-    ]);
-  }
+  ) {}
 
   async publishJob<T extends EventType>(
     eventType: T,
@@ -46,7 +40,7 @@ export class JobPublisherService {
   ): Promise<{ jobId?: string }> {
     try {
       const queueName = options?.queue ?? EVENTS.QUEUES.NOTIFICATIONS_EVENTS;
-      const queue = this.queues.get(queueName);
+      const queue = this.dispatcher.getQueue(queueName);
       if (!queue) {
         this.logger.warn('Queue not available, skipping publish', {
           queue: queueName,

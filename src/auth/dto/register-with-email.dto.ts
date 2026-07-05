@@ -1,10 +1,11 @@
-import { IsEmailDecorator } from '@/core/decorators/email.decorator';
-import { PasswordDecorator } from '@/core/decorators/password.decorator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { emailSchema, passwordSchema } from '@/core/zod/schemas';
 
-export class RegisterWithEmailDto {
-  @IsEmailDecorator()
-  email!: string;
+export const registerWithEmailSchema = z
+  .object({ email: emailSchema, password: passwordSchema })
+  .meta({ id: 'RegisterWithEmailDto' });
 
-  @PasswordDecorator()
-  password!: string;
-}
+export class RegisterWithEmailDto extends createZodDto(
+  registerWithEmailSchema,
+) {}

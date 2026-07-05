@@ -1,17 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize } from 'class-validator';
-import { FILES } from '@/constants';
 
+/**
+ * Swagger-only description of the multipart upload body. The actual files are
+ * parsed by FilesInterceptor + the ParseFilePipe validators (see
+ * `@ValidatedFiles`), not by the Zod pipe — binary uploads aren't a Zod concern.
+ */
 export class FileUploadDto {
   @ApiProperty({
     type: 'array',
-    items: {
-      type: 'string',
-      format: 'binary',
-    },
-    description: 'File to be uploaded',
+    items: { type: 'string', format: 'binary' },
+    description: 'Files to be uploaded',
     required: true,
   })
-  @ArrayMaxSize(FILES.MAX_FILES)
   files!: Express.Multer.File[];
 }

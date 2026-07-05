@@ -3,7 +3,9 @@ import { NestJsCmsModule } from '@arkv/nestjs-cms';
 import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AIModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
@@ -12,9 +14,10 @@ import { AppConfigModule } from './config/app.config.module';
 import { ValidatedConfig, validateConfig } from './config/env.validation';
 import { loggerModuleAsyncOptions } from './config/logger.config';
 import { AppConfigService } from './config/services/app.config.service';
+import { DbExceptionFilter } from './core/filters/db-exception.filter';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
-import { TypeOrmExceptionFilter } from './core/filters/typeorm-exception.filter';
 import { HelpersModule } from './core/helpers/helpers.module';
+import { AuditContextInterceptor } from './core/interceptors/audit-context.interceptor';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
 import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
@@ -23,9 +26,7 @@ import { FileModule } from './file/file.module';
 import { DatabaseModule } from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
 import { QueueModule } from './infra/queue/queue.module';
-import { QueueDashboardModule } from './infra/queue/queue-dashboard.module';
-import { RedisModule } from './infra/redis/redis.module';
-import { RedisCacheThrottlerModule } from './infra/redis/redis-cache-throttler.module';
+import { RateLimitModule } from './infra/throttler/throttler.module';
 import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
@@ -53,8 +54,7 @@ import { UsersModule } from './users/users.module';
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
-    RedisModule,
-    RedisCacheThrottlerModule,
+    RateLimitModule,
     PaginationModule,
     NestJsContextLoggerModule.forRootAsync(loggerModuleAsyncOptions),
     HealthModule,
@@ -63,7 +63,6 @@ import { UsersModule } from './users/users.module';
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,
-    QueueDashboardModule,
     FileModule,
     // Registers CmsSchemaService; the UI + schema routes are mounted in
     // main.ts via NestJsCmsModule.setup(app, document, ...).
@@ -71,10 +70,18 @@ import { UsersModule } from './users/users.module';
   ],
   providers: [
     HttpLoggingInterceptor,
-    TypeOrmExceptionFilter,
+    DbExceptionFilter,
     GenericExceptionFilter,
     RequestMiddleware,
     HtmlBasicAuthMiddleware,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditContextInterceptor,
+    },
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
+    },
   ],
 })
 export class AppModule {}

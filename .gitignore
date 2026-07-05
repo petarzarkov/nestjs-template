@@ -4,8 +4,8 @@ node_modules/
 .pnp.js
 
 # Build outputs
-dist/
-build/
+dist
+build
 *.tsbuildinfo
 
 # Environment files
@@ -43,6 +43,7 @@ docker-compose.override.yml
 *.njsproj
 *.sln
 
+data
 .tmp
 .eslintcache
 .prettiercache

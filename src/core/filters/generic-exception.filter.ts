@@ -56,32 +56,33 @@ export class GenericExceptionFilter implements ExceptionFilter {
 
   private exceptionResponse(exception: unknown) {
     if (exception instanceof HttpException) {
+      const status = exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR;
       const errorResponse = exception.getResponse();
       const parsedError =
-        typeof errorResponse === 'object'
+        typeof errorResponse === 'object' && errorResponse !== null
           ? {
               error:
                 'error' in errorResponse
                   ? errorResponse.error
-                  : HttpStatus[
-                      exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR
-                    ],
+                  : HttpStatus[status],
               message:
                 'message' in errorResponse
                   ? errorResponse.message
                   : 'An unknown error occurred',
+              // Surface field-level validation issues (e.g. the ZodValidation
+              // Exception's `errors` array) so clients know what failed.
+              ...('errors' in errorResponse
+                ? { errors: errorResponse.errors }
+                : {}),
             }
           : {
-              error:
-                HttpStatus[
-                  exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR
-                ],
+              error: HttpStatus[status],
               message: errorResponse || 'An unknown error occurred',
             };
 
       return {
         ...parsedError,
-        status: exception?.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR,
+        status,
       };
     }
 

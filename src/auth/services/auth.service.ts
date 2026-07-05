@@ -1,25 +1,31 @@
 import { randomBytes } from 'node:crypto';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { and, eq } from 'drizzle-orm';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { password as passwordUtil } from '@/core/utils/password.util';
-import { ContextLogger } from '@arkv/nestjs-context-logger';
+import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 import { JobPublisherService } from '@/infra/queue/services/job-publisher.service';
+import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { EVENTS } from '@/notifications/events/events';
-import { SanitizedUser, User } from '@/users/entity/user.entity';
+import {
+  SanitizedUser,
+  sanitizeUser,
+  type User,
+} from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { PasswordResetTokensRepository } from '@/users/repos/password-reset-tokens.repository';
 import { UsersRepository } from '@/users/repos/users.repository';
-import { AuthProvider } from '../entity/auth-provider.entity';
+import { users } from '@/users/schema/user.schema';
 import { OAuthProvider } from '../enum/oauth-provider.enum';
 import { AuthProvidersRepository } from '../repos/auth-providers.repository';
+import { authProviders } from '../schema/auth-provider.schema';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +35,7 @@ export class AuthService {
     private readonly authProvidersRepository: AuthProvidersRepository,
     private readonly jobPublisher: JobPublisherService,
     private readonly jwtService: JwtService,
-    @InjectEntityManager() private readonly entityManager: EntityManager,
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
     private readonly logger: ContextLogger,
   ) {}
 
@@ -37,7 +43,7 @@ export class AuthService {
     email: string,
     pass: string,
   ): Promise<SanitizedUser | null> {
-    const user = await this.usersRepository.findUserWithCredentials(email);
+    const user = this.usersRepository.findUserWithCredentials(email);
     if (!user) {
       return null;
     }
@@ -52,7 +58,7 @@ export class AuthService {
       return null;
     }
 
-    return User.sanitize(user);
+    return sanitizeUser(user);
   }
 
   createAccessToken(
@@ -69,17 +75,14 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.usersRepository.findByEmail(email);
+    const user = this.usersRepository.findByEmail(email);
     if (!user) {
       // For security, do not reveal if user exists
       return;
     }
-    await this.passwordResetTokensRepository.invalidateUserTokens(user.id);
+    this.passwordResetTokensRepository.invalidateUserTokens(user.id);
     const passwordResetToken = randomBytes(32).toString('hex');
-    await this.passwordResetTokensRepository.createToken(
-      user.id,
-      passwordResetToken,
-    );
+    this.passwordResetTokensRepository.createToken(user.id, passwordResetToken);
 
     // Publish password reset event
     await this.jobPublisher.publishJob(
@@ -95,11 +98,11 @@ export class AuthService {
 
   async passwordReset(resetToken: string, newPassword: string) {
     const resetTokenEntity =
-      await this.passwordResetTokensRepository.findValid(resetToken);
+      this.passwordResetTokensRepository.findValid(resetToken);
     if (!resetTokenEntity) {
       throw new BadRequestException('Invalid or expired reset token');
     }
-    const user = await this.usersRepository.findById(resetTokenEntity.userId);
+    const user = this.usersRepository.findById(resetTokenEntity.userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -107,23 +110,31 @@ export class AuthService {
     const hashedPassword = await passwordUtil.hash(newPassword);
 
     // Update password in both User and AuthProvider (if LOCAL provider exists)
-    await this.entityManager.transaction(async transactionalEntityManager => {
-      user.password = hashedPassword;
-      await transactionalEntityManager.save(user);
+    this.db.transaction(tx => {
+      tx.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, user.id))
+        .run();
 
-      // Update LOCAL auth provider password hash if it exists
-      const localAuthProvider =
-        await this.authProvidersRepository.findByUserIdAndProvider(
-          user.id,
-          OAuthProvider.LOCAL,
-        );
+      const localAuthProvider = tx
+        .select()
+        .from(authProviders)
+        .where(
+          and(
+            eq(authProviders.userId, user.id),
+            eq(authProviders.provider, OAuthProvider.LOCAL),
+          ),
+        )
+        .get();
       if (localAuthProvider) {
-        localAuthProvider.passwordHash = hashedPassword;
-        await transactionalEntityManager.save(localAuthProvider);
+        tx.update(authProviders)
+          .set({ passwordHash: hashedPassword })
+          .where(eq(authProviders.id, localAuthProvider.id))
+          .run();
       }
     });
 
-    await this.passwordResetTokensRepository.invalidateUserTokens(user.id);
+    this.passwordResetTokensRepository.invalidateUserTokens(user.id);
     return { message: 'Password reset successful' };
   }
 
@@ -137,7 +148,7 @@ export class AuthService {
     try {
       // Check if auth provider already exists
       const existingAuthProvider =
-        await this.authProvidersRepository.findByProviderAndAuthProviderId(
+        this.authProvidersRepository.findByProviderAndAuthProviderId(
           provider,
           authProviderId,
         );
@@ -157,39 +168,36 @@ export class AuthService {
         }
 
         if (updated) {
-          await this.usersRepository.save(user);
+          this.usersRepository.save(user);
         }
 
-        return User.sanitize(user);
+        return sanitizeUser(user);
       }
 
       // Check if user with this email already exists
-      const existingUser = await this.usersRepository.findByEmail(email);
+      const existingUser = this.usersRepository.findByEmail(email);
 
       let user: User;
       if (existingUser) {
         // User exists but doesn't have this OAuth provider linked
         user = existingUser;
 
-        // Update displayName and picture if provided
         if (displayName && !user.displayName) {
           user.displayName = displayName;
         }
         if (picture && !user.picture) {
           user.picture = picture;
         }
-        await this.usersRepository.save(user);
+        this.usersRepository.save(user);
 
-        // Check if provider is already linked to this user
         const existingProviderForUser =
-          await this.authProvidersRepository.findByUserIdAndProvider(
+          this.authProvidersRepository.findByUserIdAndProvider(
             user.id,
             provider,
           );
 
         if (!existingProviderForUser) {
-          // Link the OAuth provider to existing user
-          await this.authProvidersRepository.save({
+          this.authProvidersRepository.save({
             userId: user.id,
             provider,
             authProviderId,
@@ -198,41 +206,30 @@ export class AuthService {
         }
       } else {
         // Create new user and auth provider in a transaction
-        const result = await this.entityManager.transaction(
-          async transactionalEntityManager => {
-            // Create user
-            const newUser = transactionalEntityManager.create(User, {
+        user = this.db.transaction(tx => {
+          const newUser = tx
+            .insert(users)
+            .values({
               email,
               password: null, // OAuth users don't have passwords
               roles: [UserRole.USER],
               displayName,
               picture,
-            });
-            const savedUser = await transactionalEntityManager.save(
-              User,
-              newUser,
-            );
+            })
+            .returning()
+            .get();
 
-            // Create auth provider
-            const newAuthProvider = transactionalEntityManager.create(
-              AuthProvider,
-              {
-                userId: savedUser.id,
-                provider,
-                authProviderId,
-                passwordHash: null,
-              },
-            );
-            await transactionalEntityManager.save(
-              AuthProvider,
-              newAuthProvider,
-            );
+          tx.insert(authProviders)
+            .values({
+              userId: newUser.id,
+              provider,
+              authProviderId,
+              passwordHash: null,
+            })
+            .run();
 
-            return savedUser;
-          },
-        );
-
-        user = result;
+          return newUser;
+        });
 
         // Publish user registered event
         await this.jobPublisher.publishJob(
@@ -246,7 +243,7 @@ export class AuthService {
         );
       }
 
-      return User.sanitize(user);
+      return sanitizeUser(user);
     } catch (error) {
       this.logger.error(
         `Error in createOrUpdateUserOAuth for ${provider} user ${email}`,

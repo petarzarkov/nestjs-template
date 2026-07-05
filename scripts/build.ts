@@ -6,16 +6,15 @@ import { Glob } from 'bun';
  * Bun-native production build — replaces `nest build` + `tsc-alias`.
  *
  * We transpile every source file to its own output file (1:1, structure
- * preserving) instead of bundling, because:
- *   1. Bun's *bundler* (`Bun.build`) miscompiles this app's decorators — in a
- *      full-app bundle some field-decorated classes (entities/DTOs) get emitted
- *      with the TC39 standard decorator transform instead of legacy
- *      (`experimentalDecorators`), which crashes class-validator/TypeORM at
- *      boot. The same files compile correctly file-by-file, so we transpile.
- *   2. TypeORM discovers entities/migrations at runtime via globs
- *      (`dist/**\/*.entity.js`, `dist/infra/db/migrations/**\/*.js`), and
- *      `mig:run:prod` runs against `dist/infra/db/data-source-options.js` — a
- *      single bundle would leave nothing for those to find.
+ * preserving) instead of bundling, because Bun's *bundler* (`Bun.build`)
+ * miscompiles this app's decorators — in a full-app bundle some field-decorated
+ * classes (class-validator DTOs) get emitted with the TC39 standard decorator
+ * transform instead of legacy (`experimentalDecorators`), which crashes
+ * class-validator at boot. The same files compile correctly file-by-file.
+ * (Once DTOs move to Zod, this constraint is lifted and `Bun.build` can bundle.)
+ *
+ * Drizzle migration SQL is copied verbatim below (not transpiled) so the
+ * boot-time migrator can find it under `dist/infra/db/migrations`.
  *
  * `Bun.Transpiler` only strips types / lowers decorators; it does NOT resolve
  * the `@/*` path alias, so we rewrite those specifiers to relative paths here
@@ -98,4 +97,17 @@ for await (const rel of glob.scan({ cwd: SRC })) {
 
 await Promise.all(jobs);
 
-console.log(`✅ Transpiled ${jobs.length} files to dist/`);
+// Copy non-TS runtime assets that the transpiler skips: the Drizzle migration
+// SQL + journal, applied on boot by `migrate()` (see infra/db/client.ts).
+const assetGlob = new Glob('infra/db/migrations/**/*.{sql,json}');
+let assetCount = 0;
+for await (const rel of assetGlob.scan({ cwd: SRC })) {
+  const outPath = join(OUT, rel);
+  await mkdir(dirname(outPath), { recursive: true });
+  await Bun.write(outPath, Bun.file(join(SRC, rel)));
+  assetCount++;
+}
+
+console.log(
+  `✅ Transpiled ${jobs.length} files (+${assetCount} migration assets) to dist/`,
+);

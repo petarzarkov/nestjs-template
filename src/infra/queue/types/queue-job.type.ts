@@ -1,4 +1,4 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bunqueue/client';
 import type { EventMap, EventType } from '@/notifications/events/events';
 
 export interface BaseJob<T extends EventType> {
@@ -15,12 +15,10 @@ export interface BaseJob<T extends EventType> {
 
 export type QueueJob<T extends EventType = EventType> = BaseJob<T>;
 
-export type JobHandlerPayload<
-  T extends EventType = EventType,
-  ReturnType = unknown,
-> = Job<QueueJob<T>, ReturnType>;
+export type JobHandlerPayload<T extends EventType = EventType> = Job<
+  QueueJob<T>
+>;
 
-export type JobHandlerType<
-  T extends EventType = EventType,
-  ReturnType = unknown,
-> = (job: JobHandlerPayload<T, ReturnType>) => Promise<ReturnType>;
+export type JobHandlerType<T extends EventType = EventType, R = unknown> = (
+  job: JobHandlerPayload<T>,
+) => Promise<R>;

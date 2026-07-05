@@ -71,7 +71,7 @@ describe('Auth (e2e)', () => {
 
   describe('Database Direct Access', () => {
     test('should query admin user directly from database', async () => {
-      const user = await ctx.db.getUserByEmail(E2E_ADMIN.email);
+      const user = ctx.db.getUserByEmail(E2E_ADMIN.email);
 
       expect(user).toBeDefined();
       expect(user?.email).toBe(E2E_ADMIN.email);
@@ -97,14 +97,14 @@ describe('Auth (e2e)', () => {
       expect(response.data.accessToken).toBeDefined();
 
       // Verify user was created in DB
-      const user = await ctx.db.getUserByEmail(testEmail);
+      const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
       expect(user?.email).toBe(testEmail);
       expect(user?.roles).toContain(UserRole.USER);
 
       // Clean up - delete the test user
       if (user) {
-        await ctx.db.users.delete({ id: user.id });
+        ctx.db.users.delete({ id: user.id });
       }
     });
 
@@ -144,13 +144,13 @@ describe('Auth (e2e)', () => {
       expect(notification.payload.type).toBe('direct');
 
       // Verify user was created in DB
-      const user = await ctx.db.getUserByEmail(testEmail);
+      const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
       expect(user?.email).toBe(testEmail);
 
       // Clean up - delete the test user
       if (user) {
-        await ctx.db.users.delete({ id: user.id });
+        ctx.db.users.delete({ id: user.id });
       }
     }, 10000); // 10s test timeout
   });

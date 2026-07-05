@@ -504,25 +504,25 @@ bun run test:e2e:single ./e2e/relative/path/to/test.e2e.ts  # Run single E2E tes
 
 ## **Scripts Reference**
 
-| Command                          | Description                                      |
-| -------------------------------- | ------------------------------------------------ |
-| `bun dev`                        | Start dev server with hot reload (`bun --watch`) |
-| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`) |
-| `bun start`                      | Start production build (`bun dist/main.js`)      |
-| `bun test`                       | Run unit tests                                   |
-| `bun run test:e2e`               | Run E2E tests with DB preload                    |
-| `bun run test:e2e:single <path>` | Run single E2E test                              |
-| `bun run lint`                   | Lint and fix with Oxlint                         |
-| `bun run format`                 | Format with oxfmt                                |
+| Command                          | Description                                               |
+| -------------------------------- | --------------------------------------------------------- |
+| `bun dev`                        | Start dev server with hot reload (`bun --watch`)          |
+| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`)  |
+| `bun start`                      | Start production build (`bun dist/main.js`)               |
+| `bun test`                       | Run unit tests                                            |
+| `bun run test:e2e`               | Run E2E tests with DB preload                             |
+| `bun run test:e2e:single <path>` | Run single E2E test                                       |
+| `bun run lint`                   | Lint and fix with Oxlint                                  |
+| `bun run format`                 | Format with oxfmt                                         |
 | `bun run typecheck`              | Typecheck with tsgo (single `tsconfig.json`, incl. specs) |
-| `bun run mig:gen <Name>`         | Generate TypeORM migration                       |
-| `bun run mig:run`                | Run pending migrations                           |
-| `bun run mig:revert`             | Revert last migration                            |
-| `bun run db:drop`                | Drop database schema                             |
-| `bun run create:admin`           | Create admin user interactively                  |
-| `bun run email`                  | Start React Email preview server (port 3035)     |
-| `bun run email:export`           | Export email templates as HTML                   |
-| `bun run gen:env:docs`           | Generate env vars documentation                  |
+| `bun run mig:gen <Name>`         | Generate TypeORM migration                                |
+| `bun run mig:run`                | Run pending migrations                                    |
+| `bun run mig:revert`             | Revert last migration                                     |
+| `bun run db:drop`                | Drop database schema                                      |
+| `bun run create:admin`           | Create admin user interactively                           |
+| `bun run email`                  | Start React Email preview server (port 3035)              |
+| `bun run email:export`           | Export email templates as HTML                            |
+| `bun run gen:env:docs`           | Generate env vars documentation                           |
 
 ---
 

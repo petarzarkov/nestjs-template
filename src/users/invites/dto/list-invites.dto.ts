@@ -1,14 +1,13 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional } from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { InviteStatus } from '../enum/invite-status.enum';
 
-export class ListInvitesQueryDto {
-  @ApiPropertyOptional({ enum: InviteStatus, isArray: true })
-  @IsOptional()
-  @IsArray()
-  @IsEnum(InviteStatus, { each: true })
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
-  @Type(() => String)
-  statuses?: InviteStatus[];
-}
+export const listInvitesQuerySchema = z.object({
+  // Accepts a single value or repeated query params; normalized to an array.
+  statuses: z
+    .union([z.enum(InviteStatus), z.array(z.enum(InviteStatus))])
+    .transform(value => (Array.isArray(value) ? value : [value]))
+    .optional(),
+});
+
+export class ListInvitesQueryDto extends createZodDto(listInvitesQuerySchema) {}

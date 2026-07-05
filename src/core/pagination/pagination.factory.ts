@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  lt,
+  or,
+  type SQL,
+} from 'drizzle-orm';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { PAGINATION } from '@/constants';
+import type { DrizzleDB } from '@/infra/db/client';
 import { type CursorPayload, decodeCursor, encodeCursor } from './cursor.util';
 import { PageDto } from './dto/page.dto';
 import { PageMetaDto } from './dto/page-meta.dto';
@@ -8,51 +20,129 @@ import { PageOptionsDto } from './dto/page-options.dto';
 import { PaginationDirection } from './enum/pagination-direction.enum';
 import { PaginationOrder } from './enum/pagination-order.enum';
 
+export interface PaginateParams {
+  /** The synchronous drizzle client. */
+  db: DrizzleDB;
+  /** The drizzle table to paginate. */
+  table: SQLiteTable;
+  pageOptions: PageOptionsDto;
+  /** Optional base filter (e.g. search / status conditions). */
+  where?: SQL;
+  /** Override the sort key; defaults to updatedAt → createdAt → id. */
+  orderBy?: string;
+}
+
+/**
+ * Cursor (keyset) pagination over a synchronous drizzle/SQLite query.
+ *
+ * Timestamps are stored as integer milliseconds (see `columns.ts`), so the
+ * cursor comparison is exact — no `date_trunc`/`::timestamptz` gymnastics are
+ * needed as they were on Postgres.
+ */
 @Injectable()
-export class PaginationFactory<
-  Entity extends ObjectLiteral,
-  OrderKey extends Extract<keyof Entity, string> = Extract<
-    keyof Entity,
-    string
-  >,
-> {
-  #resolveDefaultOrderKey<E extends ObjectLiteral>(qb: SelectQueryBuilder<E>) {
-    const cols = qb.expressionMap.mainAlias?.metadata?.columns ?? [];
-    const names = new Set(cols.map(c => c.propertyName));
-    for (const key of PAGINATION.ORDER_BY_PRECEDENCE) {
-      if (names.has(key)) return key;
+export class PaginationFactory {
+  paginate<T extends { id: string }>(params: PaginateParams): PageDto<T> {
+    const { db, table, pageOptions, where } = params;
+    const columns = getTableColumns(table) as Record<string, SQLiteColumn>;
+    const idColumn = columns.id;
+
+    const orderKey =
+      (params.orderBy && columns[params.orderBy]
+        ? params.orderBy
+        : undefined) ??
+      PAGINATION.ORDER_BY_PRECEDENCE.find(key => columns[key]) ??
+      'id';
+    const sortColumn = columns[orderKey];
+
+    const isBackward = pageOptions.direction === PaginationDirection.BACKWARD;
+    const requestedOrder = pageOptions.order ?? PaginationOrder.DESC;
+    const effectiveOrder = isBackward
+      ? requestedOrder === PaginationOrder.DESC
+        ? PaginationOrder.ASC
+        : PaginationOrder.DESC
+      : requestedOrder;
+    const isDesc = effectiveOrder === PaginationOrder.DESC;
+
+    const conditions: SQL[] = [];
+    if (where) {
+      conditions.push(where);
     }
-    return null;
-  }
-
-  #applyCursorWhere(
-    queryBuilder: SelectQueryBuilder<Entity>,
-    alias: string,
-    orderKey: string | null,
-    decoded: CursorPayload,
-    effectiveOrder: PaginationOrder,
-  ) {
-    const cmp = effectiveOrder === PaginationOrder.DESC ? '<' : '>';
-
-    if (orderKey && orderKey !== 'id') {
-      // Use date_trunc to match JavaScript Date millisecond precision,
-      // since PostgreSQL timestamps have microsecond precision.
-      const sortExpr = `date_trunc('milliseconds', ${alias}.${orderKey})`;
-      queryBuilder.andWhere(
-        `(${sortExpr} ${cmp} :cursorSortVal::timestamptz ` +
-          `OR (${sortExpr} = :cursorSortVal::timestamptz ` +
-          `AND ${alias}.id ${cmp} :cursorId))`,
-        { cursorSortVal: decoded.s, cursorId: decoded.i },
+    if (pageOptions.cursor) {
+      const decoded = decodeCursor(pageOptions.cursor);
+      conditions.push(
+        this.#cursorCondition(orderKey, sortColumn, idColumn, decoded, isDesc),
       );
-    } else {
-      queryBuilder.andWhere(`${alias}.id ${cmp} :cursorId`, {
-        cursorId: decoded.i,
-      });
     }
+
+    const direction = isDesc ? desc : asc;
+    const orderClause =
+      orderKey === 'id'
+        ? [direction(idColumn)]
+        : [direction(sortColumn), direction(idColumn)];
+
+    const rows = db
+      .select()
+      .from(table)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(...orderClause)
+      .limit(pageOptions.take + 1)
+      .all() as T[];
+
+    const hasMore = rows.length > pageOptions.take;
+    if (hasMore) {
+      rows.pop();
+    }
+    if (isBackward) {
+      rows.reverse();
+    }
+
+    const hasCursor = !!pageOptions.cursor;
+    const hasNextPage = isBackward ? hasCursor : hasMore;
+    const hasPreviousPage = isBackward ? hasMore : hasCursor;
+
+    const { nextCursor, previousCursor } = this.#buildCursors(
+      rows,
+      orderKey,
+      hasNextPage,
+      hasPreviousPage,
+    );
+
+    return new PageDto<T>(
+      rows,
+      new PageMetaDto({
+        take: pageOptions.take,
+        hasNextPage,
+        hasPreviousPage,
+        nextCursor,
+        previousCursor,
+      }),
+    );
   }
 
-  #buildCursors(
-    entities: Entity[],
+  #cursorCondition(
+    orderKey: string,
+    sortColumn: SQLiteColumn,
+    idColumn: SQLiteColumn,
+    decoded: CursorPayload,
+    isDesc: boolean,
+  ): SQL {
+    const cmp = isDesc ? lt : gt;
+
+    if (orderKey !== 'id') {
+      // Sort columns are millisecond timestamps; the cursor `s` is an ISO
+      // string — decode to a Date so drizzle encodes it back to epoch ms.
+      const sortValue = new Date(decoded.s);
+      return or(
+        cmp(sortColumn, sortValue),
+        and(eq(sortColumn, sortValue), cmp(idColumn, decoded.i)),
+      )!;
+    }
+
+    return cmp(idColumn, decoded.i);
+  }
+
+  #buildCursors<T extends { id: string }>(
+    rows: T[],
     cursorKey: string,
     hasNextPage: boolean,
     hasPreviousPage: boolean,
@@ -60,140 +150,21 @@ export class PaginationFactory<
     let nextCursor: string | null = null;
     let previousCursor: string | null = null;
 
-    if (entities.length > 0) {
-      const last = entities[entities.length - 1];
-      const first = entities[0];
+    if (rows.length > 0) {
+      const last = rows[rows.length - 1] as T & Record<string, unknown>;
+      const first = rows[0] as T & Record<string, unknown>;
 
       if (hasNextPage) {
-        nextCursor = encodeCursor(last[cursorKey], last.id);
+        nextCursor = encodeCursor(last[cursorKey] as Date | string, last.id);
       }
       if (hasPreviousPage) {
-        previousCursor = encodeCursor(first[cursorKey], first.id);
+        previousCursor = encodeCursor(
+          first[cursorKey] as Date | string,
+          first.id,
+        );
       }
     }
 
     return { nextCursor, previousCursor };
-  }
-
-  async paginate(
-    queryBuilder: SelectQueryBuilder<Entity>,
-    pageOptionsDto: PageOptionsDto,
-    orderBy?: OrderKey,
-    computedColumns?: string[],
-  ): Promise<PageDto<Entity>> {
-    const alias = queryBuilder.alias;
-    const orderKeyToUse =
-      (typeof orderBy === 'string' && orderBy) ||
-      this.#resolveDefaultOrderKey(queryBuilder);
-
-    const isBackward =
-      pageOptionsDto.direction === PaginationDirection.BACKWARD;
-    const requestedOrder = pageOptionsDto.order ?? PaginationOrder.DESC;
-    const effectiveOrder = isBackward
-      ? requestedOrder === PaginationOrder.DESC
-        ? PaginationOrder.ASC
-        : PaginationOrder.DESC
-      : requestedOrder;
-
-    if (pageOptionsDto.cursor) {
-      const decoded = decodeCursor(pageOptionsDto.cursor);
-      this.#applyCursorWhere(
-        queryBuilder,
-        alias,
-        orderKeyToUse,
-        decoded,
-        effectiveOrder,
-      );
-    }
-
-    if (orderKeyToUse) {
-      if (orderKeyToUse !== 'id') {
-        // Use date_trunc to match cursor WHERE precision (milliseconds)
-        queryBuilder.orderBy(
-          `date_trunc('milliseconds', ${alias}.${orderKeyToUse})`,
-          effectiveOrder,
-        );
-        queryBuilder.addOrderBy(`${alias}.id`, effectiveOrder);
-      } else {
-        queryBuilder.orderBy(`${alias}.id`, effectiveOrder);
-      }
-    }
-
-    queryBuilder.take(pageOptionsDto.take + 1);
-
-    const entities: Entity[] =
-      computedColumns && computedColumns.length > 0
-        ? await this.#fetchWithComputedColumns(queryBuilder, computedColumns)
-        : await queryBuilder.getMany();
-
-    const hasMore = entities.length > pageOptionsDto.take;
-    if (hasMore) {
-      entities.pop();
-    }
-
-    if (isBackward) {
-      entities.reverse();
-    }
-
-    const hasCursor = !!pageOptionsDto.cursor;
-    const hasNextPage = isBackward ? hasCursor : hasMore;
-    const hasPreviousPage = isBackward ? hasMore : hasCursor;
-    const cursorKey = orderKeyToUse ?? 'id';
-
-    const { nextCursor, previousCursor } = this.#buildCursors(
-      entities,
-      cursorKey,
-      hasNextPage,
-      hasPreviousPage,
-    );
-
-    const meta = new PageMetaDto({
-      take: pageOptionsDto.take,
-      hasNextPage,
-      hasPreviousPage,
-      nextCursor,
-      previousCursor,
-    });
-
-    return new PageDto(entities, meta);
-  }
-
-  async #fetchWithComputedColumns(
-    queryBuilder: SelectQueryBuilder<Entity>,
-    computedColumns: string[],
-  ): Promise<Entity[]> {
-    const { entities, raw } = await queryBuilder.getRawAndEntities();
-    const alias = queryBuilder.alias;
-    const idColumn = `${alias}_id`;
-
-    const rawDataMap = new Map<string, ObjectLiteral>();
-    for (const rawRow of raw) {
-      const entityId = rawRow[idColumn];
-      if (entityId !== undefined && !rawDataMap.has(entityId)) {
-        rawDataMap.set(entityId, rawRow);
-      }
-    }
-
-    return entities.map(entity => {
-      const rawRow = rawDataMap.get(entity.id);
-      if (!rawRow) return entity;
-
-      const computedValues = computedColumns.reduce(
-        (acc, columnName) => {
-          const rawKeyWithoutPrefix = columnName;
-          const rawKeyWithPrefix = `${alias}_${columnName}`;
-
-          if (rawKeyWithoutPrefix in rawRow) {
-            acc[columnName] = rawRow[rawKeyWithoutPrefix];
-          } else if (rawKeyWithPrefix in rawRow) {
-            acc[columnName] = rawRow[rawKeyWithPrefix];
-          }
-          return acc;
-        },
-        {} as Record<string, unknown>,
-      );
-
-      return { ...entity, ...computedValues };
-    }) as Entity[];
   }
 }

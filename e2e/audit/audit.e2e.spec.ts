@@ -36,11 +36,11 @@ describe('Audit Logs (e2e)', () => {
 
       expect(response.status).toBe(201);
 
-      const user = await ctx.db.getUserByEmail(testEmail);
+      const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
 
       // Verify audit log via DB
-      const auditLog = await ctx.db.auditLogs.findOne({
+      const auditLog = ctx.db.auditLogs.findOne({
         where: {
           entityName: 'User',
           entityId: user?.id,
@@ -77,8 +77,8 @@ describe('Audit Logs (e2e)', () => {
       expect(apiAuditLog?.oldValue).toBeNull();
 
       // Clean up
-      await ctx.db.auditLogs.delete({ entityId: user?.id });
-      await ctx.db.users.delete({ id: user?.id });
+      ctx.db.auditLogs.delete({ entityId: user?.id });
+      ctx.db.users.delete({ id: user?.id });
     });
   });
 
@@ -93,7 +93,7 @@ describe('Audit Logs (e2e)', () => {
         password: testPassword,
       });
 
-      const user = await ctx.db.getUserByEmail(testEmail);
+      const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
 
       // Login as admin and suspend the user
@@ -105,7 +105,7 @@ describe('Audit Logs (e2e)', () => {
       expect(suspendResponse.status).toBe(201);
 
       // Verify audit log via DB
-      const auditLog = await ctx.db.auditLogs.findOne({
+      const auditLog = ctx.db.auditLogs.findOne({
         where: {
           entityName: 'User',
           entityId: user?.id,
@@ -120,7 +120,7 @@ describe('Audit Logs (e2e)', () => {
       expect(auditLog?.oldValue?.suspended).toBe(false);
       expect(auditLog?.newValue?.suspended).toBe(true);
       // Actor should be the admin user
-      const admin = await ctx.db.getUserByEmail(E2E_ADMIN.email);
+      const admin = ctx.db.getUserByEmail(E2E_ADMIN.email);
       expect(auditLog?.actorId).toBe(admin?.id);
 
       // Verify audit log via API controller with multiple filters
@@ -141,8 +141,8 @@ describe('Audit Logs (e2e)', () => {
       expect(apiAuditLog?.newValue?.suspended).toBe(true);
 
       // Clean up
-      await ctx.db.auditLogs.delete({ entityId: user?.id });
-      await ctx.db.users.delete({ id: user?.id });
+      ctx.db.auditLogs.delete({ entityId: user?.id });
+      ctx.db.users.delete({ id: user?.id });
     });
   });
 
@@ -261,7 +261,7 @@ describe('Audit Logs (e2e)', () => {
 
     test('should filter audit logs by actorId', async () => {
       await ctx.loginAsAdmin();
-      const admin = await ctx.db.getUserByEmail(E2E_ADMIN.email);
+      const admin = ctx.db.getUserByEmail(E2E_ADMIN.email);
 
       const response = await ctx.api.get<AuditLogResponse>(
         `/api/audit-logs?actorId=${admin?.id}`,
@@ -305,10 +305,10 @@ describe('Audit Logs (e2e)', () => {
       expect(response.status).toBe(403);
 
       // Clean up
-      const user = await ctx.db.getUserByEmail(testEmail);
+      const user = ctx.db.getUserByEmail(testEmail);
       if (user) {
-        await ctx.db.auditLogs.delete({ entityId: user.id });
-        await ctx.db.users.delete({ id: user.id });
+        ctx.db.auditLogs.delete({ entityId: user.id });
+        ctx.db.users.delete({ id: user.id });
       }
     });
   });

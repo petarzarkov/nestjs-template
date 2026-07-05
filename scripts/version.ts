@@ -18,7 +18,7 @@ const bumpVersion = (
     case 'patch':
       return `${major}.${minor}.${patch + 1}`;
     default:
-      throw new Error(`Invalid bump type: ${type}`);
+      throw new Error(`Invalid bump type: ${String(type)}`);
   }
 };
 
@@ -71,7 +71,7 @@ const determineBumpType = (): 'major' | 'minor' | 'patch' => {
   }
 };
 
-(async () => {
+void (async () => {
   if (isDryRun) {
     console.log('\n--- 🧪 DRY RUN MODE ENABLED 🧪 ---\n');
   }

@@ -1,20 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { AIProvider } from '../enum/ai-provider.enum';
 
-export class AIResponseDto {
-  @ApiProperty({
-    description: 'The model used to generate the response',
+export const aiResponseSchema = z
+  .object({
+    model: z.string().describe('The model used to generate the response'),
+    provider: z
+      .enum(AIProvider)
+      .describe('The provider used to generate the response'),
+    text: z.string().describe('The text of the response'),
   })
-  model!: string;
+  .meta({ id: 'AIResponse' });
 
-  @ApiProperty({
-    description: 'The provider used to generate the response',
-    enum: Object.values(AIProvider),
-  })
-  provider!: AIProvider;
-
-  @ApiProperty({
-    description: 'The text of the response',
-  })
-  text!: string;
-}
+export class AIResponseDto extends createZodDto(aiResponseSchema) {}

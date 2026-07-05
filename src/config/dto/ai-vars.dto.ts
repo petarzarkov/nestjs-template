@@ -1,27 +1,15 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
 import { AIProvider } from '@/ai/enum/ai-provider.enum';
 
-export class AIVars {
-  @IsString()
-  @IsOptional()
-  AI_GEMINI_API_KEY?: string;
+export const aiVarsSchema = z.object({
+  AI_GEMINI_API_KEY: z.string().optional(),
+  AI_GROQ_API_KEY: z.string().optional(),
+  AI_OPENROUTER_API_KEY: z.string().optional(),
+  AI_STREAM_TIMEOUT: z.coerce.number().default(10000),
+  AI_DEFAULT_TEMPERATURE: z.coerce.number().default(0.8),
+});
 
-  @IsString()
-  @IsOptional()
-  AI_GROQ_API_KEY?: string;
-
-  @IsString()
-  @IsOptional()
-  AI_OPENROUTER_API_KEY?: string;
-
-  @IsNumber()
-  @IsOptional()
-  AI_STREAM_TIMEOUT: number = 10000;
-
-  @IsNumber()
-  @IsOptional()
-  AI_DEFAULT_TEMPERATURE: number = 0.8;
-}
+export type AIVars = z.infer<typeof aiVarsSchema>;
 
 export const getAIConfig = (config: AIVars) => {
   return {

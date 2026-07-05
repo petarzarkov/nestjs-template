@@ -1,17 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
-import { IsEmailDecorator } from '@/core/decorators/email.decorator';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { emailSchema } from '@/core/zod/schemas';
 import { UserRole } from '@/users/enum/user-role.enum';
 
-export class CreateInviteDto {
-  @IsEmailDecorator()
-  email!: string;
-
-  @ApiProperty({
-    description: 'The role to assign to the invited user',
-    enum: Object.values(UserRole),
-    example: UserRole.USER,
+export const createInviteSchema = z
+  .object({
+    email: emailSchema,
+    role: z.enum(UserRole).describe('The role to assign to the invited user'),
   })
-  @IsEnum(UserRole)
-  role!: UserRole;
-}
+  .meta({ id: 'CreateInvite' });
+
+export class CreateInviteDto extends createZodDto(createInviteSchema) {}

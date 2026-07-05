@@ -29,7 +29,7 @@ export class InvitesController {
     type: Invite,
     isArray: true,
   })
-  list(@Query() query: ListInvitesQueryDto): Promise<Invite[]> {
+  list(@Query() query: ListInvitesQueryDto): Invite[] {
     return this.invitesService.findAll(query);
   }
 

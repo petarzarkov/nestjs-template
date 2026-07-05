@@ -7,7 +7,6 @@ import {
   Req,
   UnauthorizedException,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -18,7 +17,9 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 import type { Request, Response } from 'express';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { BaseResponseDto } from '@/auth/dto/base-response.dto';
@@ -29,9 +30,9 @@ import {
 } from '@/auth/dto/password-reset.dto';
 import { RegisterWithEmailDto } from '@/auth/dto/register-with-email.dto';
 import { RegisterWithInviteDto } from '@/auth/dto/register-with-invite.dto';
+import { registerSchema } from '@/auth/dto/register.dto';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { Public } from '@/core/decorators/public.decorator';
-import { UnionValidationPipe } from '@/core/pipes/union-validation.pipe';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UsersService } from '@/users/services/users.service';
 import { OAuthProvider } from './enum/oauth-provider.enum';
@@ -117,26 +118,17 @@ export class AuthController {
   @ApiBody({
     schema: {
       oneOf: [
-        { $ref: '#/components/schemas/RegisterWithEmailDto' },
-        { $ref: '#/components/schemas/RegisterWithInviteDto' },
+        { $ref: getSchemaPath(RegisterWithEmailDto) },
+        { $ref: getSchemaPath(RegisterWithInviteDto) },
       ],
     },
   })
   @ApiOkResponse({ type: AuthResponseDto })
-  @UsePipes(
-    new UnionValidationPipe({
-      discriminator: (body: object) => {
-        if ('invitationToken' in body) return RegisterWithInviteDto;
-        if ('email' in body) return RegisterWithEmailDto;
-        return RegisterWithEmailDto;
-      },
-      types: [RegisterWithEmailDto, RegisterWithInviteDto],
-    }),
-  )
   async register(
-    @Body() body: RegisterWithEmailDto | RegisterWithInviteDto,
+    @Body(new ZodValidationPipe(registerSchema))
+    body: RegisterWithEmailDto | RegisterWithInviteDto,
   ): Promise<AuthResponseDto> {
-    // Check if this is an invite registration
+    // Invite-based registration.
     if ('invitationToken' in body) {
       const invitedUser = await this.usersService.createUserFromInvite(
         body.invitationToken,

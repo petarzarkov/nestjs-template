@@ -9,7 +9,6 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Emitter } from '@socket.io/redis-emitter';
 import { ExtendedError, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { AIService } from '@/ai/services/ai.service';
@@ -18,7 +17,6 @@ import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
-import { RedisService } from '@/infra/redis/services/redis.service';
 import { EventMap, EventType } from '@/notifications/events/events';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { UsersService } from '@/users/services/users.service';
@@ -27,7 +25,6 @@ import {
   ChatMessage,
   ExtendedSocket,
   WebSocketBaseMessage,
-  WebSocketEmitEvents,
   WSServer,
 } from './events.dto';
 
@@ -48,11 +45,9 @@ type MiddlewareFn = (socket: Socket, next: NextFn) => Promise<void>;
 @UsePipes(new ValidationPipe({ transform: true }))
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: WSServer | null = null; // Null in Worker Process
+  server!: WSServer;
 
-  emitter: Emitter<WebSocketEmitEvents> | null = null; // Null in Main Process
-
-  io!: WSServer | Emitter<WebSocketEmitEvents>;
+  io!: WSServer;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -61,28 +56,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly usersService: UsersService,
     private readonly contextService: ContextService,
     private readonly aiService: AIService,
-    private readonly redisService: RedisService,
   ) {}
 
-  onModuleInit() {
-    // Check if we are in the worker process (where server is null)
-    if (!this.server) {
-      const redisClient = this.redisService.newConnection('emitter', {
-        db: 4,
-      });
-
-      this.emitter = new Emitter(redisClient);
-      this.io = this.emitter;
-    } else {
-      this.io = this.server;
-    }
-
-    if (!this.io) {
-      throw new Error('Gateway IO not initialized');
-    }
-  }
-
   afterInit(server: WSServer) {
+    // Single-node in-memory Socket.io — emit directly through the server.
+    this.io = server;
     server.use(this.#createContextMiddleware());
     server.use(this.#createAuthMiddleware());
   }
@@ -100,7 +78,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         uuidv4();
       socket.handshake.headers[REQUEST_ID_HEADER_KEY] = requestId;
 
-      this.contextService.runWithContext(
+      void this.contextService.runWithContext(
         {
           ...context,
           flow: 'ws',
@@ -149,7 +127,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           secret: this.configService.get('jwt.secret'),
         });
 
-        const user = await this.usersService.findById(payload.sub);
+        const user = this.usersService.findById(payload.sub);
         if (!user) {
           return next(
             this.#buildExtendedError(

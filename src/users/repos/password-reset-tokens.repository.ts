@@ -1,40 +1,55 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { and, eq, gt } from 'drizzle-orm';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
+import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
+import { passwordResetTokens } from '@/users/schema/password-reset-token.schema';
 
 @Injectable()
 export class PasswordResetTokensRepository {
   constructor(
-    @InjectRepository(PasswordResetToken)
-    private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
     protected readonly logger: ContextLogger,
   ) {}
 
-  createToken(userId: string, passwordResetToken: string) {
-    return this.passwordResetTokenRepository.insert({
-      user: { id: userId },
-      token: passwordResetToken,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-      used: false,
-    });
-  }
-
-  invalidateUserTokens(userId: string) {
-    return this.passwordResetTokenRepository.update(
-      { user: { id: userId }, used: false },
-      { used: true },
-    );
-  }
-
-  findValid(token: string): Promise<PasswordResetToken | null> {
-    return this.passwordResetTokenRepository.findOne({
-      where: {
-        token,
+  createToken(userId: string, passwordResetToken: string): void {
+    this.db
+      .insert(passwordResetTokens)
+      .values({
+        userId,
+        token: passwordResetToken,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
         used: false,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
+      })
+      .run();
+  }
+
+  invalidateUserTokens(userId: string): void {
+    this.db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(
+        and(
+          eq(passwordResetTokens.userId, userId),
+          eq(passwordResetTokens.used, false),
+        ),
+      )
+      .run();
+  }
+
+  findValid(token: string): PasswordResetToken | null {
+    return (
+      this.db
+        .select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, token),
+            eq(passwordResetTokens.used, false),
+            gt(passwordResetTokens.expiresAt, new Date()),
+          ),
+        )
+        .get() ?? null
+    );
   }
 }

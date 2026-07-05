@@ -1,123 +1,102 @@
-import type { Repository } from 'typeorm';
-import { DataSource } from 'typeorm';
-import { AuditLog } from '@/audit/entity/audit-log.entity';
-import { SnakeNamingStrategy } from '@/infra/db/strategies/snake-case.strategy';
-import { PasswordResetToken } from '@/users/entity/password-reset-token.entity';
-import { User } from '@/users/entity/user.entity';
-import { Invite } from '@/users/invites/entity/invite.entity';
+import type { Database } from 'bun:sqlite';
+import { and, eq, like, type SQL } from 'drizzle-orm';
+import type { AuditLog } from '@/audit/entity/audit-log.entity';
+import { AuditAction } from '@/audit/enum/audit-action.enum';
+import { auditLog } from '@/audit/schema/audit-log.schema';
+import { createDrizzleClient, type DrizzleDB } from '@/infra/db/client';
+import type { User } from '@/users/entity/user.entity';
+import { type NewUserRow, users } from '@/users/schema/user.schema';
 import { E2E } from '../constants';
 
-// Entity list for this template
-const ENTITIES = [User, Invite, PasswordResetToken, AuditLog];
-
 /**
- * E2E Database Client using TypeORM
- * Provides direct access to entities for test setup/verification
+ * E2E database client (Drizzle + bun:sqlite). Opens the same SQLite file the
+ * app-under-test uses (WAL allows concurrent access) for direct setup/checks.
  */
 export class DbClient {
-  private dataSource: DataSource | null = null;
+  private db: DrizzleDB | null = null;
+  private sqlite: Database | null = null;
 
   async initialize(): Promise<void> {
-    if (this.dataSource?.isInitialized) {
+    if (this.db) {
       return;
     }
-
-    this.dataSource = new DataSource({
-      type: 'postgres',
-      host: E2E.DB.HOST,
-      port: E2E.DB.PORT,
-      username: E2E.DB.USER,
-      password: E2E.DB.PASS,
-      database: E2E.DB.NAME,
-      ssl: false,
-      synchronize: false,
-      namingStrategy: new SnakeNamingStrategy(),
-      entities: ENTITIES,
-      logging: false,
-    });
-
-    await this.dataSource.initialize();
+    const { db, sqlite } = createDrizzleClient(E2E.DB.PATH);
+    this.db = db;
+    this.sqlite = sqlite;
   }
 
   async destroy(): Promise<void> {
-    if (this.dataSource?.isInitialized) {
-      await this.dataSource.destroy();
-      this.dataSource = null;
-    }
+    this.sqlite?.close();
+    this.db = null;
+    this.sqlite = null;
   }
 
-  private getDataSource(): DataSource {
-    if (!this.dataSource?.isInitialized) {
+  private get client(): DrizzleDB {
+    if (!this.db) {
       throw new Error('DbClient not initialized. Call initialize() first.');
     }
-    return this.dataSource;
+    return this.db;
   }
 
-  /**
-   * Get a repository for any entity
-   */
-  getRepository<T extends object>(entity: new () => T): Repository<T> {
-    return this.getDataSource().getRepository(entity);
+  readonly users = {
+    save: (values: NewUserRow): User =>
+      this.client.insert(users).values(values).returning().get(),
+    update: (id: string, partial: Partial<NewUserRow>): void => {
+      this.client.update(users).set(partial).where(eq(users.id, id)).run();
+    },
+    delete: (where: { id?: string }): void => {
+      if (where.id) {
+        this.client.delete(users).where(eq(users.id, where.id)).run();
+      }
+    },
+  };
+
+  readonly auditLogs = {
+    findOne: (opts: {
+      where: { entityName?: string; entityId?: string; action?: AuditAction };
+    }): AuditLog | null => {
+      const conditions: SQL[] = [];
+      if (opts.where.entityName) {
+        conditions.push(eq(auditLog.entityName, opts.where.entityName));
+      }
+      if (opts.where.entityId) {
+        conditions.push(eq(auditLog.entityId, opts.where.entityId));
+      }
+      if (opts.where.action) {
+        conditions.push(eq(auditLog.action, opts.where.action));
+      }
+      return (
+        this.client
+          .select()
+          .from(auditLog)
+          .where(conditions.length ? and(...conditions) : undefined)
+          .get() ?? null
+      );
+    },
+    delete: (where: { entityId?: string }): void => {
+      if (where.entityId) {
+        this.client
+          .delete(auditLog)
+          .where(eq(auditLog.entityId, where.entityId))
+          .run();
+      }
+    },
+  };
+
+  getUserByEmail(email: string): User | null {
+    return (
+      this.client.select().from(users).where(eq(users.email, email)).get() ??
+      null
+    );
   }
 
-  /**
-   * Execute raw SQL query
-   */
-  async query<T = unknown>(sql: string, parameters?: unknown[]): Promise<T[]> {
-    return this.getDataSource().query(sql, parameters);
-  }
-
-  // Convenience repository getters
-  get users(): Repository<User> {
-    return this.getRepository(User);
-  }
-
-  get invites(): Repository<Invite> {
-    return this.getRepository(Invite);
-  }
-
-  get passwordResetTokens(): Repository<PasswordResetToken> {
-    return this.getRepository(PasswordResetToken);
-  }
-
-  get auditLogs(): Repository<AuditLog> {
-    return this.getRepository(AuditLog);
-  }
-
-  /**
-   * Clean up test users by email pattern
-   * @param emailPattern - SQL LIKE pattern (e.g., '%@test.e2e%')
-   */
-  async cleanupTestUsers(emailPattern = '%@e2e-test.com'): Promise<number> {
-    // Delete related records first
-    await this.invites
-      .createQueryBuilder()
-      .delete()
-      .where('email LIKE :pattern', { pattern: emailPattern })
-      .execute();
-
-    await this.passwordResetTokens
-      .createQueryBuilder()
-      .delete()
-      .where('user_id IN (SELECT id FROM "user" WHERE email LIKE :pattern)', {
-        pattern: emailPattern,
-      })
-      .execute();
-
-    // Delete users
-    const result = await this.users
-      .createQueryBuilder()
-      .delete()
-      .where('email LIKE :pattern', { pattern: emailPattern })
-      .execute();
-
-    return result.affected ?? 0;
-  }
-
-  /**
-   * Get user by email
-   */
-  async getUserByEmail(email: string): Promise<User | null> {
-    return this.users.findOne({ where: { email } });
+  cleanupTestUsers(emailPattern = '%@e2e-test.com'): number {
+    const matched = this.client
+      .select({ id: users.id })
+      .from(users)
+      .where(like(users.email, emailPattern))
+      .all();
+    this.client.delete(users).where(like(users.email, emailPattern)).run();
+    return matched.length;
   }
 }
