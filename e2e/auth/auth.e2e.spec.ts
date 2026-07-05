@@ -108,7 +108,7 @@ describe('Auth (e2e)', () => {
       }
     });
 
-    test('should trigger BullMQ job queue and receive WebSocket notification', async () => {
+    test('should trigger the job queue and receive WebSocket notification', async () => {
       // Wait for throttle window to reset (short throttle: 10 req/1s)
       await Bun.sleep(1100);
 
@@ -117,7 +117,7 @@ describe('Auth (e2e)', () => {
       ctx.ws.connect(accessToken, E2E.API_URL);
       await ctx.ws.waitForConnected(10000);
 
-      // Register a new user - this should trigger Redis queues event
+      // Register a new user - this should enqueue a notification job
       const testEmail = `test-streams-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
@@ -131,8 +131,8 @@ describe('Auth (e2e)', () => {
 
       expect(response.status).toBe(201);
 
-      // Wait for the WebSocket notification from BullMQ
-      // Flow: Register → JobPublisherService → BullMQ Background ProcessQueue → Background Worker Spawns → WebSocket Server from main process gets a redis emit from the background worker
+      // Wait for the WebSocket notification driven by the job queue
+      // Flow: Register → JobPublisherService → bunqueue (SQLite, in-process) → NotificationHandler → EventsGateway emits over WebSocket
       const notification = await ctx.ws.waitForEvent<{
         event: string;
         payload: { email: string; name: string; type: string };

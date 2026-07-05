@@ -1,6 +1,6 @@
 # NestJS Template
 
-A production-ready NestJS modular monolith template running on **Bun**, with TypeScript, TypeORM, PostgreSQL, Redis, and modern tooling.
+A production-ready, **SQLite-first** NestJS modular monolith template running on **Bun** — Drizzle ORM, bunqueue (no Redis), Zod validation, and modern tooling. It boots with **zero external services**.
 
 ## Tech Stack
 
@@ -9,10 +9,11 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 | Runtime              | [Bun](https://bun.sh)                                                                                                   |
 | Framework            | [NestJS 11](https://nestjs.com)                                                                                         |
 | Language             | TypeScript (strict, ESNext) — [tsgo / TS 7 Native Preview](https://github.com/microsoft/typescript-go) for typechecking |
-| Database             | PostgreSQL 17 + [TypeORM](https://typeorm.io)                                                                           |
-| Cache & Queues       | Redis 8 + [BullMQ](https://bullmq.io)                                                                                   |
+| Database             | SQLite via [`bun:sqlite`](https://bun.sh/docs/api/sqlite) + [Drizzle ORM](https://orm.drizzle.team) (synchronous)       |
+| Job Queue            | [bunqueue](https://www.npmjs.com/package/bunqueue) — SQLite-backed, in-process (no Redis)                               |
+| Validation           | [Zod](https://zod.dev) + [nestjs-zod](https://github.com/BenLorantfy/nestjs-zod)                                        |
 | Auth                 | Passport.js (JWT, Google, GitHub, LinkedIn)                                                                             |
-| WebSockets           | Socket.io with Redis adapter                                                                                            |
+| WebSockets           | Socket.io (single-node)                                                                                                 |
 | Email                | [Resend](https://resend.com) + [React Email](https://react.email)                                                       |
 | AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                       |
 | File Storage         | AWS S3                                                                                                                  |
@@ -20,13 +21,14 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 | Logging              | [@arkv/nestjs-context-logger](https://www.npmjs.com/package/@arkv/nestjs-context-logger) (structured, async-context)    |
 | Admin CMS            | [@arkv/nestjs-cms](https://www.npmjs.com/package/@arkv/nestjs-cms) (OpenAPI-driven admin UI)                            |
 | Build                | Bun-native transpile (`scripts/build.ts`)                                                                               |
-| Linting & Formatting | [Oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs)                                                                      |
+| Linting & Formatting | [Oxlint](https://oxc.rs) (type-aware) + [oxfmt](https://oxc.rs)                                                         |
 | Testing              | Bun test runner                                                                                                         |
 
 ## Prerequisites
 
 - [Bun](https://bun.sh) >= 1.0.0
-- [Docker](https://www.docker.com/) (for PostgreSQL and Redis)
+
+That's it — the app is SQLite-first and needs no Postgres, Redis, or Docker to run locally.
 
 ## Quick Start
 
@@ -34,18 +36,20 @@ A production-ready NestJS modular monolith template running on **Bun**, with Typ
 # Install dependencies
 bun install
 
-# Start infrastructure (PostgreSQL + Redis)
-docker compose up -d
-
 # Configure environment
 cp .env.example .env
-# Edit .env with your configuration (see env-vars.md for details)
+# Edit .env as needed (see env-vars.md). Defaults work out of the box.
 
-# Run database migrations
-bun run mig:run
-
-# Start development server
+# Start development server (SQLite migrations auto-apply on boot)
 bun dev
+```
+
+Optionally seed an admin user:
+
+```bash
+bun run seed            # runs migration-style seeders (default admin)
+# or interactively:
+bun run create:admin
 ```
 
 ## Features
@@ -61,24 +65,26 @@ bun dev
 
 ### Database & ORM
 
-- TypeORM with PostgreSQL and automatic snake_case naming
-- Migration system with generate, run, and revert commands
-- PostgreSQL advisory locks for distributed coordination
-- Automatic audit logging via `@Auditable()` entity decorator
-- Explicit naming for all DB constraints (FKs, indexes, enums) — enforced via a custom Oxlint plugin (`oxlint-plugins/`)
+- **Drizzle ORM over `bun:sqlite`** — fully **synchronous** data access (no `await` on queries)
+- Automatic `casing: 'snake_case'` mapping (camelCase properties → snake_case columns)
+- **Boot-time migrator** — migrations auto-apply on startup, so a fresh SQLite file is always schema-current
+- Timestamps as integer epoch-ms, JSON columns via `text({ mode: 'json' })`, `$inferSelect`/`$inferInsert` row types
+- Explicit, readable index/constraint names in the schema files
+- Automatic **audit logging via SQLite triggers** (not application code) — old/new JSON snapshots written to `audit_log`
+- `postgres` reserved as a future async data layer (config surface present; the module throws if selected)
 
 ### Job Queue System
 
-- BullMQ queues backed by Redis for reliable async processing
+- **bunqueue** — each queue is an embedded, SQLite-persisted, in-process instance (no Redis, no BullMQ)
 - Declarative `@JobHandler()` decorator for job routing
 - Auto-discovery of handlers via NestJS `DiscoveryService`
-- Bull Board dashboard at `/api/queues`
-- Configurable retries with exponential backoff
+- Lightweight queue dashboard at `/api/queues` (+ `/api/queues/stats` JSON)
+- Configurable concurrency, retries with exponential backoff, per-job timeout, and rate limiting
 
 ### Real-time Communication
 
 - Socket.io WebSocket gateway with JWT authentication
-- Redis adapter for multi-instance broadcast support
+- Single-node, in-memory adapter (shares the HTTP server by default)
 - Room-based messaging: chat (all users), private (per user), admin-only
 - AI response streaming over WebSocket
 
@@ -112,9 +118,15 @@ bun dev
 - Structured JSON logging with `AsyncLocalStorage`-based context (`@arkv/nestjs-context-logger`)
 - `warn`/`error`/`fatal` go to stderr; everything else to stdout
 - Request ID propagation (`X-Request-Id` header)
-- Sensitive field masking in logs (password, jwt, token, secret)
-- Health check endpoints (DB, Redis, memory)
+- Sensitive field masking in logs (password, jwt, token, secret, key, phone)
+- Health check endpoints (DB, memory)
 - HTTP request/response logging with timing
+
+### Validation & Error Handling
+
+- **Zod** schemas via `createZodDto` (nestjs-zod), enforced by a global `ZodValidationPipe`
+- `GenericExceptionFilter` for consistent error responses
+- `DbExceptionFilter` maps `bun:sqlite` constraint errors (unique → 409, FK/not-null → 400)
 
 ### Cursor-based Pagination
 
@@ -123,18 +135,19 @@ bun dev
 - Bidirectional navigation (`forward` / `backward`)
 - `take+1` sentinel strategy (no COUNT queries)
 - Automatic sort key detection (`updatedAt` → `createdAt` → `id`)
-- PostgreSQL `date_trunc` precision alignment with JavaScript Date
+- Exact integer-millisecond timestamp comparison (no `date_trunc` needed)
 
-### Caching & Rate Limiting
+### Rate Limiting
 
-- Redis-backed HTTP cache with configurable TTL
-- Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s)
+- In-memory `@nestjs/throttler` (single-node, no Redis)
+- Three-tier throttling: short (10/1s), medium (50/10s), long (300/60s) — skipped for authenticated users
+- Environment-aware `@EnvThrottle()` decorator
 
 ### Developer Experience
 
-- Oxlint for linting (with a custom JS plugin for TypeORM constraint naming) and oxfmt for formatting
+- Type-aware Oxlint for linting and oxfmt for formatting
 - TypeScript 7 (`tsgo`, the native-preview compiler) for fast typechecking
-- Husky + lint-staged for pre-commit hooks
+- Husky + lint-staged for pre-commit hooks (run the same `lint`/`format` scripts)
 - Swagger + Scalar API documentation with optional basic auth
 - `bun dev` with hot reload via `bun --watch`
 
@@ -148,29 +161,30 @@ bun dev
 ```bash
 # Development
 bun dev                                   # Dev server with hot reload
-bun run build                             # Build for production
+bun run build                             # Build for production (Bun transpile)
 bun start                                 # Start production build
 
 # Testing
 bun test                                  # Run unit tests
 bun test --watch                          # Watch mode
 bun test --coverage                       # Coverage report
-bun run test:e2e                          # Run E2E tests
+bun run test:e2e                          # Run E2E tests (throwaway SQLite DB)
 bun run test:e2e:single ./e2e/path.ts     # Run single E2E test
 
 # Database
-bun run mig:gen MyMigration               # Generate migration
-bun run mig:run                           # Run migrations
-bun run mig:revert                        # Revert last migration
-bun run db:drop                           # Drop schema
+bun run mig:gen                           # Generate a Drizzle migration from schema changes
+bun run mig:run                           # Apply pending migrations
+bun run db:push                           # Push schema straight to the DB (dev only)
+bun run db:studio                         # Open Drizzle Studio
+bun run seed                              # Run migration-style seeders
 
 # Code Quality
-bun run lint                              # Lint and fix with Oxlint
+bun run lint                              # Type-aware lint + fix with Oxlint
 bun run format                            # Format with oxfmt
 bun run typecheck                         # Typecheck with tsgo (TypeScript 7)
 
 # Utilities
-bun run create:admin                      # Create admin user
+bun run create:admin                      # Create admin user interactively
 bun run email                             # Email template preview (port 3035)
 bun run email:export                      # Export email templates as HTML
 bun run gen:env:docs                      # Generate env vars documentation
@@ -183,20 +197,22 @@ src/
 ├── main.ts               # Application bootstrap
 ├── app.module.ts          # Root module
 ├── constants.ts           # Global constants
-├── config/                # Type-safe environment configuration
-├── core/                  # Shared utilities (decorators, filters, interceptors, pagination, pipes)
-├── infra/                 # Infrastructure (database, redis, queue, health)
+├── config/                # Type-safe environment configuration (Zod)
+├── core/                  # Shared utilities (decorators, filters, interceptors, pagination, zod)
+├── infra/                 # Infrastructure (db, queue, throttler, health)
 ├── auth/                  # Authentication (JWT, OAuth strategies, guards)
 ├── users/                 # User management + invites submodule
-├── audit/                 # Automatic entity audit logging
+├── audit/                 # Automatic change logging via SQLite triggers
 ├── file/                  # File upload + S3 storage
 ├── notifications/         # Email, WebSocket, Slack, queue handlers
 └── ai/                    # Multi-provider AI integration
 
-e2e/                       # End-to-end tests
+e2e/                       # End-to-end tests (throwaway SQLite DB)
 public/                    # Static files (demo chat UI - testing only)
-scripts/                   # CLI utilities (migration, admin creation, env docs)
+scripts/                   # CLI utilities (build, seed, admin creation, env docs)
 ```
+
+Each domain module keeps its Drizzle table in a `schema/` folder and its Swagger response shape in an `entity/` folder (`@ApiProperty` classes).
 
 ## API Endpoints
 
@@ -214,41 +230,29 @@ scripts/                   # CLI utilities (migration, admin creation, env docs)
 | `POST /api/files`                        | Upload file                         |
 | `GET /api/files`                         | List files (cursor paginated)       |
 | `GET /api/audit`                         | Query audit logs (cursor paginated) |
-| `GET /api/service/health`                | Health check (DB, Redis, memory)    |
+| `GET /api/service/health`                | Health check (DB, memory)           |
 | `GET /api/service/up`                    | Uptime check                        |
 | `GET /api/service/config`                | Service configuration               |
-| `GET /api/queues`                        | Bull Board queue dashboard          |
+| `GET /api/queues`                        | Queue dashboard (bunqueue stats)    |
 | `GET /cms`                               | Admin CMS UI (OpenAPI-driven)       |
-
-## Health Endpoints
-
-- `GET /api/service/health` — Full health check (DB, memory, Redis)
-- `GET /api/service/up` — Simple uptime check
-- `GET /api/service/config` — Service configuration and feature status
 
 ## Documentation
 
 - **API Docs**: Swagger UI at `/api/docs` + Scalar at `/api/public` (when running)
 - **Admin CMS**: OpenAPI-driven admin UI at `/cms`
-- **Environment Variables**: See [env-vars.md](./env-vars.md) for full configuration reference
+- **Environment Variables**: See [env-vars.md](./env-vars.md) for the full configuration reference
 
 ## Docker
 
-### Development (infrastructure only)
-
-```bash
-docker compose up -d                      # PostgreSQL + Redis
-```
-
-### Production (full stack)
+SQLite-first — the container runs standalone with no companion database/cache services.
 
 ```bash
 cp .env.example .env.full                 # Setup env
-docker compose -f docker-compose.full.yml --env-file .env.full up -d    # Start all
-docker compose -f docker-compose.full.yml --env-file .env.full down     # Stop all
+docker compose -f docker-compose.full.yml --env-file .env.full up -d    # Start
+docker compose -f docker-compose.full.yml --env-file .env.full down     # Stop
 ```
 
-To rebuild the backend only:
+The SQLite database and bunqueue storage persist in the `app-data` volume (`/app/data`). To rebuild the backend:
 
 ```bash
 docker compose -f docker-compose.full.yml --env-file .env.full build --no-cache app-backend-full

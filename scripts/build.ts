@@ -7,11 +7,11 @@ import { Glob } from 'bun';
  *
  * We transpile every source file to its own output file (1:1, structure
  * preserving) instead of bundling, because Bun's *bundler* (`Bun.build`)
- * miscompiles this app's decorators — in a full-app bundle some field-decorated
- * classes (class-validator DTOs) get emitted with the TC39 standard decorator
- * transform instead of legacy (`experimentalDecorators`), which crashes
- * class-validator at boot. The same files compile correctly file-by-file.
- * (Once DTOs move to Zod, this constraint is lifted and `Bun.build` can bundle.)
+ * miscompiles this app's decorators at scale — in a full-app bundle some
+ * decorated classes get emitted with the TC39 standard decorator transform
+ * instead of legacy (`experimentalDecorators` + `emitDecoratorMetadata`),
+ * which breaks NestJS DI metadata (and Swagger `@ApiProperty`) at boot. The
+ * same files compile correctly file-by-file.
  *
  * Drizzle migration SQL is copied verbatim below (not transpiled) so the
  * boot-time migrator can find it under `dist/infra/db/migrations`.
@@ -55,7 +55,8 @@ function resolveAlias(code: string, outFile: string): string {
 
 // Without a file path, `Bun.Transpiler` injects a stub for files that reference
 // `__dirname`/`__filename` (e.g. `var __dirname = "", __filename = "input.ts";`).
-// That breaks runtime path resolution (e.g. the BullMQ processor lookup). Strip
+// That breaks runtime path resolution (e.g. the Drizzle migrations folder lookup
+// in client.ts, which uses `import.meta.dir`). Strip
 // it so Bun's runtime provides the real values for each output file.
 function stripDirnameStub(code: string): string {
   return code.replace(

@@ -4,6 +4,25 @@ This document outlines the environment variables required for the project. These
 
 > **Note**: Make sure to create corresponding `.env` files in the same directories.
 
+### Database
+
+| Variable         | Description                                            | Default Value                                              | Source       |
+| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------- | ------------ | ------------ |
+| `DB_TYPE`        | sqlite                                                 | postgres (postgres reserved for a future async data layer) | `sqlite`     | .env.example |
+| `SQLITE_DB_PATH` | SQLite file (auto-created; migrations applied on boot) | `./data/app.db`                                            | .env.example |
+
+### Queue
+
+| Variable                    | Description                                  | Default Value  | Source       |
+| --------------------------- | -------------------------------------------- | -------------- | ------------ |
+| `QUEUE_DATA_PATH`           | bunqueue storage directory                   | `./data/queue` | .env.example |
+| `QUEUE_CONCURRENCY`         | Jobs processed concurrently (>=1)            | `5`            | .env.example |
+| `QUEUE_MAX_RETRIES`         | Retry attempts for failed jobs               | `3`            | .env.example |
+| `QUEUE_RETRY_DELAY_MS`      | Base retry delay in ms (exponential backoff) | `1000`         | .env.example |
+| `QUEUE_JOB_TIMEOUT_MS`      | Per-job execution timeout in ms              | `30000`        | .env.example |
+| `QUEUE_RATE_LIMIT_MAX`      | Max jobs per rate window                     | `100`          | .env.example |
+| `QUEUE_RATE_LIMIT_DURATION` | Rate window in ms                            | `1000`         | .env.example |
+
 ### Email
 
 | Variable        | Description                             | Default Value                    | Source       |
@@ -76,18 +95,9 @@ This document outlines the environment variables required for the project. These
 
 ### General
 
-| Variable                    | Description                                                                                     | Default Value                                              | Source       |
-| --------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------ | ------------ |
-| `NODE_ENV`                  | The current service environment (e.g., development, staging, production).                       | `development`                                              | .env.example |
-| `BASIC_AUTH_TOKEN`          | (Optional) A unique secret key for signing JWTs. Should be a long, random string in production. | `8ddba558-22f5-467c-9d98-6189fe54e9b4`                     | .env.example |
-| `DB_TYPE`                   | sqlite                                                                                          | postgres (postgres reserved for a future async data layer) | `sqlite`     | .env.example |
-| `SQLITE_DB_PATH`            | SQLite file (auto-created; migrations applied on boot)                                          | `./data/app.db`                                            | .env.example |
-| `QUEUE_DATA_PATH`           | bunqueue storage directory                                                                      | `./data/queue`                                             | .env.example |
-| `QUEUE_CONCURRENCY`         | Jobs processed concurrently (>=1)                                                               | `5`                                                        | .env.example |
-| `QUEUE_MAX_RETRIES`         | Retry attempts for failed jobs                                                                  | `3`                                                        | .env.example |
-| `QUEUE_RETRY_DELAY_MS`      | Base retry delay in ms (exponential backoff)                                                    | `1000`                                                     | .env.example |
-| `QUEUE_JOB_TIMEOUT_MS`      | Per-job execution timeout in ms                                                                 | `30000`                                                    | .env.example |
-| `QUEUE_RATE_LIMIT_MAX`      | Max jobs per rate window                                                                        | `100`                                                      | .env.example |
-| `QUEUE_RATE_LIMIT_DURATION` | Rate window in ms                                                                               | `1000`                                                     | .env.example |
-| `CORS_ORIGIN`               | wildcard for dev                                                                                | `'*'`                                                      | .env.example |
-| `TZ`                        | No description provided.                                                                        | `UTC`                                                      | .env.example |
+| Variable           | Description                                                                                     | Default Value                          | Source       |
+| ------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------- | ------------ |
+| `NODE_ENV`         | The current service environment (e.g., development, staging, production).                       | `development`                          | .env.example |
+| `BASIC_AUTH_TOKEN` | (Optional) A unique secret key for signing JWTs. Should be a long, random string in production. | `8ddba558-22f5-467c-9d98-6189fe54e9b4` | .env.example |
+| `CORS_ORIGIN`      | wildcard for dev                                                                                | `'*'`                                  | .env.example |
+| `TZ`               | No description provided.                                                                        | `UTC`                                  | .env.example |

@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.11-slim AS builder
+FROM oven/bun:1.3.14-slim AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN rm -rf node_modules && \
 # ============================================
 # Production stage
 # ============================================
-FROM oven/bun:1.3.11-slim AS production
+FROM oven/bun:1.3.14-slim AS production
 
 # curl is used by the container healthcheck
 RUN apt-get update && \

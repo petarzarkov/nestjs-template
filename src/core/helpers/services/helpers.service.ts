@@ -11,13 +11,26 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AxiosError, AxiosRequestConfig } from 'axios';
-import imageSize, { types as imageTypes } from 'image-size';
 import { firstValueFrom } from 'rxjs';
 import { SECOND } from '@/constants';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
 import { UrlHelper } from './url.helper';
+
+/**
+ * Image formats `Bun.Image` decodes on every platform via statically-linked
+ * codecs (HEIC/AVIF/TIFF are OS-specific and intentionally excluded so behavior
+ * is portable across Linux containers, macOS, and Windows).
+ */
+const SUPPORTED_IMAGE_EXTENSIONS = [
+  'jpg',
+  'jpeg',
+  'png',
+  'webp',
+  'gif',
+  'bmp',
+] as const;
 
 @Injectable()
 export class HelpersService extends UrlHelper {
@@ -304,12 +317,17 @@ export class HelpersService extends UrlHelper {
   }
 
   isSupportedImageType(extension: string): boolean {
-    return imageTypes.includes(
-      extension as unknown as (typeof imageTypes)[number],
+    return SUPPORTED_IMAGE_EXTENSIONS.includes(
+      extension.toLowerCase() as (typeof SUPPORTED_IMAGE_EXTENSIONS)[number],
     );
   }
 
-  calculateImageSize(
+  /**
+   * Reads image dimensions from a buffer using the built-in `Bun.Image` API
+   * (no native `image-size` dependency). Detection is content-based; returns
+   * `null` for unsupported extensions or undecodable/corrupt data.
+   */
+  async calculateImageSize(
     file: {
       id: string;
       buffer: Buffer;
@@ -317,26 +335,27 @@ export class HelpersService extends UrlHelper {
       mimetype: string;
     },
     logger: ContextLogger,
-  ) {
+  ): Promise<{ width: number; height: number } | null> {
     // Only process files with valid image extensions
     const isImageType = this.isSupportedImageType(file.extension);
 
     if (!isImageType) {
       logger?.log(`File ${file.id} is not a supported image type`, {
         extension: file.extension,
-        supportedExtensions: imageTypes,
+        supportedExtensions: SUPPORTED_IMAGE_EXTENSIONS,
         mimetype: file.mimetype,
       });
       return null;
     }
 
     try {
-      const dimensions = imageSize(file.buffer);
+      const { width, height } = await new Bun.Image(file.buffer).metadata();
       logger?.debug('Image size calculated', {
         id: file.id,
-        dimensions,
+        width,
+        height,
       });
-      return dimensions;
+      return { width, height };
     } catch (error) {
       // Skip files that can't be processed (corrupted images, etc.)
       logger?.warn(`Failed to calculate image size for file ${file.id}`, {

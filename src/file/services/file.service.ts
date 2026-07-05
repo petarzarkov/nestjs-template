@@ -49,7 +49,7 @@ export class FileService {
       const imageSize = this.helpersService.isSupportedImageType(
         s3File.extension,
       )
-        ? this.helpersService.calculateImageSize(
+        ? await this.helpersService.calculateImageSize(
             {
               id: s3File.fileId,
               buffer: file.buffer,
