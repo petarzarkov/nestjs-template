@@ -21,6 +21,10 @@ export const LOGGER = {
   defaultFilterEvents: [
     `/${GLOBAL_PREFIX}/service/up`,
     `/${GLOBAL_PREFIX}/service/health`,
+    // Queue dashboard: internal, auto-refreshes every 5s, and returns a large
+    // HTML body — not worth logging (matched by exact event path).
+    `/${GLOBAL_PREFIX}/queues`,
+    `/${GLOBAL_PREFIX}/queues/stats`,
     '/favicon.ico',
   ],
 } as const;

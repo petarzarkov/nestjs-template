@@ -379,7 +379,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 - **Features**: error serialization, sensitive field masking (`accessToken`, `jwt`, `password`, `secret`, `key`, `phone`), circular reference handling, array truncation
 - **Log levels**: VERBOSE → DEBUG → LOG → WARN → ERROR → FATAL
 - **Streams**: `warn`/`error`/`fatal` write to **stderr**; everything else to stdout
-- **Filtered endpoints**: `/api/service/up`, `/api/service/health`, `/favicon.ico`
+- **Filtered endpoints** (never logged; matched by exact `event` path via `filterEvents`): `/api/service/up`, `/api/service/health`, `/api/queues`, `/api/queues/stats`, `/favicon.ico`
 
 ---
 

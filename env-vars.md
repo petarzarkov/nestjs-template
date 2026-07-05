@@ -42,17 +42,17 @@ This document outlines the environment variables required for the project. These
 
 ### Application & API
 
-| Variable                | Description                                                                             | Default Value                                               | Source       |
-| ----------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------ |
-| `APP_ENV`               | The current application environment (e.g., dev, stage, prod).                           | `local`                                                     | .env.example |
-| `API_PORT`              | No description provided.                                                                | `3011`                                                      | .env.example |
-| `LOG_LEVEL`             | Sets the minimum log level (VERBOSE, DEBUG, LOG, WARN, ERROR, FATAL)                    | `'debug'`                                                   | .env.example |
-| `LOG_MASK_FIELDS`       | Comma-separated list of fields to mask in logs                                          | `'accessToken,jwt,password,secret,phone'`                   | .env.example |
-| `LOG_FILTER_EVENTS`     | Comma-separated list of events to fully exclude from logging e.g. '/api/service/health' | `'/api/service/health,/api/service/config,/api/service/up'` | .env.example |
-| `LOG_MAX_ARRAY_LENGTH`  | Maximum number of array items to include in logs before truncating                      | `1`                                                         | .env.example |
-| `AI_GEMINI_API_KEY`     | No description provided.                                                                | `your_gemini_api_key`                                       | .env.example |
-| `AI_GROQ_API_KEY`       | No description provided.                                                                | `your_groq_api_key`                                         | .env.example |
-| `AI_OPENROUTER_API_KEY` | No description provided.                                                                | `your_openrouter_api_key`                                   | .env.example |
+| Variable                | Description                                                                             | Default Value                                                                             | Source       |
+| ----------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------ |
+| `APP_ENV`               | The current application environment (e.g., dev, stage, prod).                           | `local`                                                                                   | .env.example |
+| `API_PORT`              | No description provided.                                                                | `3011`                                                                                    | .env.example |
+| `LOG_LEVEL`             | Sets the minimum log level (VERBOSE, DEBUG, LOG, WARN, ERROR, FATAL)                    | `'debug'`                                                                                 | .env.example |
+| `LOG_MASK_FIELDS`       | Comma-separated list of fields to mask in logs                                          | `'accessToken,jwt,password,secret,phone'`                                                 | .env.example |
+| `LOG_FILTER_EVENTS`     | Comma-separated list of events to fully exclude from logging e.g. '/api/service/health' | `'/api/service/health,/api/service/config,/api/service/up,/api/queues,/api/queues/stats'` | .env.example |
+| `LOG_MAX_ARRAY_LENGTH`  | Maximum number of array items to include in logs before truncating                      | `1`                                                                                       | .env.example |
+| `AI_GEMINI_API_KEY`     | No description provided.                                                                | `your_gemini_api_key`                                                                     | .env.example |
+| `AI_GROQ_API_KEY`       | No description provided.                                                                | `your_groq_api_key`                                                                       | .env.example |
+| `AI_OPENROUTER_API_KEY` | No description provided.                                                                | `your_openrouter_api_key`                                                                 | .env.example |
 
 ### Security & JWT
 

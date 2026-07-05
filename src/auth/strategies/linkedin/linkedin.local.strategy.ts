@@ -3,7 +3,7 @@ import OAuth2Strategy, {
   StrategyOptions,
   VerifyFunction,
 } from 'passport-oauth2';
-import { ParamsType } from '@/core/helpers/types/params.type';
+import type { ParamsType } from '@arkv/shared';
 
 export interface LinkedInOidcProfile {
   sub: string;

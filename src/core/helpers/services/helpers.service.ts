@@ -16,7 +16,7 @@ import { SECOND } from '@/constants';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { AuthenticatedApiRequestConfig } from '../types/api-request.type';
 import { RetryOptions } from '../types/retry-options.type';
-import { UrlHelper } from './url.helper';
+import { UrlHelper } from '@arkv/shared';
 
 /**
  * Image formats `Bun.Image` decodes on every platform via statically-linked
