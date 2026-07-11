@@ -194,7 +194,7 @@ Imported directly via `@/core/...`:
 - `@/core/utils` — password.util (Bun.password wrapper)
 - `@/core/validators` — File validators (size, name length)
 - `@/core/docs` — Swagger + Scalar API documentation setup
-- `@/core/helpers` — HelpersModule (global utilities)
+- `@/core/helpers` — HelpersModule (global utilities): `HelpersService` (retry/backoff, stopwatch, safe stringify) and `FetchService` (fetch-based HTTP client — per-request timeout, retry, context-scoped logging, NestJS error mapping; prefer it over plain `fetch`)
 
 ### Custom Decorators (`src/core/decorators/`)
 

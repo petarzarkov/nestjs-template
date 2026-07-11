@@ -4,6 +4,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { generateText, streamText } from 'vercel-ai';
 import { ValidatedConfig } from '@/config/env.validation';
 import { AppConfigService } from '@/config/services/app.config.service';
+import { FetchService } from '@/core/helpers/services/fetch.service';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { AIProvider } from '../enum/ai-provider.enum';
 
@@ -18,6 +19,7 @@ export class AIProviderService {
   constructor(
     private readonly configService: AppConfigService<ValidatedConfig>,
     private readonly logger: ContextLogger,
+    private readonly fetchService: FetchService,
   ) {
     this.config = this.configService.get('ai');
     this.providers = new Map();
@@ -150,40 +152,39 @@ export class AIProviderService {
     try {
       // Fetch models dynamically from provider APIs
       if (provider === AIProvider.GROQ || provider === AIProvider.OPENROUTER) {
-        const response = await fetch(`${providerConfig.url}/models`, {
-          headers: {
-            Authorization: `Bearer ${providerConfig.apiKey}`,
-            'Content-Type': 'application/json',
-          },
+        const data = await this.fetchService.get<{
+          data?: { id: string }[];
+        }>(`${providerConfig.url}/models`, {
+          headers: { Authorization: `Bearer ${providerConfig.apiKey}` },
+          flow: `ai:${provider}`,
         });
-        const data = await response.json();
-        return data.data?.map((model: { id: string }) => model.id) || [];
+        return data.data?.map(model => model.id) || [];
       }
 
       if (provider === AIProvider.GOOGLE) {
-        const response = await fetch(
-          `${providerConfig.url}?key=${providerConfig.apiKey}`,
-        );
-
-        const data = await response.json();
+        // Auth via header (not `?key=`) so the key never lands in a logged URL.
+        const data = await this.fetchService.get<{
+          models?: {
+            name: string;
+            supportedGenerationMethods?: string[];
+          }[];
+        }>(providerConfig.url, {
+          headers: { 'x-goog-api-key': providerConfig.apiKey },
+          flow: `ai:${provider}`,
+        });
         return (
           data.models
-            ?.filter((model: { supportedGenerationMethods: string[] }) =>
+            ?.filter(model =>
               model.supportedGenerationMethods?.includes('generateContent'),
             )
-            .map((model: { name: string }) =>
-              model.name.replace('models/', ''),
-            ) || []
+            .map(model => model.name.replace('models/', '')) || []
         );
       }
 
       return [];
-    } catch (error) {
-      this.logger.error(`Failed to fetch models from ${provider}`, {
-        error: error instanceof Error ? error.message : error,
-        provider,
-      });
-
+    } catch {
+      // FetchService already logged (and retried) the failure; degrade
+      // gracefully to the static model list.
       return this.getStaticModels(provider);
     }
   }
