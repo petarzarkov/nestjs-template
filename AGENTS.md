@@ -18,7 +18,7 @@ This is a **NestJS modular monolith template** running on **Bun** as the runtime
 - **Package Manager:** Bun (`bun install`, `bun add`)
 - **Test Runner:** Bun test (`bun test`)
 - **TypeScript:** Native Bun execution (no ts-node/tsx), target ESNext, module ESNext, moduleResolution bundler
-- **Password Hashing:** `Bun.password` API (not bcrypt) — see `src/core/utils/password.util.ts`
+- **Password Hashing:** handled internally by **Better Auth** (default **scrypt**) — the credential hash lives in the `account` table; the app never hashes passwords itself
 - **Typecheck:** `tsc --noEmit` via `bun run typecheck` — `typescript@7` is the native (Go) compiler (`tsc` execs the native binary, same engine the `@typescript/native-preview`/`tsgo` package previewed). Typechecks the whole project via the single `tsconfig.json` (app + e2e + scripts + specs)
 - **Linting & Formatting:** Oxlint (`bun run lint` → `oxlint --type-aware --fix src e2e scripts`) + oxfmt (`bun run format`) — single quotes, trailing commas, 80-char lines. Linting is **type-aware** (powered by `oxlint-tsgolint`); there is no custom JS lint plugin.
 - **Build:** `bun run build` (`scripts/build.ts`) — a Bun-native, structure-preserving transpile (`Bun.Transpiler`), one output file per source file in `dist/`. It resolves the `@/*` alias to relative paths itself (no `tsc-alias`) and does NOT bundle (Bun's bundler miscompiles legacy decorators at scale). It also copies the Drizzle migration `.sql`/`.json` files into `dist/` so the boot-time migrator can find them. `bun run start` runs `dist/main.js`.
@@ -45,6 +45,7 @@ src/
 ├── main.ts                    # Bootstrap: express app, global filters/interceptors, CORS, WS adapter
 ├── app.module.ts              # Root module — imports all feature & infra modules; global APP_PIPE / APP_INTERCEPTOR
 ├── constants.ts               # Global constants (GLOBAL_PREFIX, LOGGER, FILES, PAGINATION, STRING_LENGTH, time units)
+├── types/                     # Ambient TS types (express.d.ts — req.user globally typed as SanitizedUser)
 ├── config/                    # Environment configuration module (Zod-validated)
 │   ├── app.config.module.ts   # Dynamic config module (.forRoot)
 │   ├── services/app.config.service.ts  # Typed config access
@@ -55,7 +56,7 @@ src/
 │   ├── dto/                   # Grouped Zod config schemas (service, db, redis, oauth, ai, aws, ws)
 │   └── enum/                  # AppEnv (local|dev|stage|prod), DbType (sqlite|postgres)
 ├── core/                      # Global utilities (NOT a NestJS module)
-│   ├── decorators/            # @Public, @Roles/@RequireAllRoles, @CurrentUser, @ApiJwtAuth,
+│   ├── decorators/            # @Public, @Roles, @CurrentUser, @ApiJwtAuth,
 │   │                          # @ValidatedFiles, @UUIDParam, @EnvThrottle
 │   ├── filters/               # GenericExceptionFilter, DbExceptionFilter
 │   ├── interceptors/          # HttpLoggingInterceptor, AuditContextInterceptor
@@ -64,7 +65,7 @@ src/
 │   ├── zod/                   # Shared Zod schemas (emailSchema, passwordSchema)
 │   ├── validators/            # File size/name validators
 │   ├── helpers/               # HelpersModule (global helper services)
-│   ├── utils/                 # password.util (Bun.password wrapper)
+│   ├── utils/                 # uuid.util
 │   └── docs/                  # Swagger + Scalar API docs setup
 ├── infra/                     # Infrastructure layer
 │   ├── db/                    # DatabaseModule (.forRoot), Drizzle client, schema barrel, columns, triggers, seeders
@@ -85,32 +86,26 @@ src/
 │       ├── job.processor.ts   # Sandboxed processor (default export) for BACKGROUND_JOBS — runs in a child process
 │       ├── queue-dashboard.module.ts  # Bull Board UI at /api/queues (@bull-board/nestjs)
 │       └── types/             # QueueJob type definitions
-├── auth/                      # AuthModule (.forRoot) — JWT + OAuth
-│   ├── auth.controller.ts     # /auth routes: login, register, password reset, OAuth callbacks
-│   ├── services/              # AuthService — auth business logic, token creation
-│   ├── strategies/            # Passport: JwtStrategy, LocalStrategy, GoogleStrategy, GithubStrategy, LinkedInStrategy
-│   ├── guards/                # JwtAuthGuard (global), RolesGuard (global)
-│   ├── entity/                # AuthProvider Swagger DTO
-│   ├── schema/                # auth_providers Drizzle table
-│   ├── repos/                 # AuthProvidersRepository (Drizzle)
-│   ├── enum/                  # OAuthProvider: google | github | linkedin | local
-│   └── dto/                   # Login, Register (union), Password reset, response DTOs
+├── auth/                      # Better Auth (via @thallesp/nestjs-better-auth) — stateful sessions + OAuth
+│   ├── auth.config.ts         # buildAuth(deps) → betterAuth({...}); buildStandaloneAuth(db) for CLI/e2e; export type Auth
+│   ├── schema/                # session, account, verification Drizzle tables (Better Auth core)
+│   └── enum/                  # OAuthProvider: google | github | linkedin | local
 ├── users/                     # UsersModule
-│   ├── users.controller.ts    # /users routes
+│   ├── users.controller.ts    # /users routes (list, me, ban, unban, update)
 │   ├── services/              # UsersService — user CRUD
-│   ├── entity/                # User, PasswordResetToken Swagger DTOs (+ sanitizeUser helper)
-│   ├── schema/                # user, password_reset_token Drizzle tables
+│   ├── entity/                # User Swagger DTO (+ SanitizedUser type & sanitizeUser helper)
+│   ├── schema/                # user Drizzle table (Better Auth core + admin-plugin fields)
 │   ├── enum/                  # UserRole: admin | user
-│   ├── repos/                 # UsersRepository, PasswordResetTokensRepository (Drizzle)
+│   ├── repos/                 # UsersRepository (Drizzle)
 │   ├── dto/                   # User DTOs
 │   └── invites/               # Nested InvitesModule submodule
-│       ├── invites.controller.ts
+│       ├── invites.controller.ts  # /invites routes (+ public POST /accept)
 │       ├── services/          # InvitesService
 │       ├── entity/            # Invite Swagger DTO
 │       ├── schema/            # invite Drizzle table
 │       ├── enum/              # InviteStatus: pending | accepted | expired
 │       ├── repos/             # InvitesRepository (Drizzle)
-│       └── dto/               # CreateInviteDto, ListInvitesDto
+│       └── dto/               # CreateInviteDto, ListInvitesDto, AcceptInviteDto
 ├── audit/                     # AuditModule — automatic change logging via SQLite triggers
 │   ├── audit.controller.ts    # /audit routes
 │   ├── services/              # AuditService — audit log queries
@@ -179,10 +174,11 @@ e2e/                           # E2E tests (*.e2e.ts, run against a throwaway SQ
 | `handlers/`   | Job handlers (decorated with `@JobHandler`)                    |
 | `repos/`      | Drizzle repositories (synchronous data access)                 |
 | `guards/`     | Module-specific guards                                         |
-| `strategies/` | Passport strategies (auth module)                              |
 | `validators/` | Module-specific validators                                     |
 
-> **`schema/` vs `entity/`**: `schema/*.schema.ts` holds the Drizzle table (persistence + inferred `Row`/`NewRow` types). `entity/*.entity.ts` holds the `@ApiProperty` DTO class that documents the JSON the API returns. They are intentionally separate — the SQLite row and the API response are not the same type (e.g. `password` is never serialized; `SanitizedUser = OmitType(User, ['password'])`).
+> The `strategies/` folder (Passport strategies) was removed with the Better Auth migration — auth is no longer strategy-based.
+
+> **`schema/` vs `entity/`**: `schema/*.schema.ts` holds the Drizzle table (persistence + inferred `Row`/`NewRow` types). `entity/*.entity.ts` holds the `@ApiProperty` DTO class that documents the JSON the API returns. They are intentionally separate — the SQLite row and the API response need not be the same type. (For `user` they happen to coincide: there are no secret columns — the credential lives in the `account` table — so `SanitizedUser` is structurally identical to `User` and `sanitizeUser()` is a pass-through.)
 
 ### Core Utilities (`src/core/`) — NOT a NestJS module
 
@@ -194,24 +190,24 @@ Imported directly via `@/core/...`:
 - `@/core/middlewares` — RequestMiddleware (Express-level), HtmlBasicAuthMiddleware
 - `@/core/pagination` — Cursor-based PaginationFactory service, DTOs, cursor utilities
 - `@/core/zod` — Shared Zod schemas (`emailSchema`, `passwordSchema`)
-- `@/core/utils` — password.util (Bun.password wrapper)
+- `@/core/utils` — uuid.util (UUID helpers)
 - `@/core/validators` — File validators (size, name length)
 - `@/core/docs` — Swagger + Scalar API documentation setup
 - `@/core/helpers` — HelpersModule (global utilities): `HelpersService` (retry/backoff, stopwatch, safe stringify) and `FetchService` (fetch-based HTTP client — per-request timeout, retry, context-scoped logging, NestJS error mapping; prefer it over plain `fetch`)
 
 ### Custom Decorators (`src/core/decorators/`)
 
-| Decorator                             | Purpose                                    |
-| ------------------------------------- | ------------------------------------------ |
-| `@Public()`                           | Bypass JWT & Roles guards                  |
-| `@Roles(role)` / `@RequireAllRoles()` | Role-based access control                  |
-| `@CurrentUser()`                      | Extract authenticated user from request    |
-| `@ApiJwtAuth()`                       | Swagger JWT security annotation            |
-| `@ValidatedFiles(opts)`               | File upload validation (size, name, count) |
-| `@UUIDParam(name)`                    | Parse + validate UUID route parameter      |
-| `@EnvThrottle(opts)`                  | Environment-aware rate limiting            |
+| Decorator               | Purpose                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| `@Public()`             | Bypass auth (re-exports Better Auth's `AllowAnonymous`)      |
+| `@Roles(...roles)`      | Role-based access control (wraps the admin plugin's `Roles`) |
+| `@CurrentUser()`        | Extract the Better Auth session user (`SanitizedUser`)       |
+| `@ApiJwtAuth()`         | Swagger bearer-auth security annotation                      |
+| `@ValidatedFiles(opts)` | File upload validation (size, name, count)                   |
+| `@UUIDParam(name)`      | Parse + validate UUID route parameter                        |
+| `@EnvThrottle(opts)`    | Environment-aware rate limiting                              |
 
-> The old class-validator decorators (`@Password`, `@Email`, `@IsNullable`, `@IsUniqueEnum`) plus `@Auditable` were removed — field validation now lives in Zod schemas (`@/core/zod`) and audit is DB-trigger driven. `@NoCache()` (skip the Redis `HttpCacheInterceptor`) still exists in `@/core/decorators`.
+> The old class-validator decorators (`@Password`, `@Email`, `@IsNullable`, `@IsUniqueEnum`) plus `@Auditable` were removed — field validation now lives in Zod schemas (`@/core/zod`) and audit is DB-trigger driven. `@RequireAllRoles()` and `ROLES_KEY` were also removed with the Better Auth migration; `@Public()` now re-exports the package's `AllowAnonymous` and `@Roles()` wraps its array-based `Roles`. `@NoCache()` (skip the Redis `HttpCacheInterceptor`) still exists in `@/core/decorators`.
 
 ---
 
@@ -226,19 +222,21 @@ The application bootstrap registers these globally:
 5. `AuditContextInterceptor` — writes the current actor id into `_audit_ctx` for the DB audit triggers (`APP_INTERCEPTOR`)
 6. `GenericExceptionFilter` + `DbExceptionFilter` — consistent error responses (the DB filter maps `bun:sqlite` constraint errors → 409/400)
 7. `SocketConfigAdapter` — Socket.io adapter backed by the **Redis adapter** (`@socket.io/redis-adapter`) for multi-node broadcast
-8. CORS enabled, trust proxy, global prefix `api`
-9. API docs served at `/api/docs` (Swagger) and `/api/public` (Scalar); `setupDocs` returns the OpenAPI document
-10. `/api/queues` (queue dashboard) is protected by `HtmlBasicAuthMiddleware` (basic auth in deployed envs)
-11. `NestJsCmsModule.setup(app, document, …)` — mounts the admin CMS UI at `/cms` (after docs, before `listen`)
+8. **Better Auth** — the app is created with `bodyParser: false` (Better Auth reads the raw body); `AuthModule` (`@thallesp/nestjs-better-auth`, wired in `app.module.ts` via `forRootAsync`) re-enables body parsing for non-auth routes, registers the global `AuthGuard`, and mounts the auth handler at the raw `basePath` `/api/auth/*`
+9. CORS enabled, trust proxy, global prefix `api` (Better Auth's `/api/auth/*` handler is auto-excluded from the prefix — no double prefix)
+10. API docs served at `/api/docs` (Swagger) and `/api/public` (Scalar); `setupDocs` returns the OpenAPI document. The Better Auth routes (served by middleware, not NestJS controllers) are merged into that document via the Better Auth `openAPI()` plugin (`auth.api.generateOpenAPISchema()`), so `/api/auth/*` appears in Swagger under an **Auth** tag
+11. `/api/queues` (queue dashboard) is protected by `HtmlBasicAuthMiddleware` (basic auth in deployed envs)
+12. `NestJsCmsModule.setup(app, document, …)` — mounts the admin CMS UI at `/cms` (after docs, before `listen`)
 
 ---
 
 ## **Config Module**
 
 - **Environment validation** in `env.validation.ts` using **Zod** — `envSchema.safeParse(config)`; failures throw `ConfigValidationError` with a readable path/message list. `class-validator`/`class-transformer` are **not** used.
-- **Typed config** via `AppConfigService<ValidatedConfig>` (extends `ConfigService<…, true>`) — access with `.get('db')`, `.getOrThrow('jwt')`, etc.
+- **Typed config** via `AppConfigService<ValidatedConfig>` (extends `ConfigService<…, true>`) — access with `.get('db')`, `.getOrThrow('auth')`, etc.
 - **Config DTOs** in `config/dto/` (each exports a Zod schema + a `getXConfig()` mapper): `service-vars`, `db-vars`, `redis-vars`, `oauth-vars`, `ai-vars`, `aws-vars`, `ws-vars`
-- **Config groups** (top-level keys of `ValidatedConfig`): `isProd`, `app`, `log`, `http`, `service`, `slack`, `jwt`, `ws`, `cors`, `email`, `db`, `redis`, `oauth`, `ai`, `aws`
+- **Config groups** (top-level keys of `ValidatedConfig`): `isProd`, `app`, `log`, `http`, `service`, `slack`, `auth`, `ws`, `cors`, `email`, `db`, `redis`, `oauth`, `ai`, `aws`
+- **Auth env vars**: `BETTER_AUTH_SECRET` (required) + `AUTH_SESSION_EXPIRATION` (seconds, default 604800) feed the `auth` config group (`{ secret, sessionExpiresIn }`). The former `JWT_SECRET`/`JWT_EXPIRATION` are gone, as is the `oauth` group's `callbackUrl` (Better Auth derives OAuth callback URLs from its `basePath`).
 - **Environments**: `local`, `dev`, `stage`, `prod` (`AppEnv` enum); **DB types**: `sqlite`, `postgres` (`DbType` enum — only `sqlite` is implemented; the Postgres env surface is validated but the module throws if selected)
 
 ---
@@ -267,18 +265,21 @@ Give indexes and unique constraints **explicit names** in the schema files (neve
 
 Declared inline in `sqliteTable(...)`, e.g. `uniqueIndex('UQ_user_email').on(t.email)`. (The old TypeORM constraint-naming Oxlint plugin was removed — Drizzle owns constraint generation now.)
 
-### Tables / Entities (6)
+### Tables / Entities (7)
 
-| Table (entity DTO)                | Module        | Key Fields                                                                                   |
-| --------------------------------- | ------------- | -------------------------------------------------------------------------------------------- |
-| `user` (`User`)                   | users         | id, email, password, displayName, picture, roles (`UserRole[]` JSON), suspended              |
-| `password_reset_token`            | users         | id, userId, token, used, expiresAt                                                           |
-| `auth_providers` (`AuthProvider`) | auth          | id, userId, provider, authProviderId, passwordHash                                           |
-| `invite` (`Invite`)               | users/invites | id, email, inviteCode, role, status, expiresAt                                               |
-| `audit_log` (`AuditLog`)          | audit         | id, actorId, action, entityName, entityId, oldValue (JSON), newValue (JSON) — no `updatedAt` |
-| `files` (`FileEntity`)            | file          | id, name, extension, mimetype, size, width, height, path, userId                             |
+| Table (entity DTO)       | Module        | Key Fields                                                                                                            |
+| ------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `user` (`User`)          | users         | id, email, emailVerified, name, image, role (`UserRole`), banned, banReason, banExpires                               |
+| `session`                | auth          | id, token, userId → user (cascade), expiresAt, ipAddress, userAgent, impersonatedBy                                   |
+| `account`                | auth          | id, accountId, providerId, userId → user (cascade), accessToken, refreshToken, idToken, scope, password (scrypt hash) |
+| `verification`           | auth          | id, identifier, value, expiresAt                                                                                      |
+| `invite` (`Invite`)      | users/invites | id, email, inviteCode, role, status, expiresAt                                                                        |
+| `audit_log` (`AuditLog`) | audit         | id, actorId, action, entityName, entityId, oldValue (JSON), newValue (JSON) — no `updatedAt`                          |
+| `files` (`FileEntity`)   | file          | id, name, extension, mimetype, size, width, height, path, userId                                                      |
 
-Enums: `UserRole` (admin|user), `OAuthProvider` (google|github|linkedin|local), `InviteStatus` (pending|accepted|expired), `AuditAction` (INSERT|UPDATE|DELETE).
+`session`, `account`, `verification` are Better Auth's core tables (they replace the old `auth_providers` and `password_reset_token`); sessions themselves live in Redis (`secondaryStorage`), so those tables are the schema surface the Drizzle adapter targets.
+
+Enums: `UserRole` (admin|user — now a single `role` text column, was a `roles` `UserRole[]` JSON array), `OAuthProvider` (google|github|linkedin|local), `InviteStatus` (pending|accepted|expired), `AuditAction` (INSERT|UPDATE|DELETE).
 
 ### Database & Seeder Commands
 
@@ -290,34 +291,60 @@ bun run db:studio             # Open Drizzle Studio
 bun run seed                  # Run migration-style seeders (scripts/seed.ts; tracked in a __seeders table)
 ```
 
-> Migrations also run automatically on app boot via the client's `migrate()` call, so a fresh SQLite file is always schema-current. The default seeder (`0000_admin.seeder.ts`) creates an admin from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (defaults `admin@local.dev` / `Admin123$`).
+> Migrations also run automatically on app boot via the client's `migrate()` call, so a fresh SQLite file is always schema-current. The default seeder (`0000_admin.seeder.ts`) creates an admin from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (defaults `admin@local.dev` / `Admin123$`) via `buildStandaloneAuth` (Better Auth's scrypt hashing → `account` row).
 
 ---
 
 ## **Authentication & Authorization**
 
-### Passport Strategies
+Auth is **Better Auth** (`better-auth`) wired into NestJS via the community package **`@thallesp/nestjs-better-auth`**. Sessions are **stateful** — stored in **Redis** via Better Auth's `secondaryStorage` and cached in a signed cookie — replacing the old stateless Passport + `@nestjs/jwt` setup.
 
-- **LocalStrategy** — email/password login
-- **JwtStrategy** — JWT token validation (global guard)
-- **GoogleStrategy** — Google OAuth2
-- **GithubStrategy** — GitHub OAuth2
-- **LinkedInStrategy** — LinkedIn OAuth2
+### Better Auth instance (`src/auth/auth.config.ts`)
 
-### Guards (globally registered)
+`buildAuth(deps)` returns `betterAuth({...})` with:
 
-- **JwtAuthGuard** — validates JWT on all routes (skip with `@Public()`)
-- **RolesGuard** — RBAC, use `@Roles(UserRole.ADMIN)` to restrict; `@RequireAllRoles()` to require all listed roles
+- `drizzleAdapter(db, { provider: 'sqlite', schema: { user, session, account, verification } })`
+- `basePath: '/api/auth'` and `advanced.database.generateId: () => crypto.randomUUID()` (UUID ids so existing FKs hold)
+- `emailAndPassword` (min 8 / max 64; `sendResetPassword` publishes the `user.password_reset` job)
+- `socialProviders` (google/github/linkedin from the `oauth` config group)
+- `session` (`expiresIn` + `cookieCache { enabled, maxAge: 300 }`) and a Redis-backed `secondaryStorage`
+- `databaseHooks.user.create.after` — publishes the `user.registered` job (welcome email + WS notification)
+- `plugins: [admin(), bearer()]`
 
-### Auth Endpoints (`/api/auth/`)
+It also exports `buildStandaloneAuth(db)` — a lightweight instance (no Redis, no queue hooks) used by CLI scripts (seeder, `create:admin`) and e2e setup — and `export type Auth = ReturnType<typeof buildAuth>`. **Password hashing** is Better Auth's default **scrypt**, done internally; the credential hash is stored in the `account` table.
 
-- `POST /login` — local email/password
-- `POST /register` — new user or invite-based registration (Swagger shows a `oneOf` of the email/invite payloads; validated on-route via `new ZodValidationPipe(registerSchema)`)
-- `POST /forgotten-password` — request password reset
-- `POST /password-reset` — reset with token
-- `GET /google`, `/google/callback` — Google OAuth
-- `GET /github`, `/github/callback` — GitHub OAuth
-- `GET /linkedin`, `/linkedin/callback` — LinkedIn OAuth
+### Plugins
+
+- **`admin()`** — roles + ban: the `role` string plus `banned` / `banReason` / `banExpires`, and admin user-management endpoints.
+- **`bearer()`** — lets WS / CMS / e2e / mobile clients authenticate with `Authorization: Bearer <sessionToken>`; sign-in / sign-up return the session token in the JSON body as `token`. Browsers can use cookie sessions instead.
+
+### NestJS wiring
+
+- `app.module.ts` uses `AuthModule.forRootAsync({ inject, useFactory })`, imported **before** `RedisCacheThrottlerModule` so the global Better Auth `AuthGuard` runs before the `ThrottlerGuard` (whose skip-for-authenticated check reads `req.user`).
+- `main.ts` creates the app with `bodyParser: false` (Better Auth needs the raw body); the `AuthModule` re-enables body parsing for non-auth routes and mounts the handler at the raw `basePath` `/api/auth/*` (auto-excluded from the global `api` prefix). It sets `request.user` / `request.session`; `req.user` is globally typed as `SanitizedUser` via `src/types/express.d.ts`.
+
+### Guards & decorators
+
+- **`AuthGuard`** (from the package) is the global guard — skip a route with **`@Public()`** (re-exports the package's `AllowAnonymous`).
+- **`@Roles(...roles)`** — RBAC via the admin plugin (wraps the package's array-based `Roles`). `@RequireAllRoles()` and `ROLES_KEY` were removed.
+- **`@CurrentUser()`** — returns `request.user`, the Better Auth session user (typed `SanitizedUser`).
+
+### WebSocket auth
+
+`EventsGateway` authenticates by calling `authService.api.getSession({ headers: fromNodeHeaders({ authorization: 'Bearer <token>' }) })` (no JWT verification). The Better Auth `AuthService` is `@Optional()` in the gateway (and in `InvitesService`) because those classes also load in the sandboxed job-worker process, whose module context has no `AuthModule`.
+
+### Endpoints (Better Auth native, under `/api/auth/`)
+
+Routes are provided by Better Auth (non-exhaustive):
+
+- `POST /api/auth/sign-up/email` — register with email + password (scrypt hash stored in `account`); still fully supported
+- `POST /api/auth/sign-in/email` — login → returns `{ token, user }`
+- `POST /api/auth/sign-out`
+- `POST /api/auth/forget-password` + `POST /api/auth/reset-password`
+- `GET /api/auth/sign-in/social/:provider` + `GET /api/auth/callback/:provider` — OAuth (google/github/linkedin). **Callback URLs are now `/api/auth/callback/<provider>` — update the provider dashboards.**
+- admin-plugin endpoints (user management, ban/unban, etc.)
+
+`UsersController` exposes `POST /api/users/:userId/ban` and `POST /api/users/:userId/unban` (were `suspend` / `reinstate`). Invite acceptance is a new **public** endpoint `POST /api/invites/accept` (`{ inviteCode, password }`) handled by `InvitesService.acceptInvite` (validate code → `auth.api.signUpEmail` → set role → mark the invite accepted).
 
 ---
 
@@ -374,7 +401,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 
 ## **WebSocket (Socket.io + Redis adapter)**
 
-- **EventsGateway** — JWT-authenticated Socket.io gateway
+- **EventsGateway** — Socket.io gateway authenticated via Better Auth sessions (validates a `Bearer <sessionToken>` through `authService.api.getSession`)
 - **SocketConfigAdapter** — configures Socket.io with the **Redis adapter** (`@socket.io/redis-adapter`, pub/sub on Redis db4) for cross-process / multi-node broadcast. Shares the HTTP server unless `WS_PORT` differs from the app port.
 - **Sandboxed workers** emit via a `@socket.io/redis-emitter` (`Emitter`) on the same db4 — so a background job running in a child process still reaches connected clients.
 - **Rooms**: `chat` (all users), `user_{id}` (private), `admins` (admin-only)
@@ -414,7 +441,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 ## **Notifications**
 
 - **Email**: Resend API + React Email templates (welcome, invite, password reset)
-- **WebSocket**: Socket.io gateway with JWT auth
+- **WebSocket**: Socket.io gateway with Better Auth session auth
 - **Slack**: SlackService for bot notifications
 - **Email dev server**: `bun run email` (port 3035)
 
@@ -443,7 +470,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 
 - **OpenAPI-driven**: the CMS generates its admin UI from the Swagger document — CRUD resources appear automatically from documented endpoints.
 - **Mounting**: `NestJsCmsModule.forRoot()` in `app.module.ts` (registers `CmsSchemaService`); `NestJsCmsModule.setup(app, document, { path: '/cms', apiPrefix: '/api' })` in `main.ts` (after `setupDocs`, before `listen`).
-- **Auth**: `setupDocs` adds `x-cms-login-endpoint` (`/api/auth/login`) and `x-cms-token-path` (`accessToken`) extensions so the CMS logs in against this API.
+- **Auth**: `setupDocs` adds `x-cms-login-endpoint` (`/api/auth/sign-in/email`) and `x-cms-token-path` (`token`) extensions so the CMS logs in against this API.
 - **UI**: `GET /cms` (admin UI), `GET /cms/schema` (blueprint). The bundled UI ships inside the npm package.
 
 ---
@@ -451,7 +478,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 ## **Audit Logging (SQLite triggers)**
 
 - **DB-trigger driven** (not application code): `src/infra/db/triggers.ts` installs `AFTER INSERT/UPDATE/DELETE` triggers on audited tables (`user`, `invite`) that write old/new JSON snapshots into `audit_log`. Applied idempotently on every boot by `applyAuditTriggers()`. Replaces the old TypeORM `EntitySubscriber`.
-- **Actor attribution**: `AuditContextInterceptor` writes the current user id into a single-row `_audit_ctx` table per request; triggers read `actor_id` from it. Because SQLite uses one shared connection, actor attribution is best-effort under concurrency — the change data itself is always exact. (`password` is excluded from snapshots.)
+- **Actor attribution**: `AuditContextInterceptor` writes the current user id into a single-row `_audit_ctx` table per request; triggers read `actor_id` from it. Because SQLite uses one shared connection, actor attribution is best-effort under concurrency — the change data itself is always exact. (The `user` snapshot captures `name`, `image`, `role`, `banned`, `emailVerified`; credentials live in the `account` table, which is not audited.)
 - **AuditLog** — stores `entityName`, `action` (INSERT/UPDATE/DELETE), `oldValue`, `newValue` (JSON), `actorId`, `entityId`.
 - **REST**: `GET /api/audit` — query audit logs with cursor pagination.
 

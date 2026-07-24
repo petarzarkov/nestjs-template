@@ -2,9 +2,11 @@ import { NestJsCmsModule } from '@arkv/nestjs-cms';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import 'reflect-metadata';
 import pkg from '../package.json';
 import { AppModule } from './app.module';
+import type { Auth } from './auth/auth.config';
 import { AppEnv } from './config/enum/app-env.enum';
 import type { ValidatedConfig } from './config/env.validation';
 import { AppConfigService } from './config/services/app.config.service';
@@ -20,7 +22,10 @@ import { SocketConfigAdapter } from './notifications/events/socket.adapter';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     forceCloseConnections: true,
-    rawBody: true,
+    // Better Auth requires the raw request body, so NestJS's body parser is
+    // disabled here and re-enabled for non-auth routes by AuthModule's
+    // `bodyParser` option (see app.module.ts).
+    bodyParser: false,
     logger: ['fatal', 'error', 'warn'],
   });
   const logger = app.get(ContextLogger);
@@ -72,11 +77,13 @@ async function bootstrap() {
   // Request validation is handled globally by the ZodValidationPipe
   // (registered as APP_PIPE in AppModule).
 
-  // Swagger documentation
-  const { title, document, swaggerPath, scalarPath } = setupDocs(
+  // Swagger documentation (merges the Better Auth routes into the doc)
+  const auth = app.get<AuthService<Auth>>(AuthService).instance;
+  const { title, document, swaggerPath, scalarPath } = await setupDocs(
     app,
     pkg,
     appConfig,
+    auth,
   );
 
   // The Bull Board queue dashboard is mounted (and basic-auth protected in

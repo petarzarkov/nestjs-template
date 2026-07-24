@@ -1,6 +1,11 @@
-import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { E2E } from '../constants';
+
+/** Better Auth sign-in / sign-up response body (bearer plugin returns `token`). */
+export interface AuthResult {
+  token: string;
+  user: SanitizedUser;
+}
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
@@ -87,9 +92,9 @@ export class ApiClient {
     return this.request<T>('DELETE', path, options);
   }
 
-  // Auth shortcuts
-  async login(email: string, password: string) {
-    const response = await this.post<AuthResponseDto>('/api/auth/login', {
+  // Auth shortcuts (Better Auth native routes)
+  async login(email: string, password: string): Promise<AuthResult> {
+    const response = await this.post<AuthResult>('/api/auth/sign-in/email', {
       email,
       password,
     });
@@ -98,19 +103,20 @@ export class ApiClient {
       throw new Error(`Login failed: ${JSON.stringify(response.data)}`);
     }
 
-    this.setAuthToken(response.data.accessToken);
+    this.setAuthToken(response.data.token);
     return response.data;
   }
 
-  async register(data: {
+  async signUp(data: {
     email: string;
     password: string;
-    inviteCode: string;
-  }) {
-    const response = await this.post<AuthResponseDto>(
-      '/api/auth/register',
-      data,
-    );
+    name?: string;
+  }): Promise<AuthResult> {
+    const response = await this.post<AuthResult>('/api/auth/sign-up/email', {
+      email: data.email,
+      password: data.password,
+      name: data.name ?? data.email.split('@')[0],
+    });
 
     if (!response.ok) {
       throw new Error(`Register failed: ${JSON.stringify(response.data)}`);

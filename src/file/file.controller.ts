@@ -157,10 +157,7 @@ export class FileController {
     const { stream, contentType, filename, contentLength, createdBy } =
       await this.fileService.downloadById(fileId);
 
-    if (
-      createdBy !== currentUser.id &&
-      !currentUser.roles.includes(UserRole.ADMIN)
-    ) {
+    if (createdBy !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'You are not authorized to download this file',
       );

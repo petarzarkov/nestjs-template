@@ -124,7 +124,7 @@ export class FileService {
     const fileEntity = this.findById(fileId);
     if (
       fileEntity.userId !== currentUser.id &&
-      !currentUser.roles.includes(UserRole.ADMIN)
+      currentUser.role !== UserRole.ADMIN
     ) {
       throw new ForbiddenException(
         'You are not authorized to delete this file',
@@ -139,7 +139,7 @@ export class FileService {
     query: ListFilesQueryDto,
     currentUser: SanitizedUser,
   ): PageDto<FileResponseDto | FileAdminResponseDto> {
-    const isAdmin = currentUser.roles.includes(UserRole.ADMIN);
+    const isAdmin = currentUser.role === UserRole.ADMIN;
 
     const filesPage = this.filesRepository.findAllPaginated(query, {
       userId: isAdmin ? undefined : currentUser.id,
@@ -155,7 +155,7 @@ export class FileService {
     fileId: string,
     currentUser: SanitizedUser,
   ): FileResponseDto | FileAdminResponseDto {
-    const isAdmin = currentUser.roles.includes(UserRole.ADMIN);
+    const isAdmin = currentUser.role === UserRole.ADMIN;
 
     const file = this.filesRepository.findByIdForUser(
       fileId,

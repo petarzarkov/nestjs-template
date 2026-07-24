@@ -9,8 +9,11 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { Public } from '@/core/decorators/public.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
+import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
+import { AcceptInviteDto } from '@/users/invites/dto/accept-invite.dto';
 import { CreateInviteDto } from '@/users/invites/dto/create-invite.dto';
 import { ListInvitesQueryDto } from '@/users/invites/dto/list-invites.dto';
 import { Invite } from '@/users/invites/entity/invite.entity';
@@ -38,5 +41,16 @@ export class InvitesController {
   @ApiOperation({ summary: 'Create and send a new user invitation' })
   create(@Body() createInviteDto: CreateInviteDto): Promise<Invite> {
     return this.invitesService.create(createInviteDto);
+  }
+
+  @Post('accept')
+  @Public()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Accept an invitation and register the account (public)',
+  })
+  @ApiOkResponse({ type: SanitizedUser })
+  acceptInvite(@Body() dto: AcceptInviteDto): Promise<SanitizedUser> {
+    return this.invitesService.acceptInvite(dto);
   }
 }

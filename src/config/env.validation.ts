@@ -1,4 +1,3 @@
-import { GLOBAL_PREFIX } from '@/constants';
 import pkg from '../../package.json';
 import { ConfigValidationError } from './config-validation.error';
 import { getAIConfig } from './dto/ai-vars.dto';
@@ -28,11 +27,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
     ...serviceConfig,
     ...getDbConfig(validatedConfig),
     ...getRedisConfig(validatedConfig),
-    oauth: getOAuthConfig(
-      validatedConfig,
-      serviceConfig.app.webUrl,
-      GLOBAL_PREFIX,
-    ),
+    oauth: getOAuthConfig(validatedConfig),
     ai: getAIConfig(validatedConfig),
     aws: {
       s3BucketName: validatedConfig.AWS_S3_BUCKET_NAME,

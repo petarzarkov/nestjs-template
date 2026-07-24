@@ -4,14 +4,16 @@ import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { AIModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
-import { AuthModule } from './auth/auth.module';
+import { buildAuth } from './auth/auth.config';
 import { AppConfigModule } from './config/app.config.module';
-import { validateConfig } from './config/env.validation';
+import { ValidatedConfig, validateConfig } from './config/env.validation';
 import { loggerModuleAsyncOptions } from './config/logger.config';
+import { AppConfigService } from './config/services/app.config.service';
 import { DbExceptionFilter } from './core/filters/db-exception.filter';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { HelpersModule } from './core/helpers/helpers.module';
@@ -21,12 +23,18 @@ import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.midd
 import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { PaginationModule } from './core/pagination/pagination.module';
 import { FileModule } from './file/file.module';
-import { DatabaseModule } from './infra/db/database.module';
+import {
+  DatabaseModule,
+  DRIZZLE_DB,
+  type DrizzleDB,
+} from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
 import { QueueDashboardModule } from './infra/queue/queue-dashboard.module';
 import { QueueModule } from './infra/queue/queue.module';
+import { JobPublisherService } from './infra/queue/services/job-publisher.service';
 import { RedisCacheThrottlerModule } from './infra/redis/redis-cache-throttler.module';
 import { RedisModule } from './infra/redis/redis.module';
+import { RedisService } from './infra/redis/services/redis.service';
 import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
@@ -41,11 +49,47 @@ import { UsersModule } from './users/users.module';
       serveRoot: '/',
       exclude: ['/api*'],
     }),
-    AuthModule.forRoot(),
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
     RedisModule,
+    QueueModule,
+    // Better Auth (stateful sessions in Redis). Builds the auth instance from
+    // the Drizzle client, a Redis connection, and the notification queue.
+    // NOTE: imported BEFORE RedisCacheThrottlerModule so the global Better Auth
+    // `AuthGuard` runs before the `ThrottlerGuard` — the throttler's
+    // skip-for-authenticated check relies on `req.user` already being set.
+    AuthModule.forRootAsync({
+      inject: [DRIZZLE_DB, AppConfigService, RedisService, JobPublisherService],
+      useFactory: (
+        db: DrizzleDB,
+        configService: AppConfigService<ValidatedConfig>,
+        redisService: RedisService,
+        jobPublisher: JobPublisherService,
+      ) => {
+        const app = configService.getOrThrow('app');
+        const authConfig = configService.getOrThrow('auth');
+        return {
+          auth: buildAuth({
+            db,
+            redis: redisService.newConnection('better-auth', { db: 1 }),
+            secret: authConfig.secret,
+            baseURL: app.webUrl,
+            trustedOrigins: [app.webUrl],
+            sessionExpiresIn: authConfig.sessionExpiresIn,
+            oauth: configService.getOrThrow('oauth'),
+            jobPublisher,
+          }),
+          // NestFactory disables its body parser (see main.ts); re-enable it
+          // here for non-auth routes. rawBody replaces NestFactory's rawBody.
+          bodyParser: {
+            json: { enabled: true },
+            urlencoded: { enabled: true, extended: true },
+            rawBody: true,
+          },
+        };
+      },
+    }),
     RedisCacheThrottlerModule,
     PaginationModule,
     NestJsContextLoggerModule.forRootAsync(loggerModuleAsyncOptions),
@@ -54,7 +98,6 @@ import { UsersModule } from './users/users.module';
     AuditModule,
     AIModule.forRoot(),
     NotificationModule,
-    QueueModule,
     QueueDashboardModule,
     FileModule,
     // Registers CmsSchemaService; the UI + schema routes are mounted in

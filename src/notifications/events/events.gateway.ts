@@ -1,5 +1,4 @@
-import { HttpStatus, UsePipes, ValidationPipe } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { HttpStatus, Optional, UsePipes, ValidationPipe } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -10,17 +9,16 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Emitter } from '@socket.io/redis-emitter';
+import { AuthService } from '@thallesp/nestjs-better-auth';
+import { fromNodeHeaders } from 'better-auth/node';
 import { ExtendedError, Socket } from 'socket.io';
 import { AIService } from '@/ai/services/ai.service';
-import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
-import { ValidatedConfig } from '@/config/env.validation';
-import { AppConfigService } from '@/config/services/app.config.service';
+import type { Auth } from '@/auth/auth.config';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
 import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import { RedisService } from '@/infra/redis/services/redis.service';
 import { EventMap, EventType } from '@/notifications/events/events';
 import { UserRole } from '@/users/enum/user-role.enum';
-import { UsersService } from '@/users/services/users.service';
 import {
   AIMessageRequest,
   ChatMessage,
@@ -54,10 +52,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   io!: WSServer | Emitter<WebSocketEmitEvents>;
 
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: AppConfigService<ValidatedConfig>,
+    // Only used by the WS auth middleware, which runs in the main process
+    // (where a WS server exists). Optional so the gateway can still be
+    // constructed inside the sandboxed job-worker process — whose `JobModule`
+    // context has no Better Auth `AuthModule` — where it is never used.
+    @Optional() private readonly authService: AuthService<Auth> | undefined,
     private readonly logger: ContextLogger,
-    private readonly usersService: UsersService,
     private readonly contextService: ContextService,
     private readonly aiService: AIService,
     private readonly redisService: RedisService,
@@ -143,13 +143,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           );
         }
 
-        const token = authHeader.split(' ')[1];
-        const payload = this.jwtService.verify<AccessTokenPayload>(token, {
-          secret: this.configService.get('jwt.secret'),
-        });
+        if (!this.authService) {
+          throw new Error('AuthService unavailable in this process');
+        }
 
-        const user = this.usersService.findById(payload.sub);
-        if (!user) {
+        const token = authHeader.split(' ')[1];
+        const session = await this.authService.api.getSession({
+          headers: fromNodeHeaders({ authorization: `Bearer ${token}` }),
+        });
+        if (!session?.user) {
           return next(
             this.#buildExtendedError(
               'Unauthorized',
@@ -159,11 +161,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           );
         }
 
-        socket.data.user = user;
+        socket.data.user = session.user;
         this.contextService.updateContext({
-          userId: user.id,
-          userEmail: user.email,
-          userRoles: user.roles,
+          userId: session.user.id,
+          userEmail: session.user.email,
+          userRoles: session.user.role ? [session.user.role] : [],
         });
 
         next();
@@ -199,7 +201,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = client.data.user;
     const userRoom = ROOMS.user(user.id);
     const rooms = [userRoom, ROOMS.CHAT];
-    if (user.roles.includes(UserRole.ADMIN)) {
+    if (user.role === UserRole.ADMIN) {
       rooms.push(ROOMS.ADMINS);
     }
 
@@ -218,7 +220,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify chat room that user joined
     this.io.to(ROOMS.CHAT).emit('userJoined', {
-      username: user.displayName || user.email?.split('@')[0],
+      username: user.name || user.email?.split('@')[0],
       timestamp: new Date(),
     });
 
@@ -257,10 +259,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user = client.data.user;
     const chatMessage: ChatMessage = {
-      username: user.displayName || user.email?.split('@')[0],
+      username: user.name || user.email?.split('@')[0],
       message: data.message,
       timestamp: new Date(),
-      picture: user.picture,
+      picture: user.image,
     };
     this.io.to(ROOMS.CHAT).emit('message', chatMessage);
     return { event: 'messageSent', data: { success: true } };
@@ -288,7 +290,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           provider: data.provider,
           model: data.model,
           done: false,
-          username: user.displayName || user.email?.split('@')[0],
+          username: user.name || user.email?.split('@')[0],
         });
       }
 
@@ -299,7 +301,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         provider: data.provider,
         model: data.model,
         done: true,
-        username: user.displayName || user.email?.split('@')[0],
+        username: user.name || user.email?.split('@')[0],
       });
     } catch (error) {
       const errorMessage =
@@ -319,7 +321,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         error: errorMessage,
         provider: data.provider,
         model: data.model,
-        username: user.displayName || user.email?.split('@')[0],
+        username: user.name || user.email?.split('@')[0],
       });
     }
   }

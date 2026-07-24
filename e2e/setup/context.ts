@@ -1,4 +1,4 @@
-import { password as passwordUtil } from '@/core/utils/password.util';
+import { buildStandaloneAuth } from '@/auth/auth.config';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { E2E } from '../constants';
 import { ApiClient } from '../utils/api-client';
@@ -11,7 +11,7 @@ import { WsClient } from '../utils/ws-client';
 export const E2E_ADMIN = {
   email: 'admin@e2e-test.com',
   password: E2E.TEST_PASSWORD,
-  roles: [UserRole.ADMIN],
+  role: UserRole.ADMIN,
 };
 
 /**
@@ -40,29 +40,26 @@ class TestContext {
   }
 
   /**
-   * Ensure admin user exists for tests
+   * Ensure a known admin user exists for tests. Created through Better Auth so
+   * the scrypt credential + `account` row match, then promoted to `admin`. A
+   * stale row is deleted first (FK cascade removes its account/session) so the
+   * password is always exactly {@link E2E_ADMIN}.password.
    */
   private async ensureAdminUser(): Promise<void> {
-    const hashedPassword = await passwordUtil.hash(E2E_ADMIN.password);
     const existingUser = this.db.getUserByEmail(E2E_ADMIN.email);
-
     if (existingUser) {
-      // Reset credentials so a stale admin row (e.g. seeded with a different
-      // password in a previous run) can never break authentication.
-      this.db.users.update(existingUser.id, {
-        password: hashedPassword,
-        roles: E2E_ADMIN.roles,
-        suspended: false,
-      });
-      return;
+      this.db.users.delete({ id: existingUser.id });
     }
 
-    this.db.users.save({
-      email: E2E_ADMIN.email,
-      password: hashedPassword,
-      roles: E2E_ADMIN.roles,
-      suspended: false,
+    const auth = buildStandaloneAuth(this.db.drizzle);
+    const { user } = await auth.api.signUpEmail({
+      body: {
+        email: E2E_ADMIN.email,
+        password: E2E_ADMIN.password,
+        name: 'E2E Admin',
+      },
     });
+    this.db.users.update(user.id, { role: E2E_ADMIN.role, banned: false });
 
     console.log(`✅ Created e2e admin user: ${E2E_ADMIN.email}`);
   }
@@ -86,7 +83,7 @@ class TestContext {
   /**
    * Login as the default admin user
    */
-  async loginAsAdmin(): Promise<{ accessToken: string }> {
+  async loginAsAdmin(): Promise<{ token: string }> {
     return this.api.login(E2E_ADMIN.email, E2E_ADMIN.password);
   }
 }

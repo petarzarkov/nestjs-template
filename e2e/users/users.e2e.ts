@@ -44,11 +44,7 @@ describe('Users Cursor Pagination (e2e)', () => {
     // Create extra users to ensure multiple pages
     for (let i = 0; i < 3; i++) {
       const email = `cursor-test-${Date.now()}-${i}@e2e-test.com`;
-      const res = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
-        { email, password: 'TestPass123!' },
-      );
-      expect(res.status).toBe(201);
+      await ctx.api.signUp({ email, password: 'TestPass123!' });
       const user = ctx.db.getUserByEmail(email);
       if (user) createdUserIds.push(user.id);
     }
@@ -94,11 +90,7 @@ describe('Users Cursor Pagination (e2e)', () => {
     // Create extra users
     for (let i = 0; i < 3; i++) {
       const email = `cursor-back-${Date.now()}-${i}@e2e-test.com`;
-      const res = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
-        { email, password: 'TestPass123!' },
-      );
-      expect(res.status).toBe(201);
+      await ctx.api.signUp({ email, password: 'TestPass123!' });
       const user = ctx.db.getUserByEmail(email);
       if (user) createdUserIds.push(user.id);
     }

@@ -11,15 +11,15 @@ import { UserRole } from '../enum/user-role.enum';
 export class UpdateUserDto extends createZodDto(
   z.object({
     email: emailSchema.optional(),
-    displayName: z.string().nullable().optional(),
-    picture: z.string().nullable().optional(),
-    roles: z.array(z.enum(UserRole)).optional(),
-    suspended: z.boolean().optional(),
+    name: z.string().optional(),
+    image: z.string().nullable().optional(),
+    role: z.enum(UserRole).optional(),
+    banned: z.boolean().optional(),
   }),
 ) {}
 
 export const getUsersQuerySchema = pageOptionsSchema.extend({
-  suspended: z.stringbool().optional(),
+  banned: z.stringbool().optional(),
 });
 
 export class GetUsersQueryDto extends createZodDto(getUsersQuerySchema) {}

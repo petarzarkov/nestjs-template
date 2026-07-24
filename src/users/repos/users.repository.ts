@@ -24,15 +24,15 @@ export class UsersRepository {
   getUsersPaginated(
     getUsersQueryDto: GetUsersQueryDto,
   ): PageDto<SanitizedUser> {
-    const { search, suspended } = getUsersQueryDto;
+    const { search, banned } = getUsersQueryDto;
 
     const filters = [];
-    if (suspended != undefined) {
-      filters.push(eq(users.suspended, suspended));
+    if (banned != undefined) {
+      filters.push(eq(users.banned, banned));
     }
     if (search) {
       const term = `%${search}%`;
-      filters.push(or(like(users.email, term), like(users.displayName, term)));
+      filters.push(or(like(users.email, term), like(users.name, term)));
     }
 
     const page = this.paginationFactory.paginate<User>({
@@ -42,7 +42,6 @@ export class UsersRepository {
       where: filters.length ? and(...filters) : undefined,
     });
 
-    // Strip the password hash from every row before it leaves the repo.
     return new PageDto(
       page.data.map(user => sanitizeUser(user)),
       page.meta,
@@ -53,15 +52,6 @@ export class UsersRepository {
     return (
       this.db.select().from(users).where(eq(users.email, email)).get() ?? null
     );
-  }
-
-  /**
-   * Returns the full row including the password hash (drizzle selects all
-   * columns by default — there is no TypeORM `select: false`), for local
-   * credential verification.
-   */
-  findUserWithCredentials(email: string): User | null {
-    return this.findByEmail(email);
   }
 
   findById(id: string): User | null {
@@ -90,11 +80,6 @@ export class UsersRepository {
   }
 
   findByRole(role: UserRole): User[] {
-    // `roles` is a JSON-encoded text array; match membership on the encoded value.
-    return this.db
-      .select()
-      .from(users)
-      .where(like(users.roles, `%"${role}"%`))
-      .all();
+    return this.db.select().from(users).where(eq(users.role, role)).all();
   }
 }

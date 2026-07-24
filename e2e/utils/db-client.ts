@@ -38,6 +38,11 @@ export class DbClient {
     return this.db;
   }
 
+  /** Raw Drizzle client, for building a standalone Better Auth instance. */
+  get drizzle(): DrizzleDB {
+    return this.client;
+  }
+
   readonly users = {
     save: (values: NewUserRow): User =>
       this.client.insert(users).values(values).returning().get(),

@@ -56,7 +56,8 @@ describe('UsersRepository (integration, in-memory SQLite)', () => {
   it('creates a user and reads it back by email', () => {
     const created = repo.create({
       email: 'jane@test.dev',
-      roles: [UserRole.USER],
+      name: 'Jane',
+      role: UserRole.USER,
     });
 
     expect(created.id).toBeTruthy();
@@ -64,20 +65,24 @@ describe('UsersRepository (integration, in-memory SQLite)', () => {
     expect(repo.findById(created.id)?.email).toBe('jane@test.dev');
   });
 
-  it('finds users by role via JSON array membership', () => {
-    repo.create({ email: 'admin@test.dev', roles: [UserRole.ADMIN] });
+  it('finds users by role', () => {
+    repo.create({
+      email: 'admin@test.dev',
+      name: 'Admin',
+      role: UserRole.ADMIN,
+    });
 
     const admins = repo.findByRole(UserRole.ADMIN);
     expect(admins.some(u => u.email === 'admin@test.dev')).toBe(true);
     expect(admins.some(u => u.email === 'jane@test.dev')).toBe(false);
   });
 
-  it('paginates by cursor and strips the password hash', () => {
+  it('paginates by cursor', () => {
     for (let i = 0; i < 5; i++) {
       repo.create({
         email: `page-${i}@test.dev`,
-        password: 'hashed',
-        roles: [UserRole.USER],
+        name: `Page ${i}`,
+        role: UserRole.USER,
       });
     }
 
@@ -107,7 +112,11 @@ describe('UsersRepository (integration, in-memory SQLite)', () => {
   });
 
   it('filters the paginated result by search term', () => {
-    repo.create({ email: 'searchable@unique.dev', roles: [UserRole.USER] });
+    repo.create({
+      email: 'searchable@unique.dev',
+      name: 'Searchable',
+      role: UserRole.USER,
+    });
 
     const page = repo.getUsersPaginated(
       query({ take: 10, order: PaginationOrder.DESC, search: 'unique.dev' }),

@@ -16,13 +16,13 @@ describe('Auth (e2e)', () => {
       await Bun.sleep(1100);
       const result = await ctx.loginAsAdmin();
 
-      expect(result.accessToken).toBeDefined();
-      expect(typeof result.accessToken).toBe('string');
+      expect(result.token).toBeDefined();
+      expect(typeof result.token).toBe('string');
     });
 
     test('should reject invalid credentials', async () => {
       await Bun.sleep(1100);
-      const response = await ctx.api.post('/api/auth/login', {
+      const response = await ctx.api.post('/api/auth/sign-in/email', {
         email: 'nonexistent@test.com',
         password: 'wrongpassword',
       });
@@ -42,7 +42,7 @@ describe('Auth (e2e)', () => {
 
       expect(profile.id).toBeDefined();
       expect(profile.email).toBe(E2E_ADMIN.email);
-      expect(profile.roles).toContain(UserRole.ADMIN);
+      expect(profile.role).toBe(UserRole.ADMIN);
     });
 
     test('should reject unauthenticated profile request', async () => {
@@ -58,9 +58,9 @@ describe('Auth (e2e)', () => {
   describe('WebSocket Connection', () => {
     test('should connect to WebSocket and receive connected event', async () => {
       await Bun.sleep(1100);
-      const { accessToken } = await ctx.loginAsAdmin();
+      const { token } = await ctx.loginAsAdmin();
 
-      ctx.ws.connect(accessToken, E2E.API_URL);
+      ctx.ws.connect(token, E2E.API_URL);
       const connectedEvent = await ctx.ws.waitForConnected(10000);
 
       expect(connectedEvent).toBeDefined();
@@ -75,8 +75,8 @@ describe('Auth (e2e)', () => {
 
       expect(user).toBeDefined();
       expect(user?.email).toBe(E2E_ADMIN.email);
-      expect(user?.roles).toContain(UserRole.ADMIN);
-      expect(user?.suspended).toBe(false);
+      expect(user?.role).toBe(UserRole.ADMIN);
+      expect(user?.banned).toBe(false);
     });
   });
 
@@ -85,22 +85,23 @@ describe('Auth (e2e)', () => {
       const testEmail = `test-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
-      const response = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
+      const response = await ctx.api.post<{ token: string }>(
+        '/api/auth/sign-up/email',
         {
           email: testEmail,
           password: testPassword,
+          name: 'Test User',
         },
       );
 
-      expect(response.status).toBe(201);
-      expect(response.data.accessToken).toBeDefined();
+      expect(response.status).toBe(200);
+      expect(response.data.token).toBeDefined();
 
       // Verify user was created in DB
       const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
       expect(user?.email).toBe(testEmail);
-      expect(user?.roles).toContain(UserRole.USER);
+      expect(user?.role).toBe(UserRole.USER);
 
       // Clean up - delete the test user
       if (user) {
@@ -113,23 +114,24 @@ describe('Auth (e2e)', () => {
       await Bun.sleep(1100);
 
       // Connect admin WebSocket to listen for notifications
-      const { accessToken } = await ctx.loginAsAdmin();
-      ctx.ws.connect(accessToken, E2E.API_URL);
+      const { token } = await ctx.loginAsAdmin();
+      ctx.ws.connect(token, E2E.API_URL);
       await ctx.ws.waitForConnected(10000);
 
       // Register a new user - this should enqueue a notification job
       const testEmail = `test-streams-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
-      const response = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
+      const response = await ctx.api.post<{ token: string }>(
+        '/api/auth/sign-up/email',
         {
           email: testEmail,
           password: testPassword,
+          name: 'Test User',
         },
       );
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
 
       // Wait for the WebSocket notification driven by the job queue
       // Flow: Register → JobPublisherService → bullmq worker → NotificationHandler → EventsGateway emits over WebSocket

@@ -26,15 +26,7 @@ describe('Audit Logs (e2e)', () => {
       const testEmail = `audit-insert-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
-      const response = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
-        {
-          email: testEmail,
-          password: testPassword,
-        },
-      );
-
-      expect(response.status).toBe(201);
+      await ctx.api.signUp({ email: testEmail, password: testPassword });
 
       const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
@@ -83,26 +75,21 @@ describe('Audit Logs (e2e)', () => {
   });
 
   describe('User UPDATE audit', () => {
-    test('should create an audit log when a user is suspended and return it via API', async () => {
+    test('should create an audit log when a user is banned and return it via API', async () => {
       // Register a test user
       const testEmail = `audit-update-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
-      await ctx.api.post('/api/auth/register', {
-        email: testEmail,
-        password: testPassword,
-      });
+      await ctx.api.signUp({ email: testEmail, password: testPassword });
 
       const user = ctx.db.getUserByEmail(testEmail);
       expect(user).toBeDefined();
 
-      // Login as admin and suspend the user
+      // Login as admin and ban the user
       await ctx.loginAsAdmin();
 
-      const suspendResponse = await ctx.api.post(
-        `/api/users/${user?.id}/suspend`,
-      );
-      expect(suspendResponse.status).toBe(201);
+      const banResponse = await ctx.api.post(`/api/users/${user?.id}/ban`);
+      expect(banResponse.status).toBe(201);
 
       // Verify audit log via DB
       const auditLog = ctx.db.auditLogs.findOne({
@@ -117,8 +104,8 @@ describe('Audit Logs (e2e)', () => {
       expect(auditLog?.action).toBe(AuditAction.UPDATE);
       expect(auditLog?.oldValue).toBeDefined();
       expect(auditLog?.newValue).toBeDefined();
-      expect(auditLog?.oldValue?.suspended).toBe(false);
-      expect(auditLog?.newValue?.suspended).toBe(true);
+      expect(auditLog?.oldValue?.banned).toBe(false);
+      expect(auditLog?.newValue?.banned).toBe(true);
       // Actor should be the admin user
       const admin = ctx.db.getUserByEmail(E2E_ADMIN.email);
       expect(auditLog?.actorId).toBe(admin?.id);
@@ -137,8 +124,8 @@ describe('Audit Logs (e2e)', () => {
       expect(apiAuditLog).toBeDefined();
       expect(apiAuditLog?.action).toBe(AuditAction.UPDATE);
       expect(apiAuditLog?.actorId).toBe(admin?.id);
-      expect(apiAuditLog?.oldValue?.suspended).toBe(false);
-      expect(apiAuditLog?.newValue?.suspended).toBe(true);
+      expect(apiAuditLog?.oldValue?.banned).toBe(false);
+      expect(apiAuditLog?.newValue?.banned).toBe(true);
 
       // Clean up
       ctx.db.auditLogs.delete({ entityId: user?.id });
@@ -287,18 +274,13 @@ describe('Audit Logs (e2e)', () => {
       const testEmail = `audit-nonadmin-${Date.now()}@e2e-test.com`;
       const testPassword = 'TestPass123!';
 
-      const registerResponse = await ctx.api.post<{ accessToken: string }>(
-        '/api/auth/register',
-        {
-          email: testEmail,
-          password: testPassword,
-        },
-      );
-
-      expect(registerResponse.status).toBe(201);
+      const registerResponse = await ctx.api.signUp({
+        email: testEmail,
+        password: testPassword,
+      });
 
       // Use the regular user's token
-      ctx.api.setAuthToken(registerResponse.data.accessToken);
+      ctx.api.setAuthToken(registerResponse.token);
 
       const response = await ctx.api.get('/api/audit-logs');
 

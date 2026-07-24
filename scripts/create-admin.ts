@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import inquirer from 'inquirer';
+import { buildStandaloneAuth } from '@/auth/auth.config';
 import { BASE_USER_TEST_PASS } from '@/constants';
-import { password as passwordUtil } from '@/core/utils/password.util';
 import { createDrizzleClient } from '@/infra/db/client';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { users } from '@/users/schema/user.schema';
@@ -31,41 +31,45 @@ async function createAdmin() {
     ]);
 
     const { email, password } = answers;
-    const hashedPassword = await passwordUtil.hash(password);
-
     const existing = db
       .select()
       .from(users)
       .where(eq(users.email, email))
       .get();
 
-    // Upsert: re-running rotates the admin's credentials.
+    if (existing) {
+      // Re-running promotes an existing account to admin (Better Auth owns the
+      // credential, so we don't rotate the password here).
+      db.update(users)
+        .set({ role: UserRole.ADMIN, banned: false, updatedAt: new Date() })
+        .where(eq(users.id, existing.id))
+        .run();
+      console.log('Existing user promoted to admin.');
+      console.table({
+        id: existing.id,
+        email: existing.email,
+        role: UserRole.ADMIN,
+      });
+      return;
+    }
+
+    const auth = buildStandaloneAuth(db);
+    const { user } = await auth.api.signUpEmail({
+      body: { email, password, name: email.split('@')[0] },
+    });
     const result = db
-      .insert(users)
-      .values({
-        email,
-        password: hashedPassword,
-        roles: [UserRole.ADMIN],
-        suspended: false,
-      })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          password: hashedPassword,
-          roles: [UserRole.ADMIN],
-          suspended: false,
-          updatedAt: new Date(),
-        },
-      })
+      .update(users)
+      .set({ role: UserRole.ADMIN })
+      .where(eq(users.id, user.id))
       .returning()
       .get();
 
-    console.log(existing ? 'Admin user updated.' : 'User created.');
+    console.log('Admin user created.');
     console.table({
       id: result.id,
       email: result.email,
-      roles: result.roles,
-      suspended: result.suspended,
+      role: result.role,
+      banned: result.banned,
       createdAt: result.createdAt,
       updatedAt: result.updatedAt,
     });

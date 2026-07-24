@@ -52,37 +52,37 @@ export class UsersController {
     return this.usersService.findById(user.id);
   }
 
-  @Post(':userId/suspend')
+  @Post(':userId/ban')
   @Roles(UserRole.ADMIN)
   @ApiJwtAuth()
   @ApiOperation({
     summary:
-      'Suspend a given user so it no longer can use the platform until explicitly activated again',
+      'Ban a given user so it can no longer use the platform until unbanned',
   })
   @ApiUuidParam({ name: 'userId', description: 'User identifier' })
   @ApiOkResponse({ type: SanitizedUser })
-  async suspendUser(
+  async banUser(
     @CurrentUser() user: SanitizedUser,
     @UuidParam({ name: 'userId' }) userId: string,
   ): Promise<SanitizedUser> {
     if (user.id === userId) {
-      throw new ForbiddenException('You cannot suspend your own account');
+      throw new ForbiddenException('You cannot ban your own account');
     }
-    return this.usersService.updateUser(userId, { suspended: true });
+    return this.usersService.updateUser(userId, { banned: true });
   }
 
-  @Post(':userId/reinstate')
+  @Post(':userId/unban')
   @Roles(UserRole.ADMIN)
   @ApiJwtAuth()
   @ApiOperation({
-    summary: 'Remove user suspension so it is able to use the platform again',
+    summary: 'Remove a user ban so it is able to use the platform again',
   })
   @ApiUuidParam({ name: 'userId', description: 'User identifier' })
   @ApiOkResponse({ type: SanitizedUser })
-  async reinstateUser(
+  async unbanUser(
     @UuidParam({ name: 'userId' }) userId: string,
   ): Promise<SanitizedUser> {
-    return this.usersService.updateUser(userId, { suspended: false });
+    return this.usersService.updateUser(userId, { banned: false });
   }
 
   @Patch(':userId')

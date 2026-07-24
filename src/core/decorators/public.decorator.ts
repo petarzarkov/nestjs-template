@@ -1,7 +1,6 @@
-import { SetMetadata } from '@nestjs/common';
-
-export const IS_PUBLIC_KEY = 'isPublic';
 /**
- * Exclude JWT and Roles protection
+ * Marks a route as public — bypasses the global Better Auth `AuthGuard`.
+ * Thin alias over `@thallesp/nestjs-better-auth`'s `AllowAnonymous` so existing
+ * `@Public()` usages keep working.
  */
-export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+export { AllowAnonymous as Public } from '@thallesp/nestjs-better-auth';

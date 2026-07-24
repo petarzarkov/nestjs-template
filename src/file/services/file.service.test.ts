@@ -318,8 +318,8 @@ describe('FileService', () => {
 
       await service.deleteById(fileId, {
         id: 'userId',
-        roles: [UserRole.ADMIN],
-      } as SanitizedUser);
+        role: UserRole.ADMIN,
+      } as unknown as SanitizedUser);
 
       expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.deleteFileByPath).toHaveBeenCalledWith(mockFile.path);
@@ -333,8 +333,8 @@ describe('FileService', () => {
       await expect(
         service.deleteById(fileId, {
           id: 'userId',
-          roles: [UserRole.ADMIN],
-        } as SanitizedUser),
+          role: UserRole.ADMIN,
+        } as unknown as SanitizedUser),
       ).rejects.toThrow('File with ID non-existent-id not found');
       expect(filesRepository.findById).toHaveBeenCalledWith(fileId);
       expect(s3Service.deleteFileByPath).not.toHaveBeenCalled();

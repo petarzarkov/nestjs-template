@@ -6,10 +6,10 @@ This document outlines the environment variables required for the project. These
 
 ### Database
 
-| Variable | Description | Default Value | Source |
-| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------- | ------------ | ------------ |
-| `DB_TYPE` | sqlite | postgres (postgres reserved for a future async data layer) | `sqlite` | .env.example |
-| `SQLITE_DB_PATH` | SQLite file (auto-created; migrations applied on boot) | `./data/app.db` | .env.example |
+| Variable         | Description                                            | Default Value                                              | Source       |
+| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------- | ------------ |
+| `DB_TYPE`        | sqlite                                                 | postgres (postgres reserved for a future async data layer) | `sqlite`     | .env.example |
+| `SQLITE_DB_PATH` | SQLite file (auto-created; migrations applied on boot) | `./data/app.db`                                            | .env.example |
 
 ### Redis
 
@@ -57,13 +57,6 @@ This document outlines the environment variables required for the project. These
 | `AI_GROQ_API_KEY`       | No description provided.                                                                | `your_groq_api_key`                                                     | .env.example |
 | `AI_OPENROUTER_API_KEY` | No description provided.                                                                | `your_openrouter_api_key`                                               | .env.example |
 
-### Security & JWT
-
-| Variable         | Description                                                     | Default Value                  | Source       |
-| ---------------- | --------------------------------------------------------------- | ------------------------------ | ------------ |
-| `JWT_EXPIRATION` | The expiration time for JWTs, in seconds (e.g., 3600 = 1 hour). | `3600`                         | .env.example |
-| `JWT_SECRET`     | No description provided.                                        | `dalfkko42fo2fok24fo2f4k0fsfd` | .env.example |
-
 ### WebSocket
 
 | Variable        | Description              | Default Value | Source       |
@@ -98,9 +91,11 @@ This document outlines the environment variables required for the project. These
 
 ### General
 
-| Variable           | Description                                                                                     | Default Value                          | Source       |
-| ------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------- | ------------ |
-| `NODE_ENV`         | The current service environment (e.g., development, staging, production).                       | `development`                          | .env.example |
-| `BASIC_AUTH_TOKEN` | (Optional) A unique secret key for signing JWTs. Should be a long, random string in production. | `8ddba558-22f5-467c-9d98-6189fe54e9b4` | .env.example |
-| `CORS_ORIGIN`      | wildcard for dev                                                                                | `'*'`                                  | .env.example |
-| `TZ`               | No description provided.                                                                        | `UTC`                                  | .env.example |
+| Variable                  | Description                                                                              | Default Value                          | Source       |
+| ------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------- | ------------ |
+| `NODE_ENV`                | The current service environment (e.g., development, staging, production).                | `development`                          | .env.example |
+| `BASIC_AUTH_TOKEN`        | Basic-auth token protecting the docs + queue dashboard in deployed envs.                 | `8ddba558-22f5-467c-9d98-6189fe54e9b4` | .env.example |
+| `BETTER_AUTH_SECRET`      | Secret Better Auth uses to sign sessions/tokens. Use a long random string in production. | `dalfkko42fo2fok24fo2f4k0fsfd`         | .env.example |
+| `AUTH_SESSION_EXPIRATION` | Session lifetime in seconds (default 604800 = 7 days).                                   | `604800`                               | .env.example |
+| `CORS_ORIGIN`             | wildcard for dev                                                                         | `'*'`                                  | .env.example |
+| `TZ`                      | No description provided.                                                                 | `UTC`                                  | .env.example |

@@ -1,17 +1,10 @@
-import { SetMetadata } from '@nestjs/common';
+import { Roles as BetterAuthRoles } from '@thallesp/nestjs-better-auth';
 import type { UserRole } from '@/users/enum/user-role.enum';
 
-export const ROLES_KEY = 'roles';
-
 /**
- * User needs to have one of the specified roles
+ * Require the authenticated user to have one of the given roles (checked
+ * against `user.role` via the Better Auth admin plugin). Thin varargs wrapper
+ * over the package's array-based `@Roles([...])` so existing
+ * `@Roles(UserRole.ADMIN)` usages keep working.
  */
-export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
-
-export const REQUIRE_ALL_ROLES_KEY = 'requireAllRoles';
-
-/**
- * When used with @Roles, requires the user to have ALL specified roles.
- * If this decorator is not present, the user only needs to have at least one of the roles.
- */
-export const RequireAllRoles = () => SetMetadata(REQUIRE_ALL_ROLES_KEY, true);
+export const Roles = (...roles: UserRole[]) => BetterAuthRoles(roles);

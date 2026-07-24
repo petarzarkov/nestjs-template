@@ -62,8 +62,8 @@ export const serviceVarsSchema = z.object({
 
   TZ: timezone,
 
-  JWT_SECRET: z.string(),
-  JWT_EXPIRATION: z.coerce.number().min(1).max(604800).default(604800),
+  BETTER_AUTH_SECRET: z.string(),
+  AUTH_SESSION_EXPIRATION: z.coerce.number().min(1).max(604800).default(604800),
 
   CORS_ORIGIN: z.string().default('*'),
 
@@ -123,9 +123,9 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       botToken: config.SLACK_BOT_TOKEN,
       channel: config.SLACK_CHANNEL,
     },
-    jwt: {
-      expiration: config.JWT_EXPIRATION,
-      secret: config.JWT_SECRET,
+    auth: {
+      secret: config.BETTER_AUTH_SECRET,
+      sessionExpiresIn: config.AUTH_SESSION_EXPIRATION,
     },
     ws: {
       connectTimeout: config.WS_CONNECT_TIMEOUT,

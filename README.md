@@ -4,26 +4,26 @@ A production-ready NestJS modular monolith template running on **Bun** — **SQL
 
 ## Tech Stack
 
-| Layer                | Technology                                                                                                                              |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime              | [Bun](https://bun.sh)                                                                                                                   |
-| Framework            | [NestJS 11](https://nestjs.com)                                                                                                         |
-| Language             | TypeScript 7 (strict, ESNext) — the [native (Go) compiler](https://github.com/microsoft/typescript-go); `tsc --noEmit` for typechecking |
-| Database             | SQLite via [`bun:sqlite`](https://bun.sh/docs/api/sqlite) + [Drizzle ORM](https://orm.drizzle.team) (synchronous)                       |
-| Job Queue            | [BullMQ](https://bullmq.io) + Redis ([Bull Board](https://github.com/felixmosh/bull-board) dashboard, sandboxed workers)                |
-| Cache & Rate Limit   | Redis (`@nestjs/cache-manager` + `@nestjs/throttler` with Redis storage)                                                                |
-| Validation           | [Zod](https://zod.dev) + [nestjs-zod](https://github.com/BenLorantfy/nestjs-zod)                                                        |
-| Auth                 | Passport.js (JWT, Google, GitHub, LinkedIn)                                                                                             |
-| WebSockets           | Socket.io with Redis adapter (multi-node)                                                                                               |
-| Email                | [Resend](https://resend.com) + [React Email](https://react.email)                                                                       |
-| AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                                       |
-| File Storage         | AWS S3                                                                                                                                  |
-| API Docs             | Swagger + [Scalar](https://scalar.com)                                                                                                  |
-| Logging              | [@arkv/nestjs-context-logger](https://www.npmjs.com/package/@arkv/nestjs-context-logger) (structured, async-context)                    |
-| Admin CMS            | [@arkv/nestjs-cms](https://www.npmjs.com/package/@arkv/nestjs-cms) (OpenAPI-driven admin UI)                                            |
-| Build                | Bun-native transpile (`scripts/build.ts`)                                                                                               |
-| Linting & Formatting | [Oxlint](https://oxc.rs) (type-aware) + [oxfmt](https://oxc.rs)                                                                         |
-| Testing              | Bun test runner                                                                                                                         |
+| Layer                | Technology                                                                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime              | [Bun](https://bun.sh)                                                                                                                                                                         |
+| Framework            | [NestJS 11](https://nestjs.com)                                                                                                                                                               |
+| Language             | TypeScript 7 (strict, ESNext) — the [native (Go) compiler](https://github.com/microsoft/typescript-go); `tsc --noEmit` for typechecking                                                       |
+| Database             | SQLite via [`bun:sqlite`](https://bun.sh/docs/api/sqlite) + [Drizzle ORM](https://orm.drizzle.team) (synchronous)                                                                             |
+| Job Queue            | [BullMQ](https://bullmq.io) + Redis ([Bull Board](https://github.com/felixmosh/bull-board) dashboard, sandboxed workers)                                                                      |
+| Cache & Rate Limit   | Redis (`@nestjs/cache-manager` + `@nestjs/throttler` with Redis storage)                                                                                                                      |
+| Validation           | [Zod](https://zod.dev) + [nestjs-zod](https://github.com/BenLorantfy/nestjs-zod)                                                                                                              |
+| Auth                 | [Better Auth](https://www.better-auth.com) (stateful sessions, email/password, Google, GitHub, LinkedIn) via [`@thallesp/nestjs-better-auth`](https://github.com/ThallesP/nestjs-better-auth) |
+| WebSockets           | Socket.io with Redis adapter (multi-node)                                                                                                                                                     |
+| Email                | [Resend](https://resend.com) + [React Email](https://react.email)                                                                                                                             |
+| AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                                                                                             |
+| File Storage         | AWS S3                                                                                                                                                                                        |
+| API Docs             | Swagger + [Scalar](https://scalar.com)                                                                                                                                                        |
+| Logging              | [@arkv/nestjs-context-logger](https://www.npmjs.com/package/@arkv/nestjs-context-logger) (structured, async-context)                                                                          |
+| Admin CMS            | [@arkv/nestjs-cms](https://www.npmjs.com/package/@arkv/nestjs-cms) (OpenAPI-driven admin UI)                                                                                                  |
+| Build                | Bun-native transpile (`scripts/build.ts`)                                                                                                                                                     |
+| Linting & Formatting | [Oxlint](https://oxc.rs) (type-aware) + [oxfmt](https://oxc.rs)                                                                                                                               |
+| Testing              | Bun test runner                                                                                                                                                                               |
 
 ## Prerequisites
 
@@ -59,12 +59,12 @@ bun run create:admin
 
 ### Authentication & Authorization
 
-- JWT-based authentication with configurable expiration
-- OAuth2 providers: Google, GitHub, LinkedIn
-- OAuth account linking (multiple providers per user)
-- Role-based access control (RBAC) with `admin` and `user` roles
+- **Better Auth** (`@thallesp/nestjs-better-auth`) with **stateful sessions stored in Redis** (signed cookie, or `Authorization: Bearer <sessionToken>` via the `bearer` plugin)
+- Email/password auth with scrypt hashing (handled internally by Better Auth)
+- OAuth2 providers: Google, GitHub, LinkedIn (accounts stored per user in the `account` table)
+- Role-based access control (RBAC) with `admin` and `user` roles, plus user ban/unban (`admin` plugin)
 - Password reset flow with email tokens
-- Invite-based registration
+- Invite-based registration (public `POST /api/invites/accept`)
 
 ### Database & ORM
 
@@ -86,7 +86,7 @@ bun run create:admin
 
 ### Real-time Communication
 
-- Socket.io WebSocket gateway with JWT authentication
+- Socket.io WebSocket gateway authenticated via Better Auth sessions (bearer session token)
 - **Redis adapter** for cross-process / multi-node broadcast (sandboxed workers emit via a Redis emitter)
 - Room-based messaging: chat (all users), private (per user), admin-only
 - AI response streaming over WebSocket
@@ -113,7 +113,7 @@ bun run create:admin
 ### Admin CMS
 
 - OpenAPI-driven admin UI (`@arkv/nestjs-cms`) served at `/cms` — CRUD resources are generated from the Swagger document
-- Schema endpoint at `/cms/schema`; logs in against this API via the documented `/api/auth/login` endpoint
+- Schema endpoint at `/cms/schema`; logs in against this API via the documented `/api/auth/sign-in/email` endpoint
 - Zero hand-written admin pages: document an endpoint and it shows up
 
 ### Observability
@@ -206,7 +206,7 @@ src/
 ├── config/                # Type-safe environment configuration (Zod)
 ├── core/                  # Shared utilities (decorators, filters, interceptors, pagination, zod)
 ├── infra/                 # Infrastructure (db, redis, queue, health)
-├── auth/                  # Authentication (JWT, OAuth strategies, guards)
+├── auth/                  # Better Auth config (sessions, OAuth) + session/account/verification schema
 ├── users/                 # User management + invites submodule
 ├── audit/                 # Automatic change logging via SQLite triggers
 ├── file/                  # File upload + S3 storage
@@ -222,25 +222,26 @@ Each domain module keeps its Drizzle table in a `schema/` folder and its Swagger
 
 ## API Endpoints
 
-| Route                                    | Description                         |
-| ---------------------------------------- | ----------------------------------- |
-| `POST /api/auth/login`                   | Email/password login                |
-| `POST /api/auth/register`                | User registration                   |
-| `POST /api/auth/forgotten-password`      | Request password reset              |
-| `POST /api/auth/password-reset`          | Reset password                      |
-| `GET /api/auth/{google,github,linkedin}` | OAuth login                         |
-| `GET /api/users`                         | List users (cursor paginated)       |
-| `GET /api/users/invites`                 | Manage invites                      |
-| `POST /api/ai/query`                     | AI query                            |
-| `GET /api/ai/models`                     | List AI models                      |
-| `POST /api/files`                        | Upload file                         |
-| `GET /api/files`                         | List files (cursor paginated)       |
-| `GET /api/audit`                         | Query audit logs (cursor paginated) |
-| `GET /api/service/health`                | Health check (DB, memory)           |
-| `GET /api/service/up`                    | Uptime check                        |
-| `GET /api/service/config`                | Service configuration               |
-| `GET /api/queues`                        | Bull Board queue dashboard          |
-| `GET /cms`                               | Admin CMS UI (OpenAPI-driven)       |
+| Route                                                   | Description                                |
+| ------------------------------------------------------- | ------------------------------------------ |
+| `POST /api/auth/sign-in/email`                          | Email/password login (→ `{ token, user }`) |
+| `POST /api/auth/sign-up/email`                          | Register with email + password             |
+| `POST /api/auth/forget-password`                        | Request password reset                     |
+| `POST /api/auth/reset-password`                         | Reset password                             |
+| `GET /api/auth/sign-in/social/{google,github,linkedin}` | OAuth login                                |
+| `GET /api/users`                                        | List users (cursor paginated)              |
+| `GET /api/invites`                                      | Manage invites                             |
+| `POST /api/invites/accept`                              | Accept an invite (public)                  |
+| `POST /api/ai/query`                                    | AI query                                   |
+| `GET /api/ai/models`                                    | List AI models                             |
+| `POST /api/files`                                       | Upload file                                |
+| `GET /api/files`                                        | List files (cursor paginated)              |
+| `GET /api/audit`                                        | Query audit logs (cursor paginated)        |
+| `GET /api/service/health`                               | Health check (DB, memory)                  |
+| `GET /api/service/up`                                   | Uptime check                               |
+| `GET /api/service/config`                               | Service configuration                      |
+| `GET /api/queues`                                       | Bull Board queue dashboard                 |
+| `GET /cms`                                              | Admin CMS UI (OpenAPI-driven)              |
 
 ## Documentation
 

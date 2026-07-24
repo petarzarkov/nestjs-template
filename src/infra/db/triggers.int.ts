@@ -32,13 +32,13 @@ describe('audit triggers (integration, in-memory SQLite)', () => {
     sqlite.close();
   });
 
-  const insertUser = (overrides: { email?: string; password?: string } = {}) =>
+  const insertUser = (overrides: { email?: string } = {}) =>
     db
       .insert(users)
       .values({
         email: overrides.email ?? 'user@test.dev',
-        password: overrides.password,
-        roles: [UserRole.USER],
+        name: 'Test User',
+        role: UserRole.USER,
       })
       .returning()
       .get();
@@ -57,32 +57,27 @@ describe('audit triggers (integration, in-memory SQLite)', () => {
     expect(rows[0].newValue).toMatchObject({ email: 'insert@test.dev' });
   });
 
-  it('never leaks the password into audit snapshots', () => {
-    const user = insertUser({
-      email: 'secret@test.dev',
-      password: 'super-secret-hash',
-    });
+  it('never leaks credentials into audit snapshots', () => {
+    // Credentials (scrypt hash) live in the un-audited `account` table, so the
+    // user snapshot never carries a password field at all.
+    const user = insertUser({ email: 'secret@test.dev' });
 
     const [row] = auditRowsFor(user.id);
     expect(row.newValue).not.toHaveProperty('password');
-    expect(JSON.stringify(row.newValue)).not.toContain('super-secret-hash');
   });
 
   it('writes an UPDATE snapshot with both old and new values', () => {
     const user = insertUser();
 
-    db.update(users)
-      .set({ suspended: true })
-      .where(eq(users.id, user.id))
-      .run();
+    db.update(users).set({ banned: true }).where(eq(users.id, user.id)).run();
 
     const rows = auditRowsFor(user.id);
     expect(rows.map(r => r.action)).toContain(AuditAction.UPDATE);
 
     const update = rows.find(r => r.action === AuditAction.UPDATE);
-    // `suspended` is stored as 0/1 but emitted as a JSON boolean by the trigger.
-    expect(update?.oldValue).toMatchObject({ suspended: false });
-    expect(update?.newValue).toMatchObject({ suspended: true });
+    // `banned` is stored as 0/1 but emitted as a JSON boolean by the trigger.
+    expect(update?.oldValue).toMatchObject({ banned: false });
+    expect(update?.newValue).toMatchObject({ banned: true });
   });
 
   it('writes a DELETE snapshot with only the old value', () => {

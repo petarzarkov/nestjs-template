@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite';
 
 /**
- * Automatic audit logging via SQLite triggers (replaces the old TypeORM
- * EntitySubscriber). Each audited table gets AFTER INSERT/UPDATE/DELETE
+ * Automatic audit logging via SQLite triggers.
+ * Each audited table gets AFTER INSERT/UPDATE/DELETE
  * triggers that write old/new JSON snapshots into `audit_log`.
  *
  * `actor_id` is read from a single-row `_audit_ctx` table, set per request by
@@ -28,10 +28,10 @@ const AUDITED_TABLES: AuditedTable[] = [
   {
     table: 'user',
     entity: 'User',
-    // password is intentionally excluded from audit snapshots; `suspended` is
-    // emitted as a JSON boolean (SQLite stores it as 0/1).
+    // `banned` / `emailVerified` are emitted as JSON booleans (SQLite stores
+    // them as 0/1). Credentials live in the `account` table, never audited.
     json: a =>
-      `json_object('id',${a}.id,'email',${a}.email,'displayName',${a}.display_name,'picture',${a}.picture,'roles',json(${a}.roles),'suspended',json(iif(${a}.suspended,'true','false')),'createdAt',${a}.created_at,'updatedAt',${a}.updated_at)`,
+      `json_object('id',${a}.id,'email',${a}.email,'name',${a}.name,'image',${a}.image,'role',${a}.role,'banned',json(iif(${a}.banned,'true','false')),'emailVerified',json(iif(${a}.email_verified,'true','false')),'createdAt',${a}.created_at,'updatedAt',${a}.updated_at)`,
   },
   {
     table: 'invite',
