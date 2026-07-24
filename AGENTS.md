@@ -445,7 +445,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 - **Email**: Resend API + React Email templates (welcome, invite, password reset)
 - **WebSocket**: Socket.io gateway with Better Auth session auth
 - **Slack**: SlackService for bot notifications
-- **Email dev server**: `bun run email` (port 3035)
+- **Email dev server**: `bun run email` (port 3035) — a Bun-native preview + export (`scripts/email.ts`) that renders the templates with `@react-email/components` `render` (the same path `EmailService` uses). It replaces the `react-email` CLI, whose dev server pulls `@react-email/ui` → Next.js (~430 MB of node_modules). `bun run email:export` writes the rendered HTML to `./out`.
 
 ---
 
@@ -587,29 +587,29 @@ bun run test:e2e:single ./e2e/relative/path/to/name.e2e.ts # Run single E2E test
 
 ## **Scripts Reference**
 
-| Command                          | Description                                                             |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| `bun dev`                        | Start dev server with hot reload (`bun --watch`)                        |
-| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`)                |
-| `bun start`                      | Start production build (`bun dist/main.js`)                             |
-| `bun run test`                   | Run unit + integration tests                                            |
-| `bun run test:unit`              | Unit tests only (`*.test.ts`)                                           |
-| `bun run test:int`               | Integration tests only (`*.spec.ts`, in-memory SQLite)                  |
-| `bun run test:cov`               | Unit + integration with coverage                                        |
-| `bun run test:e2e`               | Run E2E tests with DB preload                                           |
-| `bun run test:e2e:single <path>` | Run single E2E test                                                     |
-| `bun run lint`                   | Type-aware lint + fix with Oxlint (`--type-aware --fix`)                |
-| `bun run format`                 | Format with oxfmt                                                       |
-| `bun run typecheck`              | Typecheck with `tsc` (TS 7 native, single `tsconfig.json`, incl. specs) |
-| `bun run mig:gen`                | Generate a Drizzle migration from schema changes                        |
-| `bun run mig:run`                | Apply pending migrations                                                |
-| `bun run db:push`                | Push schema straight to the DB (dev only)                               |
-| `bun run db:studio`              | Open Drizzle Studio                                                     |
-| `bun run seed`                   | Run migration-style seeders                                             |
-| `bun run create:admin`           | Create admin user interactively                                         |
-| `bun run email`                  | Start React Email preview server (port 3035)                            |
-| `bun run email:export`           | Export email templates as HTML                                          |
-| `bun run gen:env:docs`           | Generate env vars documentation (`env-vars.md`)                         |
+| Command                          | Description                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `bun dev`                        | Start dev server with hot reload (`bun --watch`)                                |
+| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`)                        |
+| `bun start`                      | Start production build (`bun dist/main.js`)                                     |
+| `bun run test`                   | Run unit + integration tests                                                    |
+| `bun run test:unit`              | Unit tests only (`*.test.ts`)                                                   |
+| `bun run test:int`               | Integration tests only (`*.spec.ts`, in-memory SQLite)                          |
+| `bun run test:cov`               | Unit + integration with coverage                                                |
+| `bun run test:e2e`               | Run E2E tests with DB preload                                                   |
+| `bun run test:e2e:single <path>` | Run single E2E test                                                             |
+| `bun run lint`                   | Type-aware lint + fix with Oxlint (`--type-aware --fix`)                        |
+| `bun run format`                 | Format with oxfmt                                                               |
+| `bun run typecheck`              | Typecheck with `tsc` (TS 7 native, single `tsconfig.json`, incl. specs)         |
+| `bun run mig:gen`                | Generate a Drizzle migration from schema changes                                |
+| `bun run mig:run`                | Apply pending migrations                                                        |
+| `bun run db:push`                | Push schema straight to the DB (dev only)                                       |
+| `bun run db:studio`              | Open Drizzle Studio                                                             |
+| `bun run seed`                   | Run migration-style seeders                                                     |
+| `bun run create:admin`           | Create admin user interactively                                                 |
+| `bun run email`                  | Start the Bun-native React Email preview server (`scripts/email.ts`, port 3035) |
+| `bun run email:export`           | Render email templates to HTML (`./out`, via `scripts/email.ts`)                |
+| `bun run gen:env:docs`           | Generate env vars documentation (`env-vars.md`)                                 |
 
 ---
 

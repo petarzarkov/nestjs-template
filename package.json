@@ -24,8 +24,8 @@
     "test:int": "bun test .spec.ts",
     "test:e2e": "bun test --env-file=./e2e/.env --preload ./e2e/setup/preload.ts $(find ./e2e -name '*.e2e.ts')",
     "test:e2e:single": "bun test --timeout 30000 --env-file=./e2e/.env --preload ./e2e/setup/preload.ts --bail",
-    "email": "bunx react-email@6.9.1 dev --dir src/notifications/email/templates --port 3035",
-    "email:export": "bunx react-email@6.9.1 export --dir src/notifications/email/templates",
+    "email": "bun --watch scripts/email.ts",
+    "email:export": "bun scripts/email.ts export ./out",
     "lint": "oxlint --type-aware --fix src e2e scripts",
     "format": "oxfmt .",
     "typecheck": "tsc --noEmit",
@@ -84,7 +84,6 @@
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
     "@nestjs/testing": "11.1.28",
-    "@react-email/ui": "6.9.1",
     "@types/bun": "1.3.14",
     "@types/express": "5.0.6",
     "@types/mime-types": "3.0.1",

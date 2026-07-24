@@ -94,7 +94,7 @@ bun run create:admin
 ### Email Notifications
 
 - Resend API integration
-- React Email templates with local preview server
+- React Email templates with a **Bun-native** preview + export server (`scripts/email.ts`) — no `react-email` CLI / `@react-email/ui` / Next.js
 - Event-driven: welcome, invite, and password reset emails
 
 ### AI Integration
