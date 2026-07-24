@@ -1,11 +1,9 @@
 import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
-import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { AIModule } from '@/ai/ai.module';
 import { AppConfigModule } from '@/config/app.config.module';
-import { ValidatedConfig, validateConfig } from '@/config/env.validation';
+import { validateConfig } from '@/config/env.validation';
 import { loggerModuleAsyncOptions } from '@/config/logger.config';
-import { AppConfigService } from '@/config/services/app.config.service';
 import { HelpersModule } from '@/core/helpers/helpers.module';
 import { PaginationModule } from '@/core/pagination/pagination.module';
 import { FileModule } from '@/file/file.module';
@@ -22,15 +20,6 @@ import { QueueModule } from './queue.module';
     AppConfigModule.forRoot({
       isGlobal: true,
       validate: validateConfig,
-    }),
-    HttpModule.registerAsync({
-      global: true,
-      imports: [AppConfigModule],
-      useFactory: async (configService: AppConfigService<ValidatedConfig>) => ({
-        timeout: configService.getOrThrow('http.timeout'),
-        maxRedirects: configService.getOrThrow('http.maxRedirects'),
-      }),
-      inject: [AppConfigService],
     }),
     HelpersModule,
     DatabaseModule.forRoot(),

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { validate as uuidValidate } from 'uuid';
+import { isUuid } from '@/core/utils/uuid.util';
 
 export interface CursorPayload {
   /** Sort column value (ISO 8601 date string or stringified value) */
@@ -26,7 +26,7 @@ export function decodeCursor(cursor: string): CursorPayload {
       parsed === null ||
       typeof parsed.s !== 'string' ||
       typeof parsed.i !== 'string' ||
-      !uuidValidate(parsed.i)
+      !isUuid(parsed.i)
     ) {
       throw new Error();
     }

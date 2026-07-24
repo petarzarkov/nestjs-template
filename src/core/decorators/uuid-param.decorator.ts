@@ -1,7 +1,7 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { BadRequestException, createParamDecorator } from '@nestjs/common';
 import { ApiParam } from '@nestjs/swagger';
-import { validate } from 'uuid';
+import { isUuid } from '@/core/utils/uuid.util';
 
 export interface UuidParamOptions {
   name: string;
@@ -21,7 +21,7 @@ export const UuidParam = (options: UuidParamOptions) => {
         throw new BadRequestException(`Parameter '${name}' is required`);
       }
 
-      if (!validate(paramValue)) {
+      if (!isUuid(paramValue)) {
         throw new BadRequestException(
           `Parameter '${name}' must be a valid UUID`,
         );

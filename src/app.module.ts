@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { NestJsCmsModule } from '@arkv/nestjs-cms';
 import { NestJsContextLoggerModule } from '@arkv/nestjs-context-logger';
-import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -11,9 +10,8 @@ import { AIModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/app.config.module';
-import { ValidatedConfig, validateConfig } from './config/env.validation';
+import { validateConfig } from './config/env.validation';
 import { loggerModuleAsyncOptions } from './config/logger.config';
-import { AppConfigService } from './config/services/app.config.service';
 import { DbExceptionFilter } from './core/filters/db-exception.filter';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { HelpersModule } from './core/helpers/helpers.module';
@@ -37,15 +35,6 @@ import { UsersModule } from './users/users.module';
     AppConfigModule.forRoot({
       isGlobal: true,
       validate: validateConfig,
-    }),
-    HttpModule.registerAsync({
-      global: true,
-      imports: [AppConfigModule],
-      useFactory: async (configService: AppConfigService<ValidatedConfig>) => ({
-        timeout: configService.getOrThrow('http.timeout'),
-        maxRedirects: configService.getOrThrow('http.maxRedirects'),
-      }),
-      inject: [AppConfigService],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),

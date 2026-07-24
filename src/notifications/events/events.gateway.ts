@@ -11,7 +11,6 @@ import {
 } from '@nestjs/websockets';
 import { Emitter } from '@socket.io/redis-emitter';
 import { ExtendedError, Socket } from 'socket.io';
-import { v4 as uuidv4 } from 'uuid';
 import { AIService } from '@/ai/services/ai.service';
 import { AccessTokenPayload } from '@/auth/dto/access-token-payload';
 import { ValidatedConfig } from '@/config/env.validation';
@@ -97,7 +96,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const requestId =
         (socket.handshake.headers?.[REQUEST_ID_HEADER_KEY] as string) ||
         context.requestId ||
-        uuidv4();
+        crypto.randomUUID();
       socket.handshake.headers[REQUEST_ID_HEADER_KEY] = requestId;
 
       void this.contextService.runWithContext(
@@ -273,7 +272,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: AIMessageRequest,
     @ConnectedSocket() client: ExtendedSocket,
   ) {
-    const requestId = uuidv4();
+    const requestId = crypto.randomUUID();
     const user = client.data.user;
     try {
       const stream = this.aiService.streamProvider(

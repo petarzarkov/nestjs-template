@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
-import { v4, validate } from 'uuid';
 import { REQUEST_ID_HEADER_KEY } from '@/constants';
+import { isUuid } from '@/core/utils/uuid.util';
 import {
   AsyncContext,
   ContextLogger,
@@ -19,7 +19,9 @@ export class RequestMiddleware implements NestMiddleware {
     const startTime = Date.now();
     const incomingReqId = req.get(REQUEST_ID_HEADER_KEY);
     const requestId =
-      incomingReqId && validate(incomingReqId) ? incomingReqId : v4();
+      incomingReqId && isUuid(incomingReqId)
+        ? incomingReqId
+        : crypto.randomUUID();
     const eventPath = req.originalUrl?.split('?')?.[0] || req.originalUrl;
 
     res.setHeader(REQUEST_ID_HEADER_KEY, requestId);
