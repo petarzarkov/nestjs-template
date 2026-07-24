@@ -213,6 +213,115 @@ export class FetchService extends UrlHelper {
     }
   }
 
+  /**
+   * Streams a Server-Sent-Events response, yielding each `data:` payload string
+   * (the terminating `[DONE]` sentinel is consumed, not yielded). Unlike
+   * {@link request} there is **no retry** — a partially-consumed stream can't be
+   * safely replayed — but the connect timeout, context logging and NestJS error
+   * mapping still apply. Callers parse each payload themselves (e.g. `JSON.parse`).
+   */
+  async *streamSse<TRequest = unknown>(
+    url: string | URL,
+    payload?: TRequest,
+    options: {
+      headers?: Record<string, string>;
+      flow?: string;
+      /** Time-to-first-byte budget in ms; the stream itself is not capped. */
+      timeoutMs?: number;
+      method?: 'GET' | 'POST';
+    } = {},
+  ): AsyncGenerator<string> {
+    const {
+      headers,
+      flow,
+      timeoutMs = this.httpConfig.timeout,
+      method = 'POST',
+    } = options;
+    const target = this.buildUrl({ base: url });
+    const startedAt = Date.now();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(target.href, {
+        method,
+        headers: {
+          Accept: 'text/event-stream',
+          ...(payload != null && { 'Content-Type': 'application/json' }),
+          ...headers,
+        },
+        ...(payload != null && {
+          body: this.helpersService.safeStringify(
+            payload as Record<string, unknown>,
+          ),
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      this.logger.error(`HTTP STREAM ${target.href} failed to connect`, {
+        err: error instanceof Error ? error.message : String(error),
+        flow,
+      });
+      throw error instanceof TypeError
+        ? this.defaultErrorHandler(error)
+        : error;
+    } finally {
+      // Headers received (or the connect failed) — drop the connect guard so a
+      // long-lived stream isn't aborted mid-flight.
+      clearTimeout(timer);
+    }
+
+    if (!response.ok || !response.body) {
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch {
+        data = await response.text().catch(() => undefined);
+      }
+      this.logger.error(`HTTP STREAM ${target.href} failed`, {
+        err: { status: response.status, data },
+        flow,
+      });
+      throw this.defaultErrorHandler(
+        new FetchHttpError(response.status, response.statusText, data),
+      );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        let newline: number;
+        while ((newline = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          if (!line.startsWith('data:')) {
+            continue;
+          }
+          const data = line.slice(5).trim();
+          if (data === '[DONE]') {
+            return;
+          }
+          yield data;
+        }
+      }
+    } finally {
+      reader.releaseLock();
+      this.logger.debug(`HTTP STREAM ${target.href} closed`, {
+        flow,
+        elapsed: Date.now() - startedAt,
+      });
+    }
+  }
+
   get<TResponse = unknown>(
     url: string | URL,
     options?: BaseOptions<never, TResponse>,

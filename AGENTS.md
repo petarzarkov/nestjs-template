@@ -135,7 +135,10 @@ src/
 │   └── dto/                   # user-notifications payload DTOs
 └── ai/                        # AIModule (.forRoot) — multi-provider AI
     ├── ai.controller.ts       # /ai routes: query, models
-    ├── services/              # AIService (querying + streaming), AIProviderService
+    ├── services/              # AIService (facade) + AIProviderService (dispatch)
+    │                          # + per-provider services: BaseProviderAiService,
+    │                          # OpenAICompatibleAiService (Groq/OpenRouter, REST),
+    │                          # GoogleAIService (@google/genai)
     ├── enum/                  # AIProvider: google | groq | openrouter
     └── dto/                   # AI request/response DTOs
 
@@ -459,7 +462,9 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 ## **AI Integration**
 
 - **Providers**: Google Gemini, Groq, OpenRouter (`AIProvider` enum: `google | groq | openrouter`)
-- **SDKs**: `@ai-sdk/google` (Gemini) and `@ai-sdk/openai` (Groq + OpenRouter via `baseURL`), unified through the Vercel AI SDK (`ai`)
+- **No third-party AI abstraction** (no `vercel-ai` / `@ai-sdk/*`). Each provider implements one `BaseProviderAiService` contract (`generateText` / `generateStructured` / `streamText` / `listModels`); `AIProviderService` dispatches uniformly and `AIService` is the facade. Google uses the official **`@google/genai`** SDK; Groq + OpenRouter share `OpenAICompatibleAiService`, which talks raw OpenAI-compatible REST through `FetchService` (retry + back-off) and reads the streaming SSE body with plain `fetch`.
+- **Structured output**: `AIService.queryStructured(provider, model, prompt, zodSchema)` — Zod schema → JSON schema handed to the model, reply Zod-validated (Gemini via `responseJsonSchema` constrained decoding; OpenAI-compatible via `response_format: json_object` + schema in the prompt).
+- **Streaming**: `AIService.streamProvider(...)` yields text chunks (used by the WebSocket `aiRequest` event) — Gemini `generateContentStream`, OpenAI-compatible SSE.
 - **REST**: `POST /api/ai/query`, `GET /api/ai/models`
 - **WebSocket streaming**: real-time AI responses via Socket.io `aiRequest` event
 - **Dynamic model discovery** from provider APIs with static fallbacks

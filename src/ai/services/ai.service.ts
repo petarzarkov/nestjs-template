@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { ZodType } from 'zod';
 import { AIModelItemDto } from '../dto/ai-model-item.dto';
 import { AIResponseDto } from '../dto/ai-response.dto';
 import { AIProvider } from '../enum/ai-provider.enum';
@@ -6,7 +7,7 @@ import { AIProviderService } from './ai-provider.service';
 
 @Injectable()
 export class AIService {
-  constructor(private aiProviderService: AIProviderService) {}
+  constructor(private readonly aiProviderService: AIProviderService) {}
 
   async queryProvider(
     provider: AIProvider,
@@ -14,18 +15,31 @@ export class AIService {
     prompt: string,
     systemPrompt?: string,
   ): Promise<AIResponseDto> {
-    const responseText = await this.aiProviderService.queryProvider(
+    const text = await this.aiProviderService.queryProvider(
       provider,
       model,
       prompt,
       systemPrompt,
     );
 
-    return {
-      model,
+    return { model, provider, text };
+  }
+
+  /** Zod-validated structured output from the model. */
+  queryStructured<TSchema extends ZodType>(
+    provider: AIProvider,
+    model: string,
+    prompt: string,
+    schema: TSchema,
+    systemPrompt?: string,
+  ): Promise<TSchema['_output']> {
+    return this.aiProviderService.queryStructured(
       provider,
-      text: responseText,
-    };
+      model,
+      prompt,
+      schema,
+      systemPrompt,
+    );
   }
 
   async *streamProvider(
