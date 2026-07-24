@@ -13,8 +13,8 @@ import { setupDocs } from './core/docs/setupDocs';
 import { DbExceptionFilter } from './core/filters/db-exception.filter';
 import { GenericExceptionFilter } from './core/filters/generic-exception.filter';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
-import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
+import { RedisService } from './infra/redis/services/redis.service';
 import { SocketConfigAdapter } from './notifications/events/socket.adapter';
 
 async function bootstrap() {
@@ -79,13 +79,10 @@ async function bootstrap() {
     appConfig,
   );
 
-  // Protect the queue dashboard (/api/queues) with basic auth in deployed envs.
+  // The Bull Board queue dashboard is mounted (and basic-auth protected in
+  // deployed envs) by QueueDashboardModule — see
+  // src/infra/queue/queue-dashboard.module.ts.
   const queuesPath = `/${GLOBAL_PREFIX}/queues`;
-  const htmlBasicAuthMiddleware = app.get(HtmlBasicAuthMiddleware);
-  app.use(
-    queuesPath,
-    htmlBasicAuthMiddleware.use.bind(htmlBasicAuthMiddleware),
-  );
 
   // Admin CMS UI driven by the OpenAPI document (mount after docs are built)
   await NestJsCmsModule.setup(app, document, {
@@ -94,7 +91,10 @@ async function bootstrap() {
     title,
   });
 
-  app.useWebSocketAdapter(new SocketConfigAdapter(app, configService));
+  const redisService = app.get(RedisService);
+  app.useWebSocketAdapter(
+    new SocketConfigAdapter(app, configService, redisService),
+  );
 
   const appPort = configService.get('app.port');
   await app.listen(appPort, '0.0.0.0');

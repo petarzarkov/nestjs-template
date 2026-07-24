@@ -10,7 +10,7 @@ Your task is to generate code, corrections, and refactorings that strictly compl
 
 ## **Project Overview**
 
-This is a **NestJS modular monolith template** running on **Bun** as the runtime and package manager. It is **SQLite-first**: the app boots with **zero external services** (no Postgres, no Redis). Persistence is **Drizzle ORM over `bun:sqlite`** (synchronous), the job queue is **bunqueue** (SQLite-backed, in-process), and validation is **Zod** via **nestjs-zod**.
+This is a **NestJS modular monolith template** running on **Bun** as the runtime and package manager. Persistence is **SQLite-first** — **Drizzle ORM over `bun:sqlite`** (synchronous), with Postgres reserved as an optional (not-yet-implemented) async data layer. **Redis** is required at runtime: it backs the **BullMQ** job queue (with a Bull Board dashboard and sandboxed child-process workers), the **Socket.io Redis adapter** (multi-node WebSocket fan-out), the rate-limit throttler storage, and the REST cache. Validation is **Zod** via **nestjs-zod**.
 
 ### Runtime & Tooling
 
@@ -19,7 +19,7 @@ This is a **NestJS modular monolith template** running on **Bun** as the runtime
 - **Test Runner:** Bun test (`bun test`)
 - **TypeScript:** Native Bun execution (no ts-node/tsx), target ESNext, module ESNext, moduleResolution bundler
 - **Password Hashing:** `Bun.password` API (not bcrypt) — see `src/core/utils/password.util.ts`
-- **Typecheck:** `tsgo` (TypeScript 7 / `@typescript/native-preview`) via `bun run typecheck` — typechecks the whole project via the single `tsconfig.json` (app + e2e + scripts + specs)
+- **Typecheck:** `tsc --noEmit` via `bun run typecheck` — `typescript@7` is the native (Go) compiler (`tsc` execs the native binary, same engine the `@typescript/native-preview`/`tsgo` package previewed). Typechecks the whole project via the single `tsconfig.json` (app + e2e + scripts + specs)
 - **Linting & Formatting:** Oxlint (`bun run lint` → `oxlint --type-aware --fix src e2e scripts`) + oxfmt (`bun run format`) — single quotes, trailing commas, 80-char lines. Linting is **type-aware** (powered by `oxlint-tsgolint`); there is no custom JS lint plugin.
 - **Build:** `bun run build` (`scripts/build.ts`) — a Bun-native, structure-preserving transpile (`Bun.Transpiler`), one output file per source file in `dist/`. It resolves the `@/*` alias to relative paths itself (no `tsc-alias`) and does NOT bundle (Bun's bundler miscompiles legacy decorators at scale). It also copies the Drizzle migration `.sql`/`.json` files into `dist/` so the boot-time migrator can find them. `bun run start` runs `dist/main.js`.
 
@@ -52,7 +52,7 @@ src/
 │   ├── env-vars.dto.ts        # Merged Zod env schema (+ cross-field superRefine)
 │   ├── config-validation.error.ts       # Thrown on invalid config
 │   ├── logger.config.ts       # NestJsContextLoggerModule.forRootAsync factory (shared)
-│   ├── dto/                   # Grouped Zod config schemas (service, db, queue, oauth, ai, aws, ws)
+│   ├── dto/                   # Grouped Zod config schemas (service, db, redis, oauth, ai, aws, ws)
 │   └── enum/                  # AppEnv (local|dev|stage|prod), DbType (sqlite|postgres)
 ├── core/                      # Global utilities (NOT a NestJS module)
 │   ├── decorators/            # @Public, @Roles/@RequireAllRoles, @CurrentUser, @ApiJwtAuth,
@@ -76,11 +76,14 @@ src/
 │   │   ├── migrations/        # drizzle-kit generated .sql + snapshot .json
 │   │   └── seeders/           # Migration-style seeders (0000_admin.seeder.ts, …)
 │   ├── health/                # HealthModule: /service/health (DB + memory), /service/up, /service/config
-│   ├── throttler/             # In-memory rate limiting (RateLimitModule + EnvThrottlerGuard) — no Redis
-│   └── queue/                 # QueueModule, JobDispatcherService, JobPublisherService, @JobHandler, dashboard
+│   ├── redis/                 # RedisModule + RedisService (ioredis), RedisCacheThrottlerModule (throttler+cache),
+│   │                          # HttpCacheInterceptor, KeyvIoredisAdapter, Redis-backed EnvThrottlerGuard
+│   └── queue/                 # BullMQ + Redis: QueueModule, JobDispatcherService, JobPublisherService, @JobHandler
 │       ├── decorators/        # @JobHandler({ queue, name })
-│       ├── services/          # JobDispatcherService (discovers handlers, runs bunqueue), JobPublisherService
-│       ├── queue-dashboard.controller.ts  # Lightweight /api/queues dashboard (replaces Bull Board)
+│       ├── services/          # JobDispatcherService (discovers handlers, runs BullMQ Workers), JobPublisherService
+│       ├── job.module.ts      # Trimmed Nest context bootstrapped in the sandboxed worker child process
+│       ├── job.processor.ts   # Sandboxed processor (default export) for BACKGROUND_JOBS — runs in a child process
+│       ├── queue-dashboard.module.ts  # Bull Board UI at /api/queues (@bull-board/nestjs)
 │       └── types/             # QueueJob type definitions
 ├── auth/                      # AuthModule (.forRoot) — JWT + OAuth
 │   ├── auth.controller.ts     # /auth routes: login, register, password reset, OAuth callbacks
@@ -162,7 +165,7 @@ e2e/                           # E2E tests (*.e2e.ts, run against a throwaway SQ
 - **One controller per main route**, additional controllers for sub-routes
 - **Nested submodules** for related features (e.g., `users/invites/`)
 - **Dynamic modules** use `.forRoot()` pattern (Auth, Database, AI, Config)
-- **Infrastructure modules** live under `src/infra/` (db, throttler, queue, health). Logging is the external `@arkv/nestjs-context-logger`.
+- **Infrastructure modules** live under `src/infra/` (db, redis, queue, health). Logging is the external `@arkv/nestjs-context-logger`.
 
 ### Folder Conventions per Module
 
@@ -208,7 +211,7 @@ Imported directly via `@/core/...`:
 | `@UUIDParam(name)`                    | Parse + validate UUID route parameter      |
 | `@EnvThrottle(opts)`                  | Environment-aware rate limiting            |
 
-> The old class-validator decorators (`@Password`, `@Email`, `@IsNullable`, `@IsUniqueEnum`), plus `@Auditable` and `@NoCache`, were removed. Field validation now lives in Zod schemas (`@/core/zod`); audit is DB-trigger driven; there is no HTTP cache layer.
+> The old class-validator decorators (`@Password`, `@Email`, `@IsNullable`, `@IsUniqueEnum`) plus `@Auditable` were removed — field validation now lives in Zod schemas (`@/core/zod`) and audit is DB-trigger driven. `@NoCache()` (skip the Redis `HttpCacheInterceptor`) still exists in `@/core/decorators`.
 
 ---
 
@@ -222,7 +225,7 @@ The application bootstrap registers these globally:
 4. `HttpLoggingInterceptor` — logs all HTTP requests/responses with timing (`APP_INTERCEPTOR`)
 5. `AuditContextInterceptor` — writes the current actor id into `_audit_ctx` for the DB audit triggers (`APP_INTERCEPTOR`)
 6. `GenericExceptionFilter` + `DbExceptionFilter` — consistent error responses (the DB filter maps `bun:sqlite` constraint errors → 409/400)
-7. `SocketConfigAdapter` — Socket.io adapter (single-node, in-memory — no Redis)
+7. `SocketConfigAdapter` — Socket.io adapter backed by the **Redis adapter** (`@socket.io/redis-adapter`) for multi-node broadcast
 8. CORS enabled, trust proxy, global prefix `api`
 9. API docs served at `/api/docs` (Swagger) and `/api/public` (Scalar); `setupDocs` returns the OpenAPI document
 10. `/api/queues` (queue dashboard) is protected by `HtmlBasicAuthMiddleware` (basic auth in deployed envs)
@@ -234,8 +237,8 @@ The application bootstrap registers these globally:
 
 - **Environment validation** in `env.validation.ts` using **Zod** — `envSchema.safeParse(config)`; failures throw `ConfigValidationError` with a readable path/message list. `class-validator`/`class-transformer` are **not** used.
 - **Typed config** via `AppConfigService<ValidatedConfig>` (extends `ConfigService<…, true>`) — access with `.get('db')`, `.getOrThrow('jwt')`, etc.
-- **Config DTOs** in `config/dto/` (each exports a Zod schema + a `getXConfig()` mapper): `service-vars`, `db-vars`, `queue-vars`, `oauth-vars`, `ai-vars`, `aws-vars`, `ws-vars`
-- **Config groups** (top-level keys of `ValidatedConfig`): `isProd`, `app`, `log`, `http`, `service`, `slack`, `jwt`, `ws`, `cors`, `email`, `db`, `queue`, `oauth`, `ai`, `aws`
+- **Config DTOs** in `config/dto/` (each exports a Zod schema + a `getXConfig()` mapper): `service-vars`, `db-vars`, `redis-vars`, `oauth-vars`, `ai-vars`, `aws-vars`, `ws-vars`
+- **Config groups** (top-level keys of `ValidatedConfig`): `isProd`, `app`, `log`, `http`, `service`, `slack`, `jwt`, `ws`, `cors`, `email`, `db`, `redis`, `oauth`, `ai`, `aws`
 - **Environments**: `local`, `dev`, `stage`, `prod` (`AppEnv` enum); **DB types**: `sqlite`, `postgres` (`DbType` enum — only `sqlite` is implemented; the Postgres env surface is validated but the module throws if selected)
 
 ---
@@ -318,9 +321,9 @@ bun run seed                  # Run migration-style seeders (scripts/seed.ts; tr
 
 ---
 
-## **Job Queue System (bunqueue — SQLite-backed)**
+## **Job Queue System (BullMQ + Redis)**
 
-No Redis, no BullMQ. Each queue is an **embedded `bunqueue` instance** (`new Bunqueue(name, { embedded: true, … })` from `bunqueue/client`) persisted to its own SQLite file under `QUEUE_DATA_PATH`, running in-process.
+Queues are **BullMQ** queues over **Redis**, registered via `@nestjs/bullmq` (`BullModule.forRootAsync` + `registerQueueAsync`) in `QueueModule`. Connection comes from the `redis` config group.
 
 ### Queues
 
@@ -329,22 +332,29 @@ No Redis, no BullMQ. Each queue is an **embedded `bunqueue` instance** (`new Bun
 
 ### Job Handler Pattern
 
-`JobDispatcherService` discovers `@JobHandler` methods via NestJS `DiscoveryService` + `MetadataScanner` + `Reflector` (metadata key `JOB_HANDLER_METADATA`) on module init and wires each `(queue, name)` pair as a bunqueue route (with per-job ContextLogger context + timeout):
+`JobDispatcherService` discovers `@JobHandler` methods via NestJS `DiscoveryService` + `MetadataScanner` + `Reflector` (metadata key `JOB_HANDLER_METADATA`) on module init and starts a BullMQ `Worker` per queue (with per-job ContextLogger context + timeout):
 
 ```typescript
 @JobHandler({ queue: EVENTS.QUEUES.BACKGROUND_JOBS, name: EVENTS.ROUTING_KEYS.USER_REGISTERED })
 async handleUserRegistered(job: JobHandlerPayload<typeof EVENTS.ROUTING_KEYS.USER_REGISTERED>) { ... }
 ```
 
+### Workers: in-process vs sandboxed child process
+
+- **`notifications-events-queue`** → an **in-process** `Worker` (inline processor). Runs on the main event loop so its handlers can emit over the Socket.io server directly.
+- **`background-jobs-queue`** → a **sandboxed processor**: the `Worker` is given the file path `job.processor.ts`, so BullMQ spawns a **separate OS process per worker**. That child bootstraps a trimmed Nest context (`job.module.ts`) once (cached across jobs) and runs the handler via `JobDispatcherService.executeBackgroundJob`. The `IS_JOB_WORKER` env flag stops the child from starting its own workers. Because WebSocket fan-out uses the Redis adapter/emitter, a sandboxed job can still emit WS events (the child publishes through a `@socket.io/redis-emitter` on Redis db4; the main process broadcasts).
+
 ### Published Events (`src/notifications/events/events.ts`)
 
-| Routing Key           | Payload              | Action                          |
-| --------------------- | -------------------- | ------------------------------- |
-| `user.registered`     | RegisteredPayload    | Welcome email + WS notification |
-| `user.invited`        | InvitePayload        | Invite email + WS notification  |
-| `user.password_reset` | PasswordResetPayload | Password reset email            |
+| Routing Key           | Payload              | Action                                                   |
+| --------------------- | -------------------- | -------------------------------------------------------- |
+| `user.registered`     | RegisteredPayload    | Welcome email + WS notification (sandboxed / background) |
+| `user.invited`        | InvitePayload        | Invite email + WS notification                           |
+| `user.password_reset` | PasswordResetPayload | Password reset email                                     |
 
 ### Publishing Jobs
+
+`JobPublisherService` (in `NotificationQueueModule`) enqueues via BullMQ `@InjectQueue`:
 
 ```typescript
 await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
@@ -354,18 +364,19 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 
 ### Queue Dashboard
 
-- Lightweight self-hosted dashboard at `/api/queues` (`QueueDashboardController`) — per-queue job counts plus `/api/queues/stats` (JSON). It replaces Bull Board and is protected by `HtmlBasicAuthMiddleware` in deployed envs.
+- **Bull Board** UI at `/api/queues` (`QueueDashboardModule` via `@bull-board/nestjs` + `@bull-board/express`), protected by `HtmlBasicAuthMiddleware`.
 
-### Tuning (`QUEUE_*` env vars → `queue.*` config)
+### Tuning (`REDIS_QUEUES_*` env vars → `redis.queues.*` config)
 
-`QUEUE_DATA_PATH` (default `./data/queue`), `QUEUE_CONCURRENCY` (5), `QUEUE_MAX_RETRIES` (3), `QUEUE_RETRY_DELAY_MS` (1000, exponential backoff), `QUEUE_JOB_TIMEOUT_MS` (30000), `QUEUE_RATE_LIMIT_MAX` (100), `QUEUE_RATE_LIMIT_DURATION` (1000).
+`REDIS_QUEUES_CONCURRENCY` (3), `REDIS_QUEUES_MAX_RETRIES` (3), `REDIS_QUEUES_RETRY_DELAY_MS` (5000, exponential backoff), `REDIS_QUEUES_JOB_TIMEOUT_MS` (120000), `REDIS_QUEUES_RATE_LIMIT_MAX` (100), `REDIS_QUEUES_RATE_LIMIT_DURATION` (1000).
 
 ---
 
-## **WebSocket (Socket.io — single-node)**
+## **WebSocket (Socket.io + Redis adapter)**
 
 - **EventsGateway** — JWT-authenticated Socket.io gateway
-- **SocketConfigAdapter** — configures Socket.io; **in-memory, single-node** (cross-instance broadcast via a Redis adapter is out of scope for this template). Shares the HTTP server unless `WS_PORT` differs from the app port.
+- **SocketConfigAdapter** — configures Socket.io with the **Redis adapter** (`@socket.io/redis-adapter`, pub/sub on Redis db4) for cross-process / multi-node broadcast. Shares the HTTP server unless `WS_PORT` differs from the app port.
+- **Sandboxed workers** emit via a `@socket.io/redis-emitter` (`Emitter`) on the same db4 — so a background job running in a child process still reaches connected clients.
 - **Rooms**: `chat` (all users), `user_{id}` (private), `admins` (admin-only)
 - **Events**: `chatMessage` (broadcast), `aiRequest` (AI streaming)
 - **Config**: WS path/port and transports configurable via env vars
@@ -379,16 +390,24 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 - **Features**: error serialization, sensitive field masking (`accessToken`, `jwt`, `password`, `secret`, `key`, `phone`), circular reference handling, array truncation
 - **Log levels**: VERBOSE → DEBUG → LOG → WARN → ERROR → FATAL
 - **Streams**: `warn`/`error`/`fatal` write to **stderr**; everything else to stdout
-- **Filtered endpoints** (never logged; matched by exact `event` path via `filterEvents`): `/api/service/up`, `/api/service/health`, `/api/queues`, `/api/queues/stats`, `/favicon.ico`
+- **Filtered endpoints** (never logged; matched by exact `event` path via `filterEvents`): `/api/service/up`, `/api/service/health`, `/api/queues`, `/favicon.ico`
 
 ---
 
-## **Rate Limiting (in-memory)**
+## **Redis (`src/infra/redis/`)**
 
-- **RateLimitModule** (`@nestjs/throttler`) with the default **in-memory** storage — no Redis, single-node
-- **`EnvThrottlerGuard`** — driven by the `@EnvThrottle()` decorator, applies environment-aware limits via an in-process sliding window
-- **Throttle tiers**: short (10/1s), medium (50/10s), long (300/60s) — skipped for authenticated users
-- There is **no HTTP cache layer** (the old Redis cache-manager was removed)
+- **RedisModule** — `@Global`; provides `RedisService`, an ioredis connection factory (`newConnection(name, opts)`) that caches named clients and closes them on shutdown. Connection from the `redis` config group.
+- **RedisCacheThrottlerModule** — `@Global`; wires `@nestjs/throttler` (storage: `@nest-lab/throttler-storage-redis` on Redis **db2**) as `APP_GUARD ThrottlerGuard`, plus `@nestjs/cache-manager` `CacheModule` (store: `KeyvIoredisAdapter` on **db3**, TTL from `REDIS_CACHE_TTL`).
+- **DB allocation**: db0 = BullMQ, db2 = throttler + `EnvThrottlerGuard`, db3 = REST cache, db4 = Socket.io pub/sub + emitter.
+
+## **Rate Limiting**
+
+- **Throttle tiers** (`@nestjs/throttler`, Redis-backed storage): short (10/1s), medium (50/10s), long (300/60s) — skipped for authenticated users
+- **`EnvThrottlerGuard`** — driven by the `@EnvThrottle()` decorator, applies environment-aware limits via a Redis Lua-script sliding window (db2); applied per-route with `@UseGuards`
+
+## **HTTP Cache**
+
+- **`HttpCacheInterceptor`** (extends `@nestjs/cache-manager` `CacheInterceptor`) — production-only GET caching keyed by user id, skippable with **`@NoCache()`**. Available but not globally registered — opt-in via `@UseInterceptors(HttpCacheInterceptor)`.
 
 ---
 
@@ -487,7 +506,7 @@ Repositories call `paginationFactory.paginate({ db, table, pageOptions, where, o
 
 ## **Health Checks**
 
-- `GET /api/service/health` — DB (`select 1`) + memory-heap health (no Redis check — SQLite is the only external dependency)
+- `GET /api/service/health` — DB (`select 1`) + memory-heap health (Redis is a runtime dependency but is not part of the health probe)
 - `GET /api/service/up` — `uptimeSeconds`
 - `GET /api/service/config` — name, version, env, commit sha/message, timezone, Bun/Node versions
 
@@ -537,29 +556,29 @@ bun run test:e2e:single ./e2e/relative/path/to/name.e2e.ts # Run single E2E test
 
 ## **Scripts Reference**
 
-| Command                          | Description                                               |
-| -------------------------------- | --------------------------------------------------------- |
-| `bun dev`                        | Start dev server with hot reload (`bun --watch`)          |
-| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`)  |
-| `bun start`                      | Start production build (`bun dist/main.js`)               |
-| `bun run test`                   | Run unit + integration tests                              |
-| `bun run test:unit`              | Unit tests only (`*.test.ts`)                             |
-| `bun run test:int`               | Integration tests only (`*.int.ts`, in-memory SQLite)     |
-| `bun run test:cov`               | Unit + integration with coverage                          |
-| `bun run test:e2e`               | Run E2E tests with DB preload                             |
-| `bun run test:e2e:single <path>` | Run single E2E test                                       |
-| `bun run lint`                   | Type-aware lint + fix with Oxlint (`--type-aware --fix`)  |
-| `bun run format`                 | Format with oxfmt                                         |
-| `bun run typecheck`              | Typecheck with tsgo (single `tsconfig.json`, incl. specs) |
-| `bun run mig:gen`                | Generate a Drizzle migration from schema changes          |
-| `bun run mig:run`                | Apply pending migrations                                  |
-| `bun run db:push`                | Push schema straight to the DB (dev only)                 |
-| `bun run db:studio`              | Open Drizzle Studio                                       |
-| `bun run seed`                   | Run migration-style seeders                               |
-| `bun run create:admin`           | Create admin user interactively                           |
-| `bun run email`                  | Start React Email preview server (port 3035)              |
-| `bun run email:export`           | Export email templates as HTML                            |
-| `bun run gen:env:docs`           | Generate env vars documentation (`env-vars.md`)           |
+| Command                          | Description                                                             |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| `bun dev`                        | Start dev server with hot reload (`bun --watch`)                        |
+| `bun run build`                  | Build for production (Bun transpile, `scripts/build.ts`)                |
+| `bun start`                      | Start production build (`bun dist/main.js`)                             |
+| `bun run test`                   | Run unit + integration tests                                            |
+| `bun run test:unit`              | Unit tests only (`*.test.ts`)                                           |
+| `bun run test:int`               | Integration tests only (`*.int.ts`, in-memory SQLite)                   |
+| `bun run test:cov`               | Unit + integration with coverage                                        |
+| `bun run test:e2e`               | Run E2E tests with DB preload                                           |
+| `bun run test:e2e:single <path>` | Run single E2E test                                                     |
+| `bun run lint`                   | Type-aware lint + fix with Oxlint (`--type-aware --fix`)                |
+| `bun run format`                 | Format with oxfmt                                                       |
+| `bun run typecheck`              | Typecheck with `tsc` (TS 7 native, single `tsconfig.json`, incl. specs) |
+| `bun run mig:gen`                | Generate a Drizzle migration from schema changes                        |
+| `bun run mig:run`                | Apply pending migrations                                                |
+| `bun run db:push`                | Push schema straight to the DB (dev only)                               |
+| `bun run db:studio`              | Open Drizzle Studio                                                     |
+| `bun run seed`                   | Run migration-style seeders                                             |
+| `bun run create:admin`           | Create admin user interactively                                         |
+| `bun run email`                  | Start React Email preview server (port 3035)                            |
+| `bun run email:export`           | Export email templates as HTML                                          |
+| `bun run gen:env:docs`           | Generate env vars documentation (`env-vars.md`)                         |
 
 ---
 
@@ -579,7 +598,8 @@ bun run test:e2e:single ./e2e/relative/path/to/name.e2e.ts # Run single E2E test
 
 ## **Docker**
 
-SQLite-first — the container runs standalone with no companion database/cache services.
+The DB is a local SQLite file; **Redis** is the one companion service (queue, WS adapter, throttler, cache).
 
-- **docker-compose.full.yml** — a single `app-backend-full` service; SQLite DB + bunqueue storage persist in the `app-data` volume (`/app/data`). Health-checked via `/api/service/health`. (There is no `docker-compose.yml` — the app needs no external infrastructure to run.)
-- **Dockerfile** — multi-stage build, `oven/bun:1.3.14-slim` (≥1.3.14 for the built-in `Bun.Image` API), non-root `nestjs` user, `/app/data` for SQLite + queue storage. Schema migrations auto-apply on boot.
+- **docker-compose.yml** — dev infrastructure: `app-template-redis` (started by default) + `app-template-db` (Postgres, **behind the `postgres` profile** — only starts with `--profile postgres`, since the app is SQLite-first). Run the app on the host with `bun dev`.
+- **docker-compose.full.yml** — `app-backend-full` (SQLite, `DB_TYPE=sqlite`) + `app-redis-full`, plus an optional `app-postgres-full` (`--profile postgres`). SQLite DB persists in `app-data`, Redis in `redis-data`. The app `depends_on` a healthy Redis. Health-checked via `/api/service/health`.
+- **Dockerfile** — multi-stage build, `oven/bun:1.3.14-slim` (≥1.3.14 for the built-in `Bun.Image` API), non-root `nestjs` user, `/app/data` for the SQLite file. Schema migrations auto-apply on boot.

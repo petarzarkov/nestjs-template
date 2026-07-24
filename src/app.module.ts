@@ -25,8 +25,10 @@ import { PaginationModule } from './core/pagination/pagination.module';
 import { FileModule } from './file/file.module';
 import { DatabaseModule } from './infra/db/database.module';
 import { HealthModule } from './infra/health/health.module';
+import { QueueDashboardModule } from './infra/queue/queue-dashboard.module';
 import { QueueModule } from './infra/queue/queue.module';
-import { RateLimitModule } from './infra/throttler/throttler.module';
+import { RedisCacheThrottlerModule } from './infra/redis/redis-cache-throttler.module';
+import { RedisModule } from './infra/redis/redis.module';
 import { NotificationModule } from './notifications/notification.module';
 import { UsersModule } from './users/users.module';
 
@@ -54,7 +56,8 @@ import { UsersModule } from './users/users.module';
     ScheduleModule.forRoot(),
     HelpersModule,
     DatabaseModule.forRoot(),
-    RateLimitModule,
+    RedisModule,
+    RedisCacheThrottlerModule,
     PaginationModule,
     NestJsContextLoggerModule.forRootAsync(loggerModuleAsyncOptions),
     HealthModule,
@@ -63,6 +66,7 @@ import { UsersModule } from './users/users.module';
     AIModule.forRoot(),
     NotificationModule,
     QueueModule,
+    QueueDashboardModule,
     FileModule,
     // Registers CmsSchemaService; the UI + schema routes are mounted in
     // main.ts via NestJsCmsModule.setup(app, document, ...).

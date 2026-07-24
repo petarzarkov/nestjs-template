@@ -3,10 +3,6 @@
     "bun": {
       "type": "http",
       "url": "https://bun.com/docs/mcp"
-    },
-    "bunqueue": {
-      "command": "bunx",
-      "args": ["--package=bunqueue", "bunqueue-mcp"]
     }
   }
 }

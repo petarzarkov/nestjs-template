@@ -4,7 +4,7 @@ import { ConfigValidationError } from './config-validation.error';
 import { getAIConfig } from './dto/ai-vars.dto';
 import { getDbConfig } from './dto/db-vars.dto';
 import { getOAuthConfig } from './dto/oauth-vars.dto';
-import { getQueueConfig } from './dto/queue-vars.dto';
+import { getRedisConfig } from './dto/redis-vars.dto';
 import { getServiceConfig } from './dto/service-vars.dto';
 import { envSchema } from './env-vars.dto';
 
@@ -27,7 +27,7 @@ export const validateConfig = (config: Record<string, unknown>) => {
   return {
     ...serviceConfig,
     ...getDbConfig(validatedConfig),
-    ...getQueueConfig(validatedConfig),
+    ...getRedisConfig(validatedConfig),
     oauth: getOAuthConfig(
       validatedConfig,
       serviceConfig.app.webUrl,

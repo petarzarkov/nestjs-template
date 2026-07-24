@@ -132,7 +132,7 @@ describe('Auth (e2e)', () => {
       expect(response.status).toBe(201);
 
       // Wait for the WebSocket notification driven by the job queue
-      // Flow: Register → JobPublisherService → bunqueue (SQLite, in-process) → NotificationHandler → EventsGateway emits over WebSocket
+      // Flow: Register → JobPublisherService → bullmq worker → NotificationHandler → EventsGateway emits over WebSocket
       const notification = await ctx.ws.waitForEvent<{
         event: string;
         payload: { email: string; name: string; type: string };

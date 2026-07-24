@@ -1,26 +1,18 @@
-import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
-import { Bunqueue } from 'bunqueue/client';
-import type { Job, Processor } from 'bunqueue/client';
+import { Job, Worker } from 'bullmq';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { JOB_HANDLER_METADATA } from '@/constants';
+import { JOB_HANDLER_METADATA, MINUTE, SECOND } from '@/constants';
 import { ContextLogger, ContextService } from '@arkv/nestjs-context-logger';
 import type { JobHandlerOptions } from '@/infra/queue/decorators/job-handler.decorator';
-import type {
-  JobHandlerType,
-  QueueJob,
-} from '@/infra/queue/types/queue-job.type';
+import type { JobHandlerType } from '@/infra/queue/types/queue-job.type';
+import { EVENTS } from '@/notifications/events/events';
 
-/**
- * Discovers `@JobHandler` methods and runs each queue as an embedded
- * `bunqueue` instance (SQLite-persisted, in-process — no Redis). Also the
- * enqueue seam used by {@link JobPublisherService}.
- */
 @Injectable()
 export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
-  readonly #queues = new Map<string, Bunqueue<QueueJob>>();
+  private workers: Worker[] = [];
+  private handlersCache: Map<string, Map<string, JobHandlerType>> | null = null;
 
   constructor(
     private readonly configService: AppConfigService,
@@ -31,137 +23,43 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     private readonly contextService: ContextService,
   ) {}
 
-  onModuleInit() {
-    const queueConfig = this.configService.getOrThrow('queue');
-    // bunqueue's `dataPath` is the SQLite file itself — ensure the dir exists.
-    mkdirSync(queueConfig.dataPath, { recursive: true });
-    const queueMap = this.#discoverHandlers();
-
-    for (const [queueName, handlers] of queueMap) {
-      const routes: Record<string, Processor<QueueJob>> = {};
-      for (const [name, handler] of handlers) {
-        routes[name] = job => this.#process(queueName, job, handler);
-      }
-
-      const queue = new Bunqueue<QueueJob>(queueName, {
-        embedded: true,
-        dataPath: join(queueConfig.dataPath, `${queueName}.db`),
-        routes,
-        concurrency: queueConfig.concurrency,
-        retry: {
-          maxAttempts: queueConfig.maxRetries,
-          delay: queueConfig.retryDelayMs,
-          strategy: 'exponential',
-        },
-        limiter: {
-          max: queueConfig.rateLimitMax,
-          duration: queueConfig.rateLimitDuration,
-        },
-      });
-
-      queue.on('completed', job =>
-        this.logger.verbose(
-          `Job completed: ${queueName}[${job.name}] ${job.id}`,
-        ),
-      );
-      queue.on('failed', (job, error) =>
-        this.logger.error(`Job failed: ${queueName}[${job.name}] ${job.id}`, {
-          error,
-        }),
-      );
-      queue.on('error', error =>
-        this.logger.error('Queue error', { error, queueName }),
-      );
-
-      this.#queues.set(queueName, queue);
-      this.logger.log(`Started bunqueue worker for queue: ${queueName}`, {
-        queueName,
-        handlers: Array.from(handlers.keys()).join(', '),
-        concurrency: queueConfig.concurrency,
-      });
+  async onModuleInit() {
+    if (process.env.IS_JOB_WORKER === 'true') {
+      return;
     }
+    this.handlersCache = this.#discoverHandlers(() => true);
+    this.#startWorkers(this.handlersCache);
   }
 
   async onModuleDestroy() {
-    this.logger.log('Shutting down job queues...');
-    await Promise.all([...this.#queues.values()].map(queue => queue.close()));
-    this.logger.log('All job queues shut down');
+    this.logger.log('Shutting down job workers...');
+    await Promise.all(this.workers.map(worker => worker.close()));
+    this.logger.log('All job workers shut down');
   }
 
-  /** Enqueue seam used by JobPublisherService. */
-  getQueue(name: string): Bunqueue<QueueJob> | undefined {
-    return this.#queues.get(name);
-  }
-
-  /** Names of the queues with registered handlers. */
-  getQueueNames(): string[] {
-    return [...this.#queues.keys()];
-  }
-
-  /** Per-queue job counts (waiting/active/completed/failed/…) for the dashboard. */
-  async getStats(): Promise<
-    Record<string, Awaited<ReturnType<Bunqueue<QueueJob>['getJobCountsAsync']>>>
-  > {
-    const entries = await Promise.all(
-      [...this.#queues.entries()].map(
-        async ([name, queue]) =>
-          [name, await queue.getJobCountsAsync()] as const,
-      ),
-    );
-    return Object.fromEntries(entries);
-  }
-
-  #process(
-    queueName: string,
-    job: Job<QueueJob>,
-    handler: JobHandlerType,
-  ): Promise<unknown> {
-    const jobTimeoutMs = this.configService.getOrThrow('queue').jobTimeoutMs;
-    return this.contextService.runWithContext(
-      {
-        ...this.contextService.getContext(),
-        flow: 'bunqueue',
-        context: 'JobDispatcher',
-        queue: queueName,
-        jobName: job.name,
-        jobId: job.id,
-        ...(job.data?.requestId && { requestId: job.data.requestId }),
-        ...(job.data?.metadata?.userId && {
-          userId: job.data.metadata.userId,
-        }),
-      },
-      async () => {
-        this.logger.verbose(`Processing job ${job.name} (ID: ${job.id})`);
-        try {
-          return await this.#runWithTimeout(job, handler, jobTimeoutMs);
-        } catch (error) {
-          await job.log(
-            `Failed: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          throw error;
-        }
-      },
-    );
-  }
-
-  #runWithTimeout(
-    job: Job<QueueJob>,
+  /**
+   * Wraps handler execution with a timeout to prevent jobs from hanging indefinitely.
+   * If the handler exceeds the timeout, the job will be failed with a timeout error.
+   */
+  private async runWithTimeout(
+    job: Job,
     handler: JobHandlerType,
     timeoutMs: number,
   ): Promise<unknown> {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let timeoutId: NodeJS.Timeout | undefined;
+
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => {
         reject(
           new Error(
-            `Job execution timed out after ${timeoutMs / 1000}s. Job may be hanging on an external API call or database operation.`,
+            `Job execution timed out after ${timeoutMs / 1000}s. Job may be hanging on external API call or database operation.`,
           ),
         );
       }, timeoutMs);
     });
 
     try {
-      return Promise.race([handler(job), timeoutPromise]);
+      return await Promise.race([handler(job), timeoutPromise]);
     } finally {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -169,7 +67,9 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  #discoverHandlers(): Map<string, Map<string, JobHandlerType>> {
+  #discoverHandlers(
+    queueFilter: (queue: string) => boolean = () => true,
+  ): Map<string, Map<string, JobHandlerType>> {
     const queueMap = new Map<string, Map<string, JobHandlerType>>();
     const providers = this.discoveryService.getProviders();
     const controllers = this.discoveryService.getControllers();
@@ -190,11 +90,14 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
         );
 
         if (metadata) {
+          if (!queueFilter(metadata.queue)) continue;
+
           let handlers = queueMap.get(metadata.queue);
           if (!handlers) {
             handlers = new Map();
             queueMap.set(metadata.queue, handlers);
           }
+
           handlers.set(metadata.name, instance[methodName].bind(instance));
           this.logger.verbose(
             `Registered handler for Job: [${metadata.name}] in Queue: [${metadata.queue}]`,
@@ -203,5 +106,129 @@ export class JobDispatcherService implements OnModuleInit, OnModuleDestroy {
       }
     }
     return queueMap;
+  }
+
+  #startWorkers(queueMap: Map<string, Map<string, JobHandlerType>>) {
+    const redisConfig = this.configService.getOrThrow('redis');
+    const extension = __filename.endsWith('.ts') ? 'ts' : 'js';
+    const processorPath = join(__dirname, `../job.processor.${extension}`);
+
+    for (const [queueName, handlers] of queueMap) {
+      const isBackgroundJob = queueName === EVENTS.QUEUES.BACKGROUND_JOBS;
+      const processor = isBackgroundJob
+        ? processorPath
+        : async (job: Job) => {
+            const handler = handlers.get(job.name);
+            if (!handler) {
+              throw new Error(
+                `No handler found for job "${job.name}" in queue "${queueName}"`,
+              );
+            }
+
+            return this.contextService.runWithContext(
+              {
+                ...this.contextService.getContext(),
+                flow: 'bullmq',
+                context: 'JobDispatcher',
+                queue: queueName,
+                jobName: job.name,
+                jobId: job.id,
+                ...(job.data?.requestId && { requestId: job.data.requestId }),
+                ...(job.data?.metadata?.userId && {
+                  userId: job.data.metadata.userId,
+                }),
+              },
+              async () => {
+                const message = `Processing job ${job.name} (ID: ${job.id})`;
+                this.logger.verbose(message);
+
+                try {
+                  await this.runWithTimeout(
+                    job,
+                    handler,
+                    redisConfig.queues.jobTimeoutMs,
+                  );
+                } catch (error) {
+                  await job.log(
+                    `Failed: ${error instanceof Error ? error.message : String(error)}`,
+                  );
+                  throw error;
+                }
+              },
+            );
+          };
+
+      const worker = new Worker(queueName, processor, {
+        connection: {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          ...(redisConfig.password && { password: redisConfig.password }),
+          db: redisConfig.db,
+        },
+        concurrency: redisConfig.queues.concurrency,
+        limiter: {
+          max: redisConfig.queues.rateLimitMax,
+          duration: redisConfig.queues.rateLimitDuration,
+        },
+        lockDuration: 1 * MINUTE,
+        stalledInterval: 30 * SECOND,
+        maxStalledCount: 2,
+      });
+
+      worker.on('completed', job => {
+        this.logger.verbose(`Job completed: ${this.getJobId(job)}`);
+      });
+
+      worker.on('failed', (job, error) => {
+        this.logger.error(`Job failed: ${this.getJobId(job)}`, { error });
+      });
+
+      worker.on('error', error => {
+        this.logger.error('Worker error', { error, queueName });
+      });
+
+      this.workers.push(worker);
+      this.logger.log(
+        `Started [${isBackgroundJob ? 'background' : 'foreground'}] worker for queue: ${queueName}`,
+        {
+          queueName,
+          handlers: Array.from(handlers.entries())
+            .map(
+              ([name, handler]) =>
+                `${name}: ${handler?.name?.replace('bound ', '')}`,
+            )
+            .join(', '),
+          worker: {
+            id: worker.id,
+            concurrency: worker.concurrency,
+          },
+        },
+      );
+    }
+  }
+
+  getJobId(job: Job | undefined) {
+    if (!job) return 'Unknown job';
+    return `${job.id} ${job.queueName}[${job.name}]`;
+  }
+
+  public async executeBackgroundJob(job: Job) {
+    if (!this.handlersCache) {
+      this.handlersCache = this.#discoverHandlers(
+        queue => queue === EVENTS.QUEUES.BACKGROUND_JOBS,
+      );
+    }
+
+    const handlers = this.handlersCache.get(job.queueName);
+    const handler = handlers?.get(job.name);
+
+    if (!handler) {
+      throw new Error(
+        `Handler not found for job '${job.name}' in queue '${job.queueName}' (Background Process)`,
+      );
+    }
+
+    const redisConfig = this.configService.getOrThrow('redis');
+    return this.runWithTimeout(job, handler, redisConfig.queues.jobTimeoutMs);
   }
 }

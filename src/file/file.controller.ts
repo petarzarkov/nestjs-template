@@ -41,7 +41,7 @@ import { FileUploadDto } from '@/file/dto/file-upload.dto';
 import { ListFilesQueryDto } from '@/file/dto/list-files-query.dto';
 import { FileEntity } from '@/file/entity/file.entity';
 import { ContextLogger } from '@arkv/nestjs-context-logger';
-import { EnvThrottlerGuard } from '@/infra/throttler/env-throttler.guard';
+import { EnvThrottlerGuard } from '@/infra/redis/guards/env-throttler.guard';
 import { SanitizedUser } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { MultipartFormDataGuard } from './guards/multipart-form-data.guard';

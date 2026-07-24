@@ -3,7 +3,7 @@ import { aiVarsSchema } from './dto/ai-vars.dto';
 import { awsVarsSchema } from './dto/aws-vars.dto';
 import { dbVarsSchema } from './dto/db-vars.dto';
 import { oauthVarsSchema } from './dto/oauth-vars.dto';
-import { queueVarsSchema } from './dto/queue-vars.dto';
+import { redisVarsSchema } from './dto/redis-vars.dto';
 import { serviceVarsSchema } from './dto/service-vars.dto';
 import { AppEnv } from './enum/app-env.enum';
 import { DbType } from './enum/db-type.enum';
@@ -13,7 +13,7 @@ export const envSchema = z
   .object({
     ...dbVarsSchema.shape,
     ...serviceVarsSchema.shape,
-    ...queueVarsSchema.shape,
+    ...redisVarsSchema.shape,
     ...oauthVarsSchema.shape,
     ...aiVarsSchema.shape,
     ...awsVarsSchema.shape,

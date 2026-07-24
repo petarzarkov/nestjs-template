@@ -10,7 +10,7 @@ import * as glob from 'glob';
  */
 const groupConfig: Record<string, string | string[]> = {
   Database: ['DB_TYPE', 'SQLITE_', 'POSTGRES_'],
-  Queue: 'QUEUE_',
+  Redis: 'REDIS_',
   Email: 'EMAIL_',
   AWS: 'AWS_',
   'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'],

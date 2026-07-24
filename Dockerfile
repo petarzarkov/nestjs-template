@@ -44,11 +44,10 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nestjs:nodejs --chmod=755 /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# SQLite DB + bunqueue storage live here — mount a volume to persist across
-# container restarts.
+# SQLite DB lives here — mount a volume to persist across container restarts.
+# (The BullMQ queue lives in Redis, not on disk.)
 RUN mkdir -p /app/data && chown -R nestjs:nodejs /app
 ENV SQLITE_DB_PATH=/app/data/app.db
-ENV QUEUE_DATA_PATH=/app/data/queue
 
 # Switch to non-root user
 USER nestjs
