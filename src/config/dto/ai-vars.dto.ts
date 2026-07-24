@@ -20,7 +20,8 @@ export const getAIConfig = (config: AIVars) => {
     providers: {
       ...(config.AI_GEMINI_API_KEY && {
         [AIProvider.GOOGLE]: {
-          url: `https://generativelanguage.googleapis.com/v1beta/models`,
+          // Gemini's OpenAI-compatible base (chat/completions, models, SSE).
+          url: `https://generativelanguage.googleapis.com/v1beta/openai`,
           apiKey: config.AI_GEMINI_API_KEY,
         },
       }),

@@ -88,8 +88,7 @@ src/
 │       └── types/             # QueueJob type definitions
 ├── auth/                      # Better Auth (via @thallesp/nestjs-better-auth) — stateful sessions + OAuth
 │   ├── auth.config.ts         # buildAuth(deps) → betterAuth({...}); buildStandaloneAuth(db) for CLI/e2e; export type Auth
-│   ├── schema/                # session, account, verification Drizzle tables (Better Auth core)
-│   └── enum/                  # OAuthProvider: google | github | linkedin | local
+│   └── schema/                # session, account, verification Drizzle tables (Better Auth core)
 ├── users/                     # UsersModule
 │   ├── users.controller.ts    # /users routes (list, me, ban, unban, update)
 │   ├── services/              # UsersService — user CRUD
@@ -137,8 +136,8 @@ src/
     ├── ai.controller.ts       # /ai routes: query, models
     ├── services/              # AIService (facade) + AIProviderService (dispatch)
     │                          # + per-provider services: BaseProviderAiService,
-    │                          # OpenAICompatibleAiService (Groq/OpenRouter, REST),
-    │                          # GoogleAIService (@google/genai)
+    │                          # OpenAICompatibleAiService (Groq/OpenRouter/Google
+    │                          # via REST+SSE — no AI SDK at all)
     ├── enum/                  # AIProvider: google | groq | openrouter
     └── dto/                   # AI request/response DTOs
 
@@ -167,17 +166,17 @@ e2e/                           # E2E tests (*.e2e.ts, run against a throwaway SQ
 
 ### Folder Conventions per Module
 
-| Folder        | Purpose                                                        |
-| ------------- | -------------------------------------------------------------- |
-| `dto/`        | Request/response DTOs, validated with Zod (`createZodDto`)     |
-| `schema/`     | Drizzle table definitions (`sqliteTable`) + `$infer` row types |
-| `entity/`     | Swagger response DTO classes (`@ApiProperty`) — the API shape  |
-| `enum/`       | TypeScript enums                                               |
-| `services/`   | Business logic services                                        |
-| `handlers/`   | Job handlers (decorated with `@JobHandler`)                    |
-| `repos/`      | Drizzle repositories (synchronous data access)                 |
-| `guards/`     | Module-specific guards                                         |
-| `validators/` | Module-specific validators                                     |
+| Folder        | Purpose                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dto/`        | Request/response DTOs, validated with Zod (`createZodDto`)                                                                                                                            |
+| `schema/`     | Drizzle table definitions (`sqliteTable`) + `$infer` row types                                                                                                                        |
+| `entity/`     | Swagger response DTO derived from the schema (`withDateFormat(createSelectSchema(table))` + `createZodDto`) — single source of truth                                                  |
+| `enum/`       | TypeScript enums                                                                                                                                                                      |
+| `services/`   | Business logic services                                                                                                                                                               |
+| `handlers/`   | Job handlers (decorated with `@JobHandler`)                                                                                                                                           |
+| `repos/`      | Drizzle repositories — extend `BaseRepository<typeof table>` (`@/infra/db/base.repository`) for `findById`/`create`/`save`/`update`/`deleteById`/`paginate`; add only bespoke finders |
+| `guards/`     | Module-specific guards                                                                                                                                                                |
+| `validators/` | Module-specific validators                                                                                                                                                            |
 
 > The `strategies/` folder (Passport strategies) was removed with the Better Auth migration — auth is no longer strategy-based.
 
@@ -192,7 +191,7 @@ Imported directly via `@/core/...`:
 - `@/core/interceptors` — HttpLoggingInterceptor, AuditContextInterceptor (registered globally)
 - `@/core/middlewares` — RequestMiddleware (Express-level), HtmlBasicAuthMiddleware
 - `@/core/pagination` — Cursor-based PaginationFactory service, DTOs, cursor utilities
-- `@/core/zod` — Shared Zod schemas (`emailSchema`, `passwordSchema`)
+- `@/core/zod` — Shared Zod schemas (`emailSchema`, `passwordSchema`) + `entity-schema.ts` (`withDateFormat` — the `z.date()` → `string`/`date-time` JSON-Schema fix for drizzle-zod entities)
 - `@/core/utils` — uuid.util (UUID helpers)
 - `@/core/validators` — File validators (size, name length)
 - `@/core/docs` — Swagger + Scalar API documentation setup
@@ -282,7 +281,7 @@ Declared inline in `sqliteTable(...)`, e.g. `uniqueIndex('UQ_user_email').on(t.e
 
 `session`, `account`, `verification` are Better Auth's core tables (they replace the old `auth_providers` and `password_reset_token`); sessions themselves live in Redis (`secondaryStorage`), so those tables are the schema surface the Drizzle adapter targets.
 
-Enums: `UserRole` (admin|user — now a single `role` text column, was a `roles` `UserRole[]` JSON array), `OAuthProvider` (google|github|linkedin|local), `InviteStatus` (pending|accepted|expired), `AuditAction` (INSERT|UPDATE|DELETE).
+Enums: `UserRole` (admin|user — now a single `role` text column, was a `roles` `UserRole[]` JSON array), `InviteStatus` (pending|accepted|expired), `AuditAction` (INSERT|UPDATE|DELETE). (OAuth provider names — google/github/linkedin — come straight from the `oauth` config group keys, not a dedicated enum.)
 
 ### Database & Seeder Commands
 
@@ -462,9 +461,9 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 ## **AI Integration**
 
 - **Providers**: Google Gemini, Groq, OpenRouter (`AIProvider` enum: `google | groq | openrouter`)
-- **No third-party AI abstraction** (no `vercel-ai` / `@ai-sdk/*`). Each provider implements one `BaseProviderAiService` contract (`generateText` / `generateStructured` / `streamText` / `listModels`); `AIProviderService` dispatches uniformly and `AIService` is the facade. Google uses the official **`@google/genai`** SDK; Groq + OpenRouter share `OpenAICompatibleAiService`, which talks raw OpenAI-compatible REST through `FetchService` (retry + back-off) and reads the streaming SSE body with plain `fetch`.
-- **Structured output**: `AIService.queryStructured(provider, model, prompt, zodSchema)` — Zod schema → JSON schema handed to the model, reply Zod-validated (Gemini via `responseJsonSchema` constrained decoding; OpenAI-compatible via `response_format: json_object` + schema in the prompt).
-- **Streaming**: `AIService.streamProvider(...)` yields text chunks (used by the WebSocket `aiRequest` event) — Gemini `generateContentStream`, OpenAI-compatible SSE.
+- **No AI SDK at all** (no `vercel-ai`, no `@ai-sdk/*`, no `@google/genai`). Each provider implements one `BaseProviderAiService` contract (`generateText` / `generateStructured` / `streamText` / `listModels`); `AIProviderService` dispatches uniformly and `AIService` is the facade. All three providers share `OpenAICompatibleAiService`, talking raw OpenAI-compatible REST through `FetchService` (retry + back-off); **Gemini uses its OpenAI-compatible endpoint** (`/v1beta/openai`, model ids de-prefixed of `models/`).
+- **Structured output**: `AIService.queryStructured(provider, model, prompt, zodSchema)` — the Zod schema is converted to a JSON schema, embedded in the prompt with `response_format: { type: 'json_object' }`, and the reply is Zod-validated. All three providers (Gemini included) go through this same OpenAI-compatible path.
+- **Streaming**: `AIService.streamProvider(...)` yields text chunks (used by the WebSocket `aiRequest` event) via `FetchService.streamSse` (reusable SSE reader — connect-timeout, no retry).
 - **REST**: `POST /api/ai/query`, `GET /api/ai/models`
 - **WebSocket streaming**: real-time AI responses via Socket.io `aiRequest` event
 - **Dynamic model discovery** from provider APIs with static fallbacks
@@ -617,7 +616,6 @@ bun run test:e2e:single ./e2e/relative/path/to/name.e2e.ts # Run single E2E test
 ## **Key Constants (`src/constants.ts`)**
 
 - `GLOBAL_PREFIX = 'api'`, `DOCS_AFFIX = 'docs'`
-- `PASSWORD_HASH_ROUNDS = 10`
 - `REQUEST_ID_HEADER_KEY = 'X-Request-Id'`
 - `LOGGER`: default mask fields (`accessToken`, `jwt`, `password`, `secret`, `key`, `phone`) + default filter events (`/api/service/up`, `/api/service/health`, `/favicon.ico`)
 - `FILES`: min 1KB, max 10MB, min name length 6, max 6 files

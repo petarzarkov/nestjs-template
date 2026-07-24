@@ -46,7 +46,6 @@
     "@bull-board/api": "8.3.0",
     "@bull-board/express": "8.3.0",
     "@bull-board/nestjs": "8.3.0",
-    "@google/genai": "^2.13.0",
     "@nest-lab/throttler-storage-redis": "1.2.0",
     "@nestjs/bullmq": "11.0.4",
     "@nestjs/cache-manager": "3.1.3",

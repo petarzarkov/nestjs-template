@@ -21,24 +21,27 @@ Add the variable with a sensible local-dev default (never a production secret).
 
 ### Step 3 — Validation DTO (`src/config/dto/`)
 
-Add the variable to the appropriate config DTO:
+Config is **Zod**, not class-validator. Each DTO exports a `z.object({...})`
+schema plus a `getXConfig(config)` mapper.
 
 - Pick the matching group (`service-vars.dto.ts`, `db-vars.dto.ts`,
   `redis-vars.dto.ts`, `oauth-vars.dto.ts`, `ai-vars.dto.ts`, `aws-vars.dto.ts`,
   `ws-vars.dto.ts`). Create a new DTO only for a genuinely new concern.
-- Add the class-validator decorators:
-  - Required: the type decorator (`@IsString()`, `@IsNumber()`, `@IsEnum(...)`,
-    `@IsUrl()`, …) with no `@IsOptional()`. The `!` non-null assertion marks it
-    required (e.g. `JWT_SECRET!: string`).
-  - Optional / defaulted: add `@IsOptional()` plus the type decorator, and give
-    it a default (e.g. `HTTP_REQ_TIMEOUT: number = 30000`).
-  - Use `@Transform(...)` for parsing (comma-lists, numbers, booleans).
-- If the value should be exposed to the app, map it in that DTO's
-  `getXConfig(...)` function (e.g. `getServiceConfig`, `getAWSConfig`) so it
-  surfaces under the typed `AppConfigService` config tree.
-- If you created a **new** DTO, add it to the `IntersectionType(...)` in
+- Add the field to that file's `xVarsSchema = z.object({ ... })`. Env values are
+  strings, so coerce non-strings:
+  - Required: `VAR_NAME: z.string()` (or `z.url()`, `z.enum(MyEnum)`).
+  - Number: `z.coerce.number()` (e.g. `z.coerce.number().default(30000)`).
+  - Boolean: `z.stringbool()`.
+  - Optional / defaulted: add `.optional()` or `.default(...)`.
+- Surface it to the app by mapping it in that DTO's `getXConfig(config)`
+  function (e.g. `getServiceConfig`, `getAIConfig`) so it appears under the typed
+  `AppConfigService` config tree.
+- Cross-field rules ("required when X") go in the `.superRefine(...)` in
+  [`src/config/env-vars.dto.ts`](../../src/config/env-vars.dto.ts).
+- If you created a **new** DTO: spread its `.shape` into `envSchema` in
   [`src/config/env-vars.dto.ts`](../../src/config/env-vars.dto.ts) and wire its
-  `getXConfig` into [`src/config/env.validation.ts`](../../src/config/env.validation.ts).
+  `getXConfig` into the config object returned by
+  [`src/config/env.validation.ts`](../../src/config/env.validation.ts).
 
 ### Step 4 — Regenerate docs
 

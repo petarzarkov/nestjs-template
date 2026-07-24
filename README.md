@@ -16,7 +16,7 @@ A production-ready NestJS modular monolith template running on **Bun** — **SQL
 | Auth                 | [Better Auth](https://www.better-auth.com) (stateful sessions, email/password, Google, GitHub, LinkedIn) via [`@thallesp/nestjs-better-auth`](https://github.com/ThallesP/nestjs-better-auth) |
 | WebSockets           | Socket.io with Redis adapter (multi-node)                                                                                                                                                     |
 | Email                | [Resend](https://resend.com) + [React Email](https://react.email)                                                                                                                             |
-| AI                   | [Vercel AI SDK](https://sdk.vercel.ai) (Gemini, Groq, OpenRouter)                                                                                                                             |
+| AI                   | Google Gemini, Groq, OpenRouter — **SDK-free**, via OpenAI-compatible REST/SSE through `FetchService`                                                                                         |
 | File Storage         | AWS S3                                                                                                                                                                                        |
 | API Docs             | Swagger + [Scalar](https://scalar.com)                                                                                                                                                        |
 | Logging              | [@arkv/nestjs-context-logger](https://www.npmjs.com/package/@arkv/nestjs-context-logger) (structured, async-context)                                                                          |
@@ -99,10 +99,10 @@ bun run create:admin
 
 ### AI Integration
 
-- Unified interface via Vercel AI SDK
+- **No AI SDK** — providers talk plain OpenAI-compatible REST/SSE through the shared `FetchService` (Gemini via its `/v1beta/openai` endpoint); one `BaseProviderAiService` contract, uniform dispatch
 - Providers: Google Gemini, Groq, OpenRouter
-- REST endpoint for queries + WebSocket streaming
-- Dynamic model discovery from provider APIs
+- Text, Zod-validated structured output, and streaming (REST + WebSocket)
+- Dynamic model discovery from provider APIs with static fallbacks
 
 ### File Management
 
@@ -218,7 +218,7 @@ public/                    # Static files (demo chat UI - testing only)
 scripts/                   # CLI utilities (build, seed, admin creation, env docs)
 ```
 
-Each domain module keeps its Drizzle table in a `schema/` folder and its Swagger response shape in an `entity/` folder (`@ApiProperty` classes).
+Each domain module keeps its Drizzle table in a `schema/` folder; the `entity/` folder derives the Swagger response DTO from that table (`drizzle-zod` `createSelectSchema` + `createZodDto`) as a single source of truth. Repositories extend a generic `BaseRepository` for standard CRUD + cursor pagination.
 
 ## API Endpoints
 
