@@ -22,7 +22,7 @@ import {
 import type { Response } from 'express';
 import { AppEnv } from '@/config/enum/app-env.enum';
 import { MINUTE } from '@/constants';
-import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { ApiAuth } from '@/core/decorators/api-auth.decorator';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { EnvThrottle } from '@/core/decorators/env-throttle.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
@@ -48,7 +48,7 @@ import { MultipartFormDataGuard } from './guards/multipart-form-data.guard';
 import { FileService } from './services/file.service';
 
 @ApiTags('files')
-@ApiJwtAuth()
+@ApiAuth()
 @Controller('files')
 export class FileController {
   constructor(

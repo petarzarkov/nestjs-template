@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { ApiAuth } from '@/core/decorators/api-auth.decorator';
 import { AIModelItemDto } from './dto/ai-model-item.dto';
 import { AIRequestDto } from './dto/ai-request.dto';
 import { AIResponseDto } from './dto/ai-response.dto';
@@ -8,7 +8,7 @@ import { AIService } from './services/ai.service';
 
 @ApiTags('ai')
 @Controller('ai')
-@ApiJwtAuth()
+@ApiAuth()
 export class AIController {
   constructor(private readonly aiService: AIService) {}
 

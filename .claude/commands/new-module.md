@@ -3,80 +3,171 @@ description: Scaffold a new NestJS domain module with the standard folder struct
 ---
 
 The user will pass the module name as an argument (e.g. `/new-module bonus`).
-Use that name (kebab-case for files, PascalCase for classes).
+Use that name (kebab-case for files, PascalCase for classes, snake_case for the
+DB table).
 
-Create the following structure under `src/<name>/`:
+This is a **Drizzle + `bun:sqlite` (synchronous)**, **Zod (nestjs-zod)**,
+**Better Auth** stack. Create the following under `src/<name>/`:
 
 ```
 src/<name>/
-  <name>.module.ts          # @Module — wires controllers, providers, imports
+  <name>.module.ts          # @Module — controllers + providers (no forFeature)
   <name>.controller.ts      # Thin controller: routes + payload marshalling
   services/                 # <name>.service.ts — business logic (@Injectable)
-  repos/                    # Custom TypeORM repositories (@Injectable)
-  entity/                   # TypeORM entities
-  dto/                      # Request/response DTOs (class-validator + swagger)
-  enum/                     # Enums
+  repos/                    # <name>.repository.ts — extends BaseRepository
+  schema/                   # <name>.schema.ts — Drizzle sqliteTable (source of truth)
+  entity/                   # <name>.entity.ts — Swagger DTO derived from the schema
+  dto/                      # request/query DTOs (Zod via createZodDto)
+  enum/                     # TS enums
 ```
 
-Only create the folders you actually need now — add `guards/`, `handlers/`,
-`subscribers/`, `validators/` later if the feature calls for them.
+Only create the folders you need now — add `guards/`, `handlers/`,
+`validators/` later if the feature calls for it.
 
-`<name>.module.ts` minimum shape:
+## 1. Schema (`schema/<name>.schema.ts`) — the single source of truth
+
+```ts
+import { sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { createdAt, updatedAt, uuidPk } from '@/infra/db/columns';
+
+export const bonuses = sqliteTable(
+  'bonus',
+  {
+    id: uuidPk(),
+    name: text().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  t => [uniqueIndex('UQ_bonus_name').on(t.name)],
+);
+
+export type BonusRow = typeof bonuses.$inferSelect;
+export type NewBonusRow = typeof bonuses.$inferInsert;
+```
+
+- Use the `columns.ts` helpers (`uuidPk`, `createdAt`, `updatedAt`,
+  `timestampMs`); `casing: 'snake_case'` derives column names from the property
+  key, so pass no name argument.
+- **Name every index / unique constraint explicitly** (`UQ_<table>_<cols>`,
+  `<table>_<cols>_index`); FKs via `.references(() => other.id, { onDelete })`.
+- **Register the table in the barrel** `src/infra/db/schema.ts` so Drizzle (and
+  the boot-time migrator) discovers it.
+
+## 2. Entity (`entity/<name>.entity.ts`) — Swagger response class + drift guard
+
+Hand-write the `@ApiProperty` class (Swagger reads its metadata directly), then
+add a compile-time **drift guard** so it can't silently diverge from the schema:
+
+```ts
+import { ApiProperty } from '@nestjs/swagger';
+import type { Equal, Expect } from '@/core/utils/type-equal';
+import type { BonusRow } from '../schema/bonus.schema';
+
+export class BonusEntity {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+}
+
+/** Fails `tsc` if the entity drifts from the Drizzle `bonus` row. */
+export type _BonusMatchesRow = Expect<Equal<BonusEntity, BonusRow>>;
+```
+
+Don't try to derive the entity from the schema with `drizzle-zod` +
+`createZodDto`: the row's `Date` columns are unrepresentable in the JSON Schema
+nestjs-zod feeds to `@nestjs/swagger`, which throws at boot
+(`Date cannot be represented in JSON Schema`). The `@ApiProperty` class + `Equal`
+guard gives the same no-drift guarantee without that limitation. See
+`src/users/entity/user.entity.ts` (note `SanitizedUser` stays a class so it
+works as both a type and a Swagger value). Response subsets are separate
+hand-written classes.
+
+## 3. Request / query DTOs (`dto/`)
+
+Plain Zod via `createZodDto` (class-validator is NOT used). Paginated list DTOs
+extend the shared cursor options:
+
+```ts
+import { createZodDto } from 'nestjs-zod';
+import { pageOptionsSchema } from '@/core/pagination/dto/page-options.dto';
+
+export class ListBonusesQueryDto extends createZodDto(
+  pageOptionsSchema.extend({/* search: z.string().optional() */}),
+) {}
+```
+
+## 4. Repository (`repos/<name>.repository.ts`) — extend `BaseRepository`
+
+`BaseRepository` (`@/infra/db/base.repository`) provides `findById`, `create`,
+`save` (upsert), `update`, `deleteById`, and a protected `paginate(...)`. Inject
+`DRIZZLE_DB` + `PaginationFactory` (both global) and declare only bespoke finders:
+
+```ts
+import { Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+import { PaginationFactory } from '@/core/pagination/pagination.factory';
+import { BaseRepository } from '@/infra/db/base.repository';
+import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
+import { bonuses } from '../schema/bonus.schema';
+import { BonusEntity } from '../entity/bonus.entity';
+
+@Injectable()
+export class BonusesRepository extends BaseRepository<typeof bonuses> {
+  constructor(
+    @Inject(DRIZZLE_DB) db: DrizzleDB,
+    paginationFactory: PaginationFactory,
+  ) {
+    super(db, bonuses, paginationFactory);
+  }
+
+  findByName(name: string): BonusEntity | null {
+    return (
+      this.db.select().from(bonuses).where(eq(bonuses.name, name)).get() ?? null
+    );
+  }
+}
+```
+
+Data access is **synchronous** — `.get()` / `.all()` / `.run()`, no `await`.
+See `src/users/repos/users.repository.ts` for a paginated example.
+
+## 5. Module + registration
 
 ```ts
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '@/infra/db/database.module';
-// import the entity / service / repository / controller you create
+import { BonusesController } from './bonuses.controller';
+import { BonusesRepository } from './repos/bonuses.repository';
+import { BonusesService } from './services/bonuses.service';
 
 @Module({
-  imports: [DatabaseModule.forFeature([/* <Name>Entity */])],
-  controllers: [/* <Name>Controller */],
-  providers: [/* <Name>Service, <Name>Repository */],
-  exports: [/* <Name>Service */],
+  controllers: [BonusesController],
+  providers: [BonusesService, BonusesRepository],
+  exports: [BonusesService],
 })
-export class <Name>Module {}
+export class BonusesModule {}
 ```
 
-Then add `<Name>Module` to the `imports` array of
-[`src/app.module.ts`](../../src/app.module.ts) — among the other domain modules
-(`UsersModule`, `AuditModule`, `FileModule`, …), after the infrastructure
-modules (`DatabaseModule.forRoot()`, `RedisModule`, `PaginationModule`,
-`NestJsContextLoggerModule.forRootAsync(...)`, `HealthModule`).
+- `DatabaseModule` is `@Global` (`DRIZZLE_DB` token) — there is **no**
+  `forFeature`; don't import it per module.
+- Add `BonusesModule` to the `imports` array of `src/app.module.ts` among the
+  domain modules.
 
-Rules to follow:
+## 6. Controller — thin, declarative
 
-- Services and repositories are decorated with `@Injectable()` from
-  `@nestjs/common`. Repositories inject the entity repo with
-  `@InjectRepository(<Name>Entity) private readonly repo: Repository<...>` and
-  also inject `ContextLogger`.
-- Services own logic; controllers stay thin (declarative routes + DTO
-  marshalling). Guards (`JwtAuthGuard`, `RolesGuard`) are global — use
-  `@Public()`, `@Roles(UserRole.ADMIN)`, `@CurrentUser()` as needed.
-- For **paginated list endpoints**, the query DTO extends `PageOptionsDto`
-  (`@/core/pagination/dto/page-options.dto`) and the repository calls
-  `paginationFactory.paginate(queryBuilder, query)` — inject
-  `PaginationFactory<Entity>`. See
-  [`src/users/repos/users.repository.ts`](../../src/users/repos/users.repository.ts).
-- **Entities** must follow the DB constraint-naming convention (enforced by the
-  custom Oxlint plugin):
-  - `@PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'PK_<table>' })`
-  - `@Index('<descriptive_columns>_index', ...)` — always name the index
-  - `@JoinColumn({ foreignKeyConstraintName: 'FK_<source>_to_<target>' })`
-  - `@Column({ type: 'enum', enumName: '<snake>_enum', enum: ... })` — always
-    name the enum; reuse the same `enumName` everywhere a shared TS enum is used
-  - Date columns use `@CreateDateColumn({ type: 'timestamptz' })` /
-    `@UpdateDateColumn({ type: 'timestamptz' })`; string columns set `length`.
-  - Add `@Auditable()` if entity changes should be tracked in the audit log.
-  - DTO/entity fields use `@ApiProperty` / `@ApiPropertyOptional` from
-    `@nestjs/swagger` and class-validator decorators.
-- Use the `@/` path alias for cross-module imports; relative paths within the
-  same module.
-- Do **not** generate a migration yet — finish the entities first, then run
-  `bun run mig:gen <Name>` at the end (see `/gen-migration`).
-- Do **not** create gateways or queue handlers unless the user explicitly asks.
+- `@Injectable()` services own logic; controllers marshal DTOs only.
+- Auth: guards are global (Better Auth `AuthGuard` + `RolesGuard`). Use
+  `@Public()` (bypass), `@Roles(UserRole.ADMIN)`, `@CurrentUser()`, `@ApiAuth()`
+  from `@/core/decorators`.
+- `@UUIDParam`/`@ApiUuidParam` for UUID route params.
 
-After scaffolding, tell the user:
+## Rules
 
-1. Files created.
-2. Next steps (finalize entity, register in `app.module.ts`, add routes,
-   write tests, generate migration with `bun run mig:gen`).
+- `@/` alias for cross-module imports; relative paths within a module.
+- Do **not** create gateways or queue handlers unless the user asks.
+- After scaffolding, generate the migration with `bun run mig:gen` (see
+  `/gen-migration`) — it also auto-applies on app boot.
+
+After scaffolding, tell the user: (1) files created; (2) next steps — register in
+`app.module.ts`, add routes, write tests (`*.int.ts` against in-memory SQLite),
+generate the migration.

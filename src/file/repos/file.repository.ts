@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, like, type SQL } from 'drizzle-orm';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginationFactory } from '@/core/pagination/pagination.factory';
+import { BaseRepository } from '@/infra/db/base.repository';
 import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 import { ListFilesQueryDto } from '../dto/list-files-query.dto';
 import { FileEntity } from '../entity/file.entity';
-import { type NewFileRow, files } from '../schema/file.schema';
+import { files } from '../schema/file.schema';
 
 export interface FindAllPaginatedOptions {
   userId?: string;
-  includeUserAndOrg: boolean;
 }
 
 export interface FindExistingFileParams {
@@ -20,11 +20,13 @@ export interface FindExistingFileParams {
 }
 
 @Injectable()
-export class FilesRepository {
+export class FilesRepository extends BaseRepository<typeof files> {
   constructor(
-    @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
-    private readonly paginationFactory: PaginationFactory,
-  ) {}
+    @Inject(DRIZZLE_DB) db: DrizzleDB,
+    paginationFactory: PaginationFactory,
+  ) {
+    super(db, files, paginationFactory);
+  }
 
   findAllPaginated(
     query: ListFilesQueryDto,
@@ -38,12 +40,7 @@ export class FilesRepository {
       filters.push(like(files.name, `%${query.search}%`));
     }
 
-    return this.paginationFactory.paginate<FileEntity>({
-      db: this.db,
-      table: files,
-      pageOptions: query,
-      where: filters.length ? and(...filters) : undefined,
-    });
+    return this.paginate(query, filters.length ? and(...filters) : undefined);
   }
 
   findExisting(params: FindExistingFileParams): FileEntity | null {
@@ -63,10 +60,6 @@ export class FilesRepository {
     );
   }
 
-  findById(id: string): FileEntity | null {
-    return this.db.select().from(files).where(eq(files.id, id)).get() ?? null;
-  }
-
   findByIdForUser(fileId: string, userId?: string): FileEntity | null {
     const conditions: SQL[] = [eq(files.id, fileId)];
     if (userId) {
@@ -79,25 +72,5 @@ export class FilesRepository {
         .where(and(...conditions))
         .get() ?? null
     );
-  }
-
-  create(file: NewFileRow): FileEntity {
-    return this.db.insert(files).values(file).returning().get();
-  }
-
-  save(file: NewFileRow): FileEntity {
-    return this.db
-      .insert(files)
-      .values(file)
-      .onConflictDoUpdate({
-        target: files.id,
-        set: { ...file, updatedAt: new Date() },
-      })
-      .returning()
-      .get();
-  }
-
-  deleteById(id: string): void {
-    this.db.delete(files).where(eq(files.id, id)).run();
   }
 }

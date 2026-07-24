@@ -7,8 +7,6 @@ export const BASE_USER_TEST_PASS = 'Test123$';
 export const GLOBAL_PREFIX = 'api';
 export const DOCS_AFFIX = 'docs';
 
-export const PASSWORD_HASH_ROUNDS = 10;
-
 export const LOGGER = {
   defaultMaskFields: [
     'accessToken',
@@ -53,7 +51,6 @@ export const PAGINATION = Object.freeze({
 
 export const STRING_LENGTH = {
   EMAIL_MAX: 254, // RFC 5321
-  PASSWORD_HASH_MAX: 128, // bcrypt ~60 chars + buffer
   SHORT_MAX: 128, // tokens, IDs, codes
   MEDIUM_MAX: 255, // names, entity names
   PATH_MAX: 1024, // S3 paths, URLs

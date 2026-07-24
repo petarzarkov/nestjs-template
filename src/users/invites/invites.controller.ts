@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { ApiAuth } from '@/core/decorators/api-auth.decorator';
 import { Public } from '@/core/decorators/public.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
 import { SanitizedUser } from '@/users/entity/user.entity';
@@ -20,7 +20,7 @@ import { Invite } from '@/users/invites/entity/invite.entity';
 import { InvitesService } from './services/invites.service';
 
 @ApiTags('invites')
-@ApiJwtAuth()
+@ApiAuth()
 @Roles(UserRole.ADMIN)
 @Controller('invites')
 export class InvitesController {

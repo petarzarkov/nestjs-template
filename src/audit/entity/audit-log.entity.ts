@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { Equal, Expect } from '@/core/utils/type-equal';
+import type { AuditLogRow } from '../schema/audit-log.schema';
 import { AuditAction } from '../enum/audit-action.enum';
 
 export class AuditLog {
@@ -28,3 +30,6 @@ export class AuditLog {
   @ApiProperty({ description: 'Timestamp of the audit event' })
   createdAt!: Date;
 }
+
+/** Compile-time drift guard: must match the Drizzle `audit_log` row. */
+export type _AuditLogMatchesRow = Expect<Equal<AuditLog, AuditLogRow>>;

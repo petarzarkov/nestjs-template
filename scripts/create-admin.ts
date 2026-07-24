@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import inquirer from 'inquirer';
 import { buildStandaloneAuth } from '@/auth/auth.config';
 import { BASE_USER_TEST_PASS } from '@/constants';
+import { passwordSchema } from '@/core/zod/schemas';
 import { createDrizzleClient } from '@/infra/db/client';
 import { UserRole } from '@/users/enum/user-role.enum';
 import { users } from '@/users/schema/user.schema';
@@ -25,8 +26,12 @@ async function createAdmin() {
         message: 'Enter the admin password:',
         default: BASE_USER_TEST_PASS,
         mask: '*',
-        validate: (v: string) =>
-          v.length >= 8 ? true : 'Password must be min 8 chars long',
+        validate: (v: string) => {
+          const parsed = passwordSchema.safeParse(v);
+          return parsed.success
+            ? true
+            : (parsed.error.issues[0]?.message ?? 'Invalid password');
+        },
       },
     ]);
 

@@ -1,4 +1,4 @@
-import { HttpStatus, Optional, UsePipes, ValidationPipe } from '@nestjs/common';
+import { HttpStatus, Optional } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -42,7 +42,6 @@ type MiddlewareFn = (socket: Socket, next: NextFn) => Promise<void>;
  * so we don't need to pass any options here.
  */
 @WebSocketGateway()
-@UsePipes(new ValidationPipe({ transform: true }))
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: WSServer | null = null; // Null in Worker Process

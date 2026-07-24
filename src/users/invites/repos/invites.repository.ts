@@ -1,13 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, inArray } from 'drizzle-orm';
+import { PaginationFactory } from '@/core/pagination/pagination.factory';
+import { BaseRepository } from '@/infra/db/base.repository';
 import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 import { Invite } from '../entity/invite.entity';
 import { InviteStatus } from '../enum/invite-status.enum';
-import { type NewInviteRow, invites } from '../schema/invite.schema';
+import { invites } from '../schema/invite.schema';
 
 @Injectable()
-export class InvitesRepository {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDB) {}
+export class InvitesRepository extends BaseRepository<typeof invites> {
+  constructor(
+    @Inject(DRIZZLE_DB) db: DrizzleDB,
+    paginationFactory: PaginationFactory,
+  ) {
+    super(db, invites, paginationFactory);
+  }
 
   findAll(statuses?: InviteStatus[]): Invite[] {
     if (statuses?.length) {
@@ -37,21 +44,5 @@ export class InvitesRepository {
         )
         .get() ?? null
     );
-  }
-
-  save(invite: NewInviteRow): Invite {
-    return this.db
-      .insert(invites)
-      .values(invite)
-      .onConflictDoUpdate({
-        target: invites.id,
-        set: { ...invite, updatedAt: new Date() },
-      })
-      .returning()
-      .get();
-  }
-
-  update(id: string, partial: Partial<NewInviteRow>): void {
-    this.db.update(invites).set(partial).where(eq(invites.id, id)).run();
   }
 }

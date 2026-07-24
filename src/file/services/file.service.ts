@@ -143,7 +143,6 @@ export class FileService {
 
     const filesPage = this.filesRepository.findAllPaginated(query, {
       userId: isAdmin ? undefined : currentUser.id,
-      includeUserAndOrg: isAdmin,
     });
 
     const data = filesPage.data.map(file => this.toResponseDto(file, isAdmin));

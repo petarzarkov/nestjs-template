@@ -29,7 +29,4 @@ export class FileResponseDto {
 export class FileAdminResponseDto extends FileResponseDto {
   @ApiProperty({ description: 'User ID (ADMIN only)' })
   userId!: string;
-
-  @ApiPropertyOptional({ description: 'User full name (ADMIN only)' })
-  userFullName?: string;
 }

@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { ApiAuth } from '@/core/decorators/api-auth.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginatedDto } from '@/core/pagination/dto/paginated.dto';
@@ -10,7 +10,7 @@ import { AuditLog } from './entity/audit-log.entity';
 import { AuditService } from './services/audit.service';
 
 @ApiTags('audit')
-@ApiJwtAuth()
+@ApiAuth()
 @Roles(UserRole.ADMIN)
 @Controller('audit-logs')
 export class AuditController {

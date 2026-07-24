@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiJwtAuth } from '@/core/decorators/api-jwt-auth.decorator';
+import { ApiAuth } from '@/core/decorators/api-auth.decorator';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { Roles } from '@/core/decorators/roles.decorator';
 import {
@@ -29,7 +29,7 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.USER)
-  @ApiJwtAuth()
+  @ApiAuth()
   @ApiOperation({ summary: 'Get users list' })
   @ApiOkResponse({
     description: 'A paginated list of users.',
@@ -43,7 +43,7 @@ export class UsersController {
   }
 
   @Get('me')
-  @ApiJwtAuth()
+  @ApiAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiOkResponse({ type: SanitizedUser })
   async getMe(
@@ -54,7 +54,7 @@ export class UsersController {
 
   @Post(':userId/ban')
   @Roles(UserRole.ADMIN)
-  @ApiJwtAuth()
+  @ApiAuth()
   @ApiOperation({
     summary:
       'Ban a given user so it can no longer use the platform until unbanned',
@@ -73,7 +73,7 @@ export class UsersController {
 
   @Post(':userId/unban')
   @Roles(UserRole.ADMIN)
-  @ApiJwtAuth()
+  @ApiAuth()
   @ApiOperation({
     summary: 'Remove a user ban so it is able to use the platform again',
   })
@@ -87,7 +87,7 @@ export class UsersController {
 
   @Patch(':userId')
   @Roles(UserRole.ADMIN)
-  @ApiJwtAuth()
+  @ApiAuth()
   @ApiOperation({
     summary: 'Update user properties',
   })

@@ -14,7 +14,7 @@ const groupConfig: Record<string, string | string[]> = {
   Email: 'EMAIL_',
   AWS: 'AWS_',
   'Application & API': ['API_', 'APP_', 'SWAGGER_', 'LOG_'],
-  'Security & JWT': 'JWT_',
+  'Security & Auth': ['BETTER_AUTH_', 'AUTH_', 'BASIC_AUTH_'],
   WebSocket: 'WS_',
   'HTTP Client': 'HTTP_REQ_',
   OAuth: 'OAUTH_',

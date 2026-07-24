@@ -36,10 +36,9 @@ export async function setupDocs(
       {
         type: 'http',
         in: 'header',
-        bearerFormat: 'JWT',
         scheme: 'bearer',
         name: 'Authorization',
-        description: 'Enter your access token',
+        description: 'Enter your Better Auth session token',
       },
       'bearerAuth',
     )

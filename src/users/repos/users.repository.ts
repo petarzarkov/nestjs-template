@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, like, or } from 'drizzle-orm';
 import { PageDto } from '@/core/pagination/dto/page.dto';
 import { PaginationFactory } from '@/core/pagination/pagination.factory';
-import { ContextLogger } from '@arkv/nestjs-context-logger';
+import { BaseRepository } from '@/infra/db/base.repository';
 import { DRIZZLE_DB, type DrizzleDB } from '@/infra/db/database.module';
 import { GetUsersQueryDto } from '@/users/dto/user.dto';
 import {
@@ -11,15 +11,16 @@ import {
   type User,
 } from '@/users/entity/user.entity';
 import { UserRole } from '@/users/enum/user-role.enum';
-import { type NewUserRow, users } from '@/users/schema/user.schema';
+import { users } from '@/users/schema/user.schema';
 
 @Injectable()
-export class UsersRepository {
+export class UsersRepository extends BaseRepository<typeof users> {
   constructor(
-    @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
-    protected readonly logger: ContextLogger,
-    private readonly paginationFactory: PaginationFactory,
-  ) {}
+    @Inject(DRIZZLE_DB) db: DrizzleDB,
+    paginationFactory: PaginationFactory,
+  ) {
+    super(db, users, paginationFactory);
+  }
 
   getUsersPaginated(
     getUsersQueryDto: GetUsersQueryDto,
@@ -35,12 +36,10 @@ export class UsersRepository {
       filters.push(or(like(users.email, term), like(users.name, term)));
     }
 
-    const page = this.paginationFactory.paginate<User>({
-      db: this.db,
-      table: users,
-      pageOptions: getUsersQueryDto,
-      where: filters.length ? and(...filters) : undefined,
-    });
+    const page = this.paginate(
+      getUsersQueryDto,
+      filters.length ? and(...filters) : undefined,
+    );
 
     return new PageDto(
       page.data.map(user => sanitizeUser(user)),
@@ -52,31 +51,6 @@ export class UsersRepository {
     return (
       this.db.select().from(users).where(eq(users.email, email)).get() ?? null
     );
-  }
-
-  findById(id: string): User | null {
-    return this.db.select().from(users).where(eq(users.id, id)).get() ?? null;
-  }
-
-  create(user: NewUserRow): User {
-    return this.db.insert(users).values(user).returning().get();
-  }
-
-  save(user: User): User {
-    const { createdAt: _createdAt, ...mutable } = user;
-    return this.db
-      .insert(users)
-      .values(user)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: { ...mutable, updatedAt: new Date() },
-      })
-      .returning()
-      .get();
-  }
-
-  update(userId: string, partialEntity: Partial<NewUserRow>): void {
-    this.db.update(users).set(partialEntity).where(eq(users.id, userId)).run();
   }
 
   findByRole(role: UserRole): User[] {

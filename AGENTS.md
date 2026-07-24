@@ -56,7 +56,7 @@ src/
 │   ├── dto/                   # Grouped Zod config schemas (service, db, redis, oauth, ai, aws, ws)
 │   └── enum/                  # AppEnv (local|dev|stage|prod), DbType (sqlite|postgres)
 ├── core/                      # Global utilities (NOT a NestJS module)
-│   ├── decorators/            # @Public, @Roles, @CurrentUser, @ApiJwtAuth,
+│   ├── decorators/            # @Public, @Roles, @CurrentUser, @ApiAuth,
 │   │                          # @ValidatedFiles, @UUIDParam, @EnvThrottle
 │   ├── filters/               # GenericExceptionFilter, DbExceptionFilter
 │   ├── interceptors/          # HttpLoggingInterceptor, AuditContextInterceptor
@@ -202,7 +202,7 @@ Imported directly via `@/core/...`:
 | `@Public()`             | Bypass auth (re-exports Better Auth's `AllowAnonymous`)      |
 | `@Roles(...roles)`      | Role-based access control (wraps the admin plugin's `Roles`) |
 | `@CurrentUser()`        | Extract the Better Auth session user (`SanitizedUser`)       |
-| `@ApiJwtAuth()`         | Swagger bearer-auth security annotation                      |
+| `@ApiAuth()`            | Swagger bearer-auth security annotation                      |
 | `@ValidatedFiles(opts)` | File upload validation (size, name, count)                   |
 | `@UUIDParam(name)`      | Parse + validate UUID route parameter                        |
 | `@EnvThrottle(opts)`    | Environment-aware rate limiting                              |
