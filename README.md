@@ -168,10 +168,10 @@ bun dev                                   # Dev server with hot reload
 bun run build                             # Build for production (Bun transpile)
 bun start                                 # Start production build
 
-# Testing — unit (*.test.ts) + integration (*.int.ts, in-memory SQLite) live in src/
-bun run test                              # Run unit + integration
+# Testing — unit (*.test.ts) + integration (*.spec.ts, in-memory SQLite) live in src/
+bun run test                              # Run unit + integration (bun test)
 bun run test:unit                         # Unit only (*.test.ts)
-bun run test:int                          # Integration only (*.int.ts)
+bun run test:int                          # Integration only (*.spec.ts)
 bun test --watch                          # Watch mode (unit)
 bun run test:cov                          # Coverage (unit + integration)
 bun run test:e2e                          # Run E2E tests (*.e2e.ts, live server + throwaway SQLite DB)

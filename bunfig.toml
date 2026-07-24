@@ -3,14 +3,15 @@
 
 # Test taxonomy by file extension:
 #   - Unit:        src/**/*.test.ts  (pure, mocked deps, no I/O)
-#   - Integration: src/**/*.int.ts   (real in-memory SQLite)
+#   - Integration: src/**/*.spec.ts  (real in-memory SQLite)
 #   - E2E:         e2e/**/*.e2e.ts   (live server)
 #
-# `bun test` (bare) only auto-discovers *.test.ts / *.spec.ts — i.e. the unit
-# suite. Integration (*.int.ts) and e2e (*.e2e.ts) are NOT auto-discovered, so
-# the test / test:cov / test:int / test:e2e scripts route through
-# scripts/test.ts, which resolves the globs with Bun.Glob and passes explicit
-# file paths to `bun test`. `root` below scopes any bare `bun test` (test:watch).
+# `bun test` auto-discovers *.test.ts / *.spec.ts, so bare `bun test` runs the
+# unit + integration suites (scoped to `root` below → the `src/` tree only, so
+# the live-server e2e files stay out). `test:unit` / `test:int` narrow that by
+# passing the `.test.ts` / `.spec.ts` substring as a path filter. E2E (*.e2e.ts)
+# is NOT auto-discovered — the `test:e2e` script runs it by passing explicit
+# paths from `find`.
 [test]
 root = "./src"
 

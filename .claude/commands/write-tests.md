@@ -9,7 +9,7 @@ If not specified, ask which service/module to test.
 
 - **Unit** (`<name>.test.ts`, next to the source) — pure logic, all deps mocked,
   no I/O. Run with `bun run test:unit`.
-- **Integration** (`<name>.int.ts`, next to the source) — real components against
+- **Integration** (`<name>.spec.ts`, next to the source) — real components against
   an **in-memory SQLite** DB (`createDrizzleClient(':memory:')` — migrations +
   audit triggers applied exactly as on boot). Run with `bun run test:int`.
 - **E2E** (`e2e/<feature>/<feature>.e2e.ts`) — a real running app + a **throwaway
@@ -31,15 +31,15 @@ Ask (or infer) which tier(s) to write. `bun run test` runs unit + integration.
 - Reset call history in `afterEach` (`.mockClear()`); never share mutable state.
 - Reference: [`src/file/services/file.service.test.ts`](../../src/file/services/file.service.test.ts).
 
-### Integration tests (`<name>.int.ts`)
+### Integration tests (`<name>.spec.ts`)
 
 - Spin up a throwaway DB: `const { db, sqlite } = createDrizzleClient(':memory:')`
   in `beforeEach`; `sqlite.close()` in `afterEach`.
 - Either drive Drizzle directly (see
-  [`src/infra/db/triggers.int.ts`](../../src/infra/db/triggers.int.ts)) or wire
+  [`src/infra/db/triggers.spec.ts`](../../src/infra/db/triggers.spec.ts)) or wire
   the real provider through a `TestingModule` with
   `{ provide: DRIZZLE_DB, useValue: db }` (see
-  [`src/users/repos/users.repository.int.ts`](../../src/users/repos/users.repository.int.ts)).
+  [`src/users/repos/users.repository.spec.ts`](../../src/users/repos/users.repository.spec.ts)).
 
 ### E2E tests (`e2e/<feature>/<feature>.e2e.ts`)
 

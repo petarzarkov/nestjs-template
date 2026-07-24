@@ -150,7 +150,7 @@ e2e/                           # E2E tests (*.e2e.ts, run against a throwaway SQ
 └── audit/                     # audit.e2e.ts (cursor pagination)
 ```
 
-> **Test taxonomy** (see the Testing section): `*.test.ts` = unit (co-located in `src/`), `*.int.ts` = integration (co-located in `src/`, real in-memory SQLite), `*.e2e.ts` = end-to-end (in `e2e/`, against a live server).
+> **Test taxonomy** (see the Testing section): `*.test.ts` = unit (co-located in `src/`), `*.spec.ts` = integration (co-located in `src/`, real in-memory SQLite), `*.e2e.ts` = end-to-end (in `e2e/`, against a live server).
 
 ---
 
@@ -550,22 +550,22 @@ Three tiers, distinguished by file extension:
 | Tier            | Files       | Location | What it exercises                                  |
 | --------------- | ----------- | -------- | -------------------------------------------------- |
 | **Unit**        | `*.test.ts` | `src/`   | Pure logic with mocked dependencies (no I/O)       |
-| **Integration** | `*.int.ts`  | `src/`   | Real components against an **in-memory SQLite** DB |
+| **Integration** | `*.spec.ts` | `src/`   | Real components against an **in-memory SQLite** DB |
 | **E2E**         | `*.e2e.ts`  | `e2e/`   | Full HTTP/WS flows against a **live server**       |
 
-Only `*.test.ts` / `*.spec.ts` are auto-discovered by `bun test`, so integration (`*.int.ts`) and e2e (`*.e2e.ts`) are run by **explicit path**. The `test` / `test:cov` / `test:int` / `test:e2e` scripts route through **`scripts/test.ts`**, a tiny runner that resolves the globs with `Bun.Glob` (reliable across nested dirs — the package.json shell's `**` is not) and passes `bun test` explicit `./`-prefixed paths. `test` + `test:cov` run **unit + integration together**, so CI covers integration.
+`bun test` auto-discovers `*.test.ts` (unit) and `*.spec.ts` (integration); `bunfig.toml` scopes discovery to `./src`, so the live-server e2e files stay out. So `bun run test` (and `test:cov`) run **unit + integration together** with plain `bun test` — no runner shim. `test:unit` / `test:int` narrow to the unit / integration set by passing `.test.ts` / `.spec.ts` as a path-substring filter. E2E (`*.e2e.ts`) is **not** auto-discovered — `test:e2e` runs it by passing explicit paths from `find ./e2e -name '*.e2e.ts'`.
 
 ### Unit + Integration
 
 ```bash
-bun run test          # Run unit + integration (via scripts/test.ts)
+bun run test          # Run unit + integration (bun test)
 bun run test:unit     # Unit only (*.test.ts)
-bun run test:int      # Integration only (*.int.ts)
+bun run test:int      # Integration only (*.spec.ts)
 bun test --watch      # Watch mode (auto-discovered unit tests)
 bun run test:cov      # Coverage (unit + integration)
 ```
 
-**Integration test pattern**: spin up a throwaway DB with `createDrizzleClient(':memory:')` (migrations + audit triggers applied exactly as on boot), then either drive Drizzle directly (e.g. `src/infra/db/triggers.int.ts`) or wire the real provider through a NestJS `TestingModule` with `{ provide: DRIZZLE_DB, useValue: db }` (e.g. `src/users/repos/users.repository.int.ts`).
+**Integration test pattern**: spin up a throwaway DB with `createDrizzleClient(':memory:')` (migrations + audit triggers applied exactly as on boot), then either drive Drizzle directly (e.g. `src/infra/db/triggers.spec.ts`) or wire the real provider through a NestJS `TestingModule` with `{ provide: DRIZZLE_DB, useValue: db }` (e.g. `src/users/repos/users.repository.spec.ts`).
 
 ### E2E Tests (`e2e/**/*.e2e.ts`)
 
@@ -594,7 +594,7 @@ bun run test:e2e:single ./e2e/relative/path/to/name.e2e.ts # Run single E2E test
 | `bun start`                      | Start production build (`bun dist/main.js`)                             |
 | `bun run test`                   | Run unit + integration tests                                            |
 | `bun run test:unit`              | Unit tests only (`*.test.ts`)                                           |
-| `bun run test:int`               | Integration tests only (`*.int.ts`, in-memory SQLite)                   |
+| `bun run test:int`               | Integration tests only (`*.spec.ts`, in-memory SQLite)                  |
 | `bun run test:cov`               | Unit + integration with coverage                                        |
 | `bun run test:e2e`               | Run E2E tests with DB preload                                           |
 | `bun run test:e2e:single <path>` | Run single E2E test                                                     |

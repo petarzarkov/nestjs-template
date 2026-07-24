@@ -174,5 +174,5 @@ export class BonusesModule {}
   `/gen-migration`) — it also auto-applies on app boot.
 
 After scaffolding, tell the user: (1) files created; (2) next steps — register in
-`app.module.ts`, add routes, write tests (`*.int.ts` against in-memory SQLite),
+`app.module.ts`, add routes, write tests (`*.spec.ts` against in-memory SQLite),
 generate the migration.
