@@ -178,7 +178,7 @@ e2e/                           # E2E tests (*.e2e.ts, run against a throwaway SQ
 
 > The `strategies/` folder (Passport strategies) was removed with the Better Auth migration — auth is no longer strategy-based.
 
-> **`schema/` vs `entity/`**: `schema/*.schema.ts` holds the Drizzle table (persistence + inferred `Row`/`NewRow` types). `entity/*.entity.ts` holds the `@ApiProperty` DTO class that documents the JSON the API returns. They are intentionally separate — the SQLite row and the API response need not be the same type. (For `user` they happen to coincide: there are no secret columns — the credential lives in the `account` table — so `SanitizedUser` is structurally identical to `User` and `sanitizeUser()` is a pass-through.)
+> **`schema/` vs `entity/`**: `schema/*.schema.ts` holds the Drizzle table (persistence + inferred `Row`/`NewRow` types). `entity/*.entity.ts` derives the Swagger response DTO **from that table** as the single source of truth — `withDateFormat(createSelectSchema(table, { …enum/JSON refinements }))` wrapped in `createZodDto` (nestjs-zod), so the API shape can't drift from the schema. `withDateFormat` (`@/core/zod/entity-schema`) attaches a `string`/`date-time` JSON-Schema override to each `z.date()` column — zod v4 otherwise throws `Date cannot be represented in JSON Schema` when nestjs-zod generates the OpenAPI doc (nestjs/swagger#3672). Request/update DTOs reuse the same schema via `.pick(...).extend(...).partial()` (see `users/dto/user.dto.ts`). (For `user` there are no secret columns — the credential lives in `account` — so `SanitizedUser` is structurally identical to `User` and `sanitizeUser()` is a pass-through.)
 
 ### Core Utilities (`src/core/`) — NOT a NestJS module
 

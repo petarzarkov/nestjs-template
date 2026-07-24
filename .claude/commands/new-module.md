@@ -53,35 +53,40 @@ export type NewBonusRow = typeof bonuses.$inferInsert;
 - **Register the table in the barrel** `src/infra/db/schema.ts` so Drizzle (and
   the boot-time migrator) discovers it.
 
-## 2. Entity (`entity/<name>.entity.ts`) — Swagger response class + drift guard
+## 2. Entity (`entity/<name>.entity.ts`) — single source of truth from the schema
 
-Hand-write the `@ApiProperty` class (Swagger reads its metadata directly), then
-add a compile-time **drift guard** so it can't silently diverge from the schema:
+Derive the Swagger DTO from the Drizzle table with `drizzle-zod`, wrapped in
+`withDateFormat` (`@/core/zod/entity-schema`). Refine enum/JSON columns:
 
 ```ts
-import { ApiProperty } from '@nestjs/swagger';
-import type { Equal, Expect } from '@/core/utils/type-equal';
-import type { BonusRow } from '../schema/bonus.schema';
+import { createSelectSchema } from 'drizzle-zod';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { withDateFormat } from '@/core/zod/entity-schema';
+import { bonuses } from '../schema/bonus.schema';
+// import { BonusKind } from '../enum/bonus-kind.enum';
 
-export class BonusEntity {
-  @ApiProperty() id!: string;
-  @ApiProperty() name!: string;
-  @ApiProperty() createdAt!: Date;
-  @ApiProperty() updatedAt!: Date;
-}
+export const bonusSelectSchema = withDateFormat(
+  createSelectSchema(bonuses, {
+    // kind: z.enum(BonusKind),  // refine $type<Enum>() text columns
+  }),
+);
 
-/** Fails `tsc` if the entity drifts from the Drizzle `bonus` row. */
-export type _BonusMatchesRow = Expect<Equal<BonusEntity, BonusRow>>;
+export class BonusEntity extends createZodDto(bonusSelectSchema) {}
 ```
 
-Don't try to derive the entity from the schema with `drizzle-zod` +
-`createZodDto`: the row's `Date` columns are unrepresentable in the JSON Schema
-nestjs-zod feeds to `@nestjs/swagger`, which throws at boot
-(`Date cannot be represented in JSON Schema`). The `@ApiProperty` class + `Equal`
-guard gives the same no-drift guarantee without that limitation. See
-`src/users/entity/user.entity.ts` (note `SanitizedUser` stays a class so it
-works as both a type and a Swagger value). Response subsets are separate
-hand-written classes.
+One definition, no drift. `withDateFormat` is required: zod v4 can't represent
+`z.date()` in JSON Schema, so a plain `createZodDto` with a date column crashes
+Swagger at boot (`Date cannot be represented in JSON Schema`,
+nestjs/swagger#3672) — the helper attaches a `string`/`date-time` override to
+each date column. See `src/users/entity/user.entity.ts` (note `SanitizedUser`
+stays a class so it works as both a type and a Swagger value).
+
+Response subsets / request DTOs reuse the same schema:
+`bonusSelectSchema.omit({ path: true })`, or
+`bonusSelectSchema.pick({ name: true }).extend({ email: emailSchema }).partial()`
+for an update DTO that needs stricter-than-DB validation (see
+`src/users/dto/user.dto.ts`).
 
 ## 3. Request / query DTOs (`dto/`)
 

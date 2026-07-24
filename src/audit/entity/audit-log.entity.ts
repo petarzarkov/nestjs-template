@@ -1,35 +1,17 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { Equal, Expect } from '@/core/utils/type-equal';
-import type { AuditLogRow } from '../schema/audit-log.schema';
+import { createSelectSchema } from 'drizzle-zod';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { withDateFormat } from '@/core/zod/entity-schema';
+import { auditLog } from '../schema/audit-log.schema';
 import { AuditAction } from '../enum/audit-action.enum';
 
-export class AuditLog {
-  @ApiProperty({ description: 'Audit log entry ID' })
-  id!: string;
+/** Audit log row/response shape, derived from the Drizzle `audit_log` table. */
+export const auditLogSelectSchema = withDateFormat(
+  createSelectSchema(auditLog, {
+    action: z.enum(AuditAction),
+    oldValue: z.record(z.string(), z.unknown()).nullable(),
+    newValue: z.record(z.string(), z.unknown()).nullable(),
+  }),
+);
 
-  @ApiPropertyOptional({
-    description: 'User ID of the actor (null for system actions)',
-  })
-  actorId!: string | null;
-
-  @ApiProperty({ description: 'The action performed', enum: AuditAction })
-  action!: AuditAction;
-
-  @ApiProperty({ description: 'Name of the audited entity (e.g., "User")' })
-  entityName!: string;
-
-  @ApiProperty({ description: 'Primary key of the audited entity' })
-  entityId!: string;
-
-  @ApiPropertyOptional({ description: 'Previous values (UPDATE/DELETE only)' })
-  oldValue!: Record<string, unknown> | null;
-
-  @ApiPropertyOptional({ description: 'New values (INSERT/UPDATE only)' })
-  newValue!: Record<string, unknown> | null;
-
-  @ApiProperty({ description: 'Timestamp of the audit event' })
-  createdAt!: Date;
-}
-
-/** Compile-time drift guard: must match the Drizzle `audit_log` row. */
-export type _AuditLogMatchesRow = Expect<Equal<AuditLog, AuditLogRow>>;
+export class AuditLog extends createZodDto(auditLogSelectSchema) {}
