@@ -10,7 +10,7 @@ import type { Auth } from '@/auth/auth.config';
 import { ValidatedConfig } from '@/config/env.validation';
 import { PackageJson } from '@/config/PackageJson';
 import { GLOBAL_PREFIX } from '@/constants';
-import { HtmlBasicAuthMiddleware } from '../middlewares/html-basic-auth.middleware';
+import { HtmlSessionAuthMiddleware } from '../middlewares/html-session-auth.middleware';
 
 export async function setupDocs(
   app: INestApplication,
@@ -19,11 +19,11 @@ export async function setupDocs(
   auth: Auth,
 ) {
   const SWAGGER_PATH = `/${GLOBAL_PREFIX}/docs`;
-  const htmlBasicAuthMiddleware = app.get(HtmlBasicAuthMiddleware);
+  const htmlSessionAuthMiddleware = app.get(HtmlSessionAuthMiddleware);
 
   app.use(
     [SWAGGER_PATH, `${SWAGGER_PATH}-json`],
-    htmlBasicAuthMiddleware.use.bind(htmlBasicAuthMiddleware),
+    htmlSessionAuthMiddleware.use.bind(htmlSessionAuthMiddleware),
   );
 
   const title = `${appConfig.name} ${appConfig.env}`;

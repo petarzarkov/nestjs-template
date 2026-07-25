@@ -19,7 +19,7 @@ import { GenericExceptionFilter } from './core/filters/generic-exception.filter'
 import { HelpersModule } from './core/helpers/helpers.module';
 import { AuditContextInterceptor } from './core/interceptors/audit-context.interceptor';
 import { HttpLoggingInterceptor } from './core/interceptors/http-logging.interceptor';
-import { HtmlBasicAuthMiddleware } from './core/middlewares/html-basic-auth.middleware';
+import { HtmlSessionAuthMiddleware } from './core/middlewares/html-session-auth.middleware';
 import { RequestMiddleware } from './core/middlewares/request.middleware';
 import { PaginationModule } from './core/pagination/pagination.module';
 import { FileModule } from './file/file.module';
@@ -110,7 +110,7 @@ import { UsersModule } from './users/users.module';
     DbExceptionFilter,
     GenericExceptionFilter,
     RequestMiddleware,
-    HtmlBasicAuthMiddleware,
+    HtmlSessionAuthMiddleware,
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditContextInterceptor,

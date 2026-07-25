@@ -5,7 +5,6 @@ import { dbVarsSchema } from './dto/db-vars.dto';
 import { oauthVarsSchema } from './dto/oauth-vars.dto';
 import { redisVarsSchema } from './dto/redis-vars.dto';
 import { serviceVarsSchema } from './dto/service-vars.dto';
-import { AppEnv } from './enum/app-env.enum';
 import { DbType } from './enum/db-type.enum';
 
 /** All env vars, merged, with cross-field rules. */
@@ -41,17 +40,6 @@ export const envSchema = z
           message: 'POSTGRES_CA_PATH is required when POSTGRES_USE_SSL is true',
         });
       }
-    }
-
-    if (
-      [AppEnv.STG, AppEnv.PRD].includes(data.APP_ENV) &&
-      !data.BASIC_AUTH_TOKEN
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['BASIC_AUTH_TOKEN'],
-        message: 'BASIC_AUTH_TOKEN is required when APP_ENV is stage or prod',
-      });
     }
 
     if (data.AUTH_SESSION_UPDATE_AGE > data.AUTH_SESSION_EXPIRATION) {

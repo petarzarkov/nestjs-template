@@ -59,7 +59,7 @@ src/
 │   │                          # @ValidatedFiles, @UUIDParam, @EnvThrottle
 │   ├── filters/               # GenericExceptionFilter, DbExceptionFilter
 │   ├── interceptors/          # HttpLoggingInterceptor, AuditContextInterceptor
-│   ├── middlewares/           # RequestMiddleware (context+requestId), HtmlBasicAuthMiddleware (docs/queues auth)
+│   ├── middlewares/           # RequestMiddleware (context+requestId), HtmlSessionAuthMiddleware (session gate for docs/queues)
 │   ├── pagination/            # Cursor-based pagination: PaginationFactory, PageDto, PageMetaDto, PageOptionsDto, cursor.util
 │   ├── zod/                   # Shared Zod schemas (emailSchema, passwordSchema)
 │   ├── validators/            # File size/name validators
@@ -188,7 +188,7 @@ Imported directly via `@/core/...`:
 - `@/core/decorators` — Custom parameter & metadata decorators
 - `@/core/filters` — Exception filters (registered globally in `main.ts`)
 - `@/core/interceptors` — HttpLoggingInterceptor, AuditContextInterceptor (registered globally)
-- `@/core/middlewares` — RequestMiddleware (Express-level), HtmlBasicAuthMiddleware
+- `@/core/middlewares` — RequestMiddleware (Express-level), HtmlSessionAuthMiddleware
 - `@/core/pagination` — Cursor-based PaginationFactory service, DTOs, cursor utilities
 - `@/core/zod` — Shared Zod schemas (`emailSchema`, `passwordSchema`) + `entity-schema.ts` (`withDateFormat` — the `z.date()` → `string`/`date-time` JSON-Schema fix for drizzle-zod entities)
 - `@/core/utils` — uuid.util (UUID helpers)
@@ -226,7 +226,7 @@ The application bootstrap registers these globally:
 8. **Better Auth** — the app is created with `bodyParser: false` (Better Auth reads the raw body); `AuthModule` (`@thallesp/nestjs-better-auth`, wired in `app.module.ts` via `forRootAsync`) re-enables body parsing for non-auth routes, registers the global `AuthGuard`, and mounts the auth handler at the raw `basePath` `/api/auth/*`
 9. CORS enabled, trust proxy, global prefix `api` (Better Auth's `/api/auth/*` handler is auto-excluded from the prefix — no double prefix)
 10. API docs served at `/api/docs` (Swagger) and `/api/public` (Scalar); `setupDocs` returns the OpenAPI document. The Better Auth routes (served by middleware, not NestJS controllers) are merged into that document via the Better Auth `openAPI()` plugin (`auth.api.generateOpenAPISchema()`), so `/api/auth/*` appears in Swagger under an **Auth** tag
-11. `/api/queues` (queue dashboard) is protected by `HtmlBasicAuthMiddleware` (basic auth in deployed envs)
+11. `/api/queues` (queue dashboard) + the docs are protected by `HtmlSessionAuthMiddleware` — a Better Auth **session** gate (validates the session cookie via `auth.api.getSession`, requires any authenticated user); an unauthenticated browser gets a self-contained login form that signs in through `auth.api.signInEmail` and forwards the session cookie. Bypassed in local; no shared secret.
 12. `NestJsCmsModule.setup(app, document, …)` — mounts the admin CMS UI at `/cms` (after docs, before `listen`)
 
 ---
@@ -392,7 +392,7 @@ await jobPublisher.publishJob(EVENTS.ROUTING_KEYS.USER_REGISTERED, payload, {
 
 ### Queue Dashboard
 
-- **Bull Board** UI at `/api/queues` (`QueueDashboardModule` via `@bull-board/nestjs` + `@bull-board/express`), protected by `HtmlBasicAuthMiddleware`.
+- **Bull Board** UI at `/api/queues` (`QueueDashboardModule` via `@bull-board/nestjs` + `@bull-board/express`), protected by `HtmlSessionAuthMiddleware` (Better Auth session gate).
 
 ### Tuning (`REDIS_QUEUES_*` env vars → `redis.queues.*` config)
 

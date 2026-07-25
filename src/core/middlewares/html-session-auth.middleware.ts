@@ -1,57 +1,46 @@
-import { timingSafeEqual } from 'node:crypto';
 import { HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
+import { AuthService } from '@thallesp/nestjs-better-auth';
+import { fromNodeHeaders } from 'better-auth/node';
 import type { NextFunction, Request, Response } from 'express';
+import type { Auth } from '@/auth/auth.config';
 import { AppEnv } from '@/config/enum/app-env.enum';
 import { AppConfigService } from '@/config/services/app.config.service';
 
+/**
+ * Gates the browser-facing ops pages that live OUTSIDE Nest's routing — the
+ * Swagger/Scalar docs and the Bull Board queue dashboard (raw Express mounts the
+ * global Better Auth `AuthGuard` never sees). Access requires any valid Better
+ * Auth session (any authenticated user, no specific role):
+ *   - a valid session cookie → pass straight through
+ *   - otherwise a self-contained login form is rendered; submitting it signs in
+ *     through Better Auth (`signInEmail`), forwards the resulting session cookie
+ *     to the browser, and reloads the page
+ *
+ * There is no shared secret — access is tied to real user accounts (revocable,
+ * auditable). Bypassed entirely in local for developer convenience.
+ */
 @Injectable()
-export class HtmlBasicAuthMiddleware implements NestMiddleware {
-  constructor(private readonly configService: AppConfigService) {}
+export class HtmlSessionAuthMiddleware implements NestMiddleware {
+  constructor(
+    private readonly configService: AppConfigService,
+    private readonly authService: AuthService<Auth>,
+  ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const env = this.configService.get('app.env');
-    const token = this.configService.getOrThrow('app.basicAuthToken');
-
-    if (env === AppEnv.LOCAL || !token) {
+    if (this.configService.get('app.env') === AppEnv.LOCAL) {
       return next();
     }
 
-    const username = 'admin';
-    const cookieName = 'x-auth-token';
-
-    const authCookie = this.getCookie(req, cookieName);
-    if (authCookie) {
-      if (this.validateToken(authCookie, username, token)) {
-        return next();
-      }
+    // Already signed in (session cookie present + valid)?
+    const session = await this.authService.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+    if (session?.user) {
+      return next();
     }
 
     if (req.method === 'POST') {
-      const body = await this.parseBody(req);
-      const { username: inputUser, password: inputPassword } = body;
-
-      if (this.validateCredentials(inputUser, inputPassword, username, token)) {
-        const sessionToken = Buffer.from(`${username}:${token}`).toString(
-          'base64',
-        );
-
-        res.setHeader(
-          'Set-Cookie',
-          `${cookieName}=${sessionToken}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`,
-        );
-
-        const redirectUrl = req.baseUrl || req.originalUrl.split('?')[0];
-        return res.redirect(redirectUrl);
-      }
-
-      return res
-        .status(HttpStatus.UNAUTHORIZED)
-        .send(
-          this.renderHtml(
-            'Restricted Area',
-            HttpStatus[HttpStatus.UNAUTHORIZED],
-          ),
-        );
+      return this.handleLogin(req, res);
     }
 
     return res
@@ -59,45 +48,39 @@ export class HtmlBasicAuthMiddleware implements NestMiddleware {
       .send(this.renderHtml('Restricted Area'));
   }
 
-  private validateCredentials(
-    inputUser: string,
-    inputPass: string,
-    validUser: string,
-    validPass: string,
-  ): boolean {
-    if (!inputUser || !inputPass) return false;
-    return (
-      this.safeCompare(inputUser, validUser) &&
-      this.safeCompare(inputPass, validPass)
-    );
-  }
+  /** Handle the login-form submission: sign in via Better Auth, gate on role. */
+  private async handleLogin(req: Request, res: Response) {
+    const { email, password } = await this.parseBody(req);
 
-  private validateToken(
-    cookieVal: string,
-    validUser: string,
-    validPass: string,
-  ): boolean {
-    try {
-      const decoded = Buffer.from(cookieVal, 'base64').toString('utf-8');
-      const [user, pass] = decoded.split(':');
-      return this.validateCredentials(user, pass, validUser, validPass);
-    } catch {
-      return false;
+    if (!email || !password) {
+      return this.deny(
+        res,
+        HttpStatus.UNAUTHORIZED,
+        'Email and password required',
+      );
     }
+
+    const authRes = await this.authService.api.signInEmail({
+      body: { email, password },
+      headers: fromNodeHeaders(req.headers),
+      asResponse: true,
+    });
+
+    if (!authRes.ok) {
+      return this.deny(res, HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+    }
+
+    // Forward Better Auth's session cookie(s) to the browser, then reload so the
+    // now-authenticated request passes the check above.
+    const cookies = authRes.headers.getSetCookie();
+    if (cookies.length > 0) {
+      res.setHeader('Set-Cookie', cookies);
+    }
+    return res.redirect(req.baseUrl || req.originalUrl.split('?')[0]);
   }
 
-  private safeCompare(a: string, b: string): boolean {
-    const bufA = Buffer.from(a);
-    const bufB = Buffer.from(b);
-    if (bufA.length !== bufB.length) return false;
-    return timingSafeEqual(bufA, bufB);
-  }
-
-  private getCookie(req: Request, name: string): string | undefined {
-    const header = req.headers.cookie;
-    if (!header) return undefined;
-    const match = header.match(new RegExp(`(^| )${name}=([^;]+)`));
-    return match ? match[2] : undefined;
+  private deny(res: Response, status: HttpStatus, error: string) {
+    return res.status(status).send(this.renderHtml('Restricted Area', error));
   }
 
   private parseBody(req: Request): Promise<Record<string, string>> {
@@ -146,7 +129,7 @@ export class HtmlBasicAuthMiddleware implements NestMiddleware {
           <h2>Login</h2>
           ${error ? `<div class="error">${error}</div>` : ''}
           <form method="POST">
-            <input type="text" name="username" placeholder="Username" required autofocus>
+            <input type="email" name="email" placeholder="Email" required autofocus>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Sign In</button>
           </form>

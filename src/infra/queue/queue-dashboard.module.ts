@@ -3,7 +3,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppConfigService } from '@/config/services/app.config.service';
-import { HtmlBasicAuthMiddleware } from '@/core/middlewares/html-basic-auth.middleware';
+import { HtmlSessionAuthMiddleware } from '@/core/middlewares/html-session-auth.middleware';
 import { EVENTS } from '@/notifications/events/events';
 
 @Global()
@@ -45,6 +45,6 @@ import { EVENTS } from '@/notifications/events/events';
 })
 export class QueueDashboardModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(HtmlBasicAuthMiddleware).forRoutes('/queues');
+    consumer.apply(HtmlSessionAuthMiddleware).forRoutes('/queues');
   }
 }

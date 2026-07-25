@@ -41,7 +41,6 @@ export const serviceVarsSchema = z.object({
   LOG_MAX_ARRAY_LENGTH: z.coerce.number().min(1).max(1000).default(1),
 
   API_PORT: z.coerce.number().min(0).max(65535),
-  BASIC_AUTH_TOKEN: z.string().optional(),
 
   HTTP_REQ_TIMEOUT: z.coerce.number().default(30000),
   HTTP_REQ_MAX_REDIRECTS: z.coerce.number().default(5),
@@ -92,7 +91,6 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
       nodeEnv: config.NODE_ENV,
       version: pkg.version,
       port: config.API_PORT,
-      basicAuthToken: config.BASIC_AUTH_TOKEN,
       timezone: config.TZ,
       logoUrl: config.LOGO_URL,
     },
