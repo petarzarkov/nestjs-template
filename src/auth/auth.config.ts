@@ -41,6 +41,27 @@ export interface BuildAuthDeps {
 }
 
 /**
+ * Password hashing via Bun's native bcrypt (`Bun.password`) instead of Better
+ * Auth's default pure-JS scrypt — the native implementation is significantly
+ * faster. Bun pre-hashes the input, so bcrypt's 72-byte cap is a non-issue even
+ * for a max-length multibyte password. `verify` swallows Bun's
+ * `UnsupportedAlgorithm` throw so a non-bcrypt hash (e.g. a legacy scrypt hash
+ * left over from before this switch) resolves to a clean auth failure (401)
+ * rather than a 500 — such a user must reset their password to get a bcrypt hash.
+ */
+const bunBcryptPassword = {
+  hash: (password: string) =>
+    Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 }),
+  verify: async ({ hash, password }: { hash: string; password: string }) => {
+    try {
+      return await Bun.password.verify(password, hash);
+    } catch {
+      return false;
+    }
+  },
+};
+
+/**
  * Builds the Better Auth instance. Stateful sessions (stored in Redis via
  * `secondaryStorage`, cached in a signed cookie), email/password + social
  * (google/github/linkedin), the `admin` plugin (role/ban) and the `bearer`
@@ -78,6 +99,8 @@ export const buildAuth = (deps: BuildAuthDeps) => {
       enabled: true,
       minPasswordLength: 8,
       maxPasswordLength: 64,
+      // Native Bun bcrypt for hash + verify (see bunBcryptPassword above).
+      password: bunBcryptPassword,
       ...(jobPublisher && {
         sendResetPassword: async ({ user, token }) => {
           await jobPublisher.publishJob(

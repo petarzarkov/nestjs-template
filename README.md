@@ -60,7 +60,7 @@ bun run create:admin
 ### Authentication & Authorization
 
 - **Better Auth** (`@thallesp/nestjs-better-auth`) with **stateful sessions stored in Redis** (signed cookie, or `Authorization: Bearer <sessionToken>` via the `bearer` plugin)
-- Email/password auth with scrypt hashing (handled internally by Better Auth)
+- Email/password auth with native Bun bcrypt hashing (`Bun.password`, via Better Auth)
 - OAuth2 providers: Google, GitHub, LinkedIn (accounts stored per user in the `account` table)
 - Role-based access control (RBAC) with `admin` and `user` roles, plus user ban/unban (`admin` plugin)
 - Password reset flow with email tokens

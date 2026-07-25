@@ -18,7 +18,7 @@ This is a **NestJS modular monolith template** running on **Bun** as the runtime
 - **Package Manager:** Bun (`bun install`, `bun add`)
 - **Test Runner:** Bun test (`bun test`)
 - **TypeScript:** Native Bun execution (no ts-node/tsx), target ESNext, module ESNext, moduleResolution bundler
-- **Password Hashing:** handled internally by **Better Auth** (default **scrypt**) — the credential hash lives in the `account` table; the app never hashes passwords itself
+- **Password Hashing:** owned by **Better Auth**, configured to use **Bun's native bcrypt** (`Bun.password`, via `emailAndPassword.password.hash`/`verify`) instead of the default pure-JS scrypt — the credential hash lives in the `account` table; the app never calls the hasher directly
 - **Typecheck:** `tsc --noEmit` via `bun run typecheck` — `typescript@7` is the native (Go) compiler (`tsc` execs the native binary, same engine the `@typescript/native-preview`/`tsgo` package previewed). Typechecks the whole project via the single `tsconfig.json` (app + e2e + scripts + specs)
 - **Linting & Formatting:** Oxlint (`bun run lint` → `oxlint --type-aware --fix src e2e scripts`) + oxfmt (`bun run format`) — single quotes, trailing commas, 80-char lines. Linting is **type-aware** (powered by `oxlint-tsgolint`); there is no custom JS lint plugin.
 - **Build:** `bun run build` (`scripts/build.ts`) — a Bun-native, structure-preserving transpile (`Bun.Transpiler`), one output file per source file in `dist/`. It resolves the `@/*` alias to relative paths itself (no `tsc-alias`) and does NOT bundle (Bun's bundler miscompiles legacy decorators at scale). It also copies the Drizzle migration `.sql`/`.json` files into `dist/` so the boot-time migrator can find them. `bun run start` runs `dist/main.js`.
@@ -273,7 +273,7 @@ Declared inline in `sqliteTable(...)`, e.g. `uniqueIndex('UQ_user_email').on(t.e
 | ------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `user` (`User`)          | users         | id, email, emailVerified, name, image, role (`UserRole`), banned, banReason, banExpires                               |
 | `session`                | auth          | id, token, userId → user (cascade), expiresAt, ipAddress, userAgent, impersonatedBy                                   |
-| `account`                | auth          | id, accountId, providerId, userId → user (cascade), accessToken, refreshToken, idToken, scope, password (scrypt hash) |
+| `account`                | auth          | id, accountId, providerId, userId → user (cascade), accessToken, refreshToken, idToken, scope, password (bcrypt hash) |
 | `verification`           | auth          | id, identifier, value, expiresAt                                                                                      |
 | `invite` (`Invite`)      | users/invites | id, email, inviteCode, role, status, expiresAt                                                                        |
 | `audit_log` (`AuditLog`) | audit         | id, actorId, action, entityName, entityId, oldValue (JSON), newValue (JSON) — no `updatedAt`                          |
@@ -293,7 +293,7 @@ bun run db:studio             # Open Drizzle Studio
 bun run seed                  # Run migration-style seeders (scripts/seed.ts; tracked in a __seeders table)
 ```
 
-> Migrations also run automatically on app boot via the client's `migrate()` call, so a fresh SQLite file is always schema-current. The default seeder (`0000_admin.seeder.ts`) creates an admin from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (defaults `admin@local.dev` / `Admin123$`) via `buildStandaloneAuth` (Better Auth's scrypt hashing → `account` row).
+> Migrations also run automatically on app boot via the client's `migrate()` call, so a fresh SQLite file is always schema-current. The default seeder (`0000_admin.seeder.ts`) creates an admin from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (defaults `admin@local.dev` / `Admin123$`) via `buildStandaloneAuth` (Better Auth + Bun bcrypt hashing → `account` row).
 
 ---
 
@@ -313,7 +313,7 @@ Auth is **Better Auth** (`better-auth`) wired into NestJS via the community pack
 - `databaseHooks.user.create.after` — publishes the `user.registered` job (welcome email + WS notification)
 - `plugins: [admin(), bearer()]`
 
-It also exports `buildStandaloneAuth(db)` — a lightweight instance (no Redis, no queue hooks) used by CLI scripts (seeder, `create:admin`) and e2e setup — and `export type Auth = ReturnType<typeof buildAuth>`. **Password hashing** is Better Auth's default **scrypt**, done internally; the credential hash is stored in the `account` table.
+It also exports `buildStandaloneAuth(db)` — a lightweight instance (no Redis, no queue hooks) used by CLI scripts (seeder, `create:admin`) and e2e setup — and `export type Auth = ReturnType<typeof buildAuth>`. **Password hashing** is **Bun's native bcrypt** (`Bun.password`, wired through `emailAndPassword.password.hash`/`verify`) instead of Better Auth's default pure-JS scrypt — faster, and `verify` swallows Bun's `UnsupportedAlgorithm` throw so a non-bcrypt hash fails cleanly (401). The credential hash is stored in the `account` table.
 
 ### Plugins
 
@@ -339,7 +339,7 @@ It also exports `buildStandaloneAuth(db)` — a lightweight instance (no Redis, 
 
 Routes are provided by Better Auth (non-exhaustive):
 
-- `POST /api/auth/sign-up/email` — register with email + password (scrypt hash stored in `account`); still fully supported
+- `POST /api/auth/sign-up/email` — register with email + password (bcrypt hash stored in `account`); still fully supported
 - `POST /api/auth/sign-in/email` — login → returns `{ token, user }`
 - `POST /api/auth/sign-out`
 - `POST /api/auth/forget-password` + `POST /api/auth/reset-password`

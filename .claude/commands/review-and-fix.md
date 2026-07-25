@@ -32,8 +32,8 @@ diff against the rules in AGENTS.md. Check for:
   (`NotFoundException`, `BadRequestException`, `ForbiddenException`, …);
   literal HTTP status codes (`401`, `404`) where `HttpStatus.*` should be used.
 - **User creation / password handling** done in app code — Better Auth owns
-  scrypt hashing; accounts are created via `auth.api` (`signUpEmail`), never a
-  manual hash or a direct `user`/`account` insert.
+  password hashing (native Bun bcrypt); accounts are created via `auth.api`
+  (`signUpEmail`), never a manual hash or a direct `user`/`account` insert.
 - Paginated endpoints not using cursor pagination via `BaseRepository.paginate`
   / `PaginationFactory` (no offset/page-number pagination).
 - New env vars not added to `.env.example` **and** `.env` **and** the relevant
