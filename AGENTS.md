@@ -45,7 +45,6 @@ src/
 ├── main.ts                    # Bootstrap: express app, global filters/interceptors, CORS, WS adapter
 ├── app.module.ts              # Root module — imports all feature & infra modules; global APP_PIPE / APP_INTERCEPTOR
 ├── constants.ts               # Global constants (GLOBAL_PREFIX, LOGGER, FILES, PAGINATION, STRING_LENGTH, time units)
-├── types/                     # Ambient TS types (express.d.ts — req.user globally typed as SanitizedUser)
 ├── config/                    # Environment configuration module (Zod-validated)
 │   ├── app.config.module.ts   # Dynamic config module (.forRoot)
 │   ├── services/app.config.service.ts  # Typed config access
@@ -323,7 +322,7 @@ It also exports `buildStandaloneAuth(db)` — a lightweight instance (no Redis, 
 ### NestJS wiring
 
 - `app.module.ts` uses `AuthModule.forRootAsync({ inject, useFactory })`, imported **before** `RedisCacheThrottlerModule` so the global Better Auth `AuthGuard` runs before the `ThrottlerGuard` (whose skip-for-authenticated check reads `req.user`).
-- `main.ts` creates the app with `bodyParser: false` (Better Auth needs the raw body); the `AuthModule` re-enables body parsing for non-auth routes and mounts the handler at the raw `basePath` `/api/auth/*` (auto-excluded from the global `api` prefix). It sets `request.user` / `request.session`; `req.user` is globally typed as `SanitizedUser` via `src/types/express.d.ts`.
+- `main.ts` creates the app with `bodyParser: false` (Better Auth needs the raw body); the `AuthModule` re-enables body parsing for non-auth routes and mounts the handler at the raw `basePath` `/api/auth/*` (auto-excluded from the global `api` prefix). It sets `request.user` / `request.session`; `req.user` is globally typed as `SanitizedUser` via `@types/express.d.ts` (the repo-root ambient-types dir, wired in via the tsconfig `include`).
 
 ### Guards & decorators
 
