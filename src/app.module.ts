@@ -77,6 +77,7 @@ import { UsersModule } from './users/users.module';
             baseURL: app.webUrl,
             trustedOrigins: [app.webUrl],
             sessionExpiresIn: authConfig.sessionExpiresIn,
+            sessionUpdateAge: authConfig.sessionUpdateAge,
             oauth: configService.getOrThrow('oauth'),
             jobPublisher,
           }),

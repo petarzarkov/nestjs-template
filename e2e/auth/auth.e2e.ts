@@ -55,6 +55,28 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  describe('Logout', () => {
+    test('should invalidate the session on sign-out', async () => {
+      await Bun.sleep(1100);
+      const { token } = await ctx.loginAsAdmin();
+
+      // Session resolves before sign-out
+      const before = await ctx.api.get('/api/users/me');
+      expect(before.status).toBe(200);
+
+      // Better Auth native sign-out — deletes the session from Redis
+      const result = await ctx.api.logout();
+      expect(result.success).toBe(true);
+
+      // The same bearer token no longer resolves to a session
+      const after = await ctx.api.get('/api/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(after.ok).toBe(false);
+      expect(after.status).toBe(401);
+    });
+  });
+
   describe('WebSocket Connection', () => {
     test('should connect to WebSocket and receive connected event', async () => {
       await Bun.sleep(1100);

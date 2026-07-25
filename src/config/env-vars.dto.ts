@@ -53,6 +53,15 @@ export const envSchema = z
         message: 'BASIC_AUTH_TOKEN is required when APP_ENV is stage or prod',
       });
     }
+
+    if (data.AUTH_SESSION_UPDATE_AGE > data.AUTH_SESSION_EXPIRATION) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_SESSION_UPDATE_AGE'],
+        message:
+          'AUTH_SESSION_UPDATE_AGE must be <= AUTH_SESSION_EXPIRATION (the session slides forward by expiration each time it is used past the update age)',
+      });
+    }
   });
 
 export type EnvVars = z.infer<typeof envSchema>;

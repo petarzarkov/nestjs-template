@@ -13,8 +13,16 @@ export interface BuildAuthDeps {
   /** Full origin, e.g. http://localhost:3011 */
   baseURL: string;
   trustedOrigins: string[];
-  /** Session lifetime in seconds. */
+  /** Session lifetime in seconds (max age of an idle session). */
   sessionExpiresIn: number;
+  /**
+   * Rolling-session refresh window in seconds. When an active session is used
+   * and it's older than this, Better Auth extends its expiry to now +
+   * `sessionExpiresIn` (and re-persists to Redis with a fresh TTL) — so an
+   * actively-browsing user is never logged out mid-session. Must be
+   * `<= sessionExpiresIn`.
+   */
+  sessionUpdateAge: number;
   /**
    * When present, sessions/verification data live in Redis via
    * `secondaryStorage`. Omitted in CLI scripts (fall back to the DB tables).
@@ -95,6 +103,9 @@ export const buildAuth = (deps: BuildAuthDeps) => {
 
     session: {
       expiresIn: deps.sessionExpiresIn,
+      // Rolling session: an active session past `updateAge` gets its expiry
+      // pushed to now + expiresIn, so active users are never randomly logged out.
+      updateAge: deps.sessionUpdateAge,
       cookieCache: { enabled: true, maxAge: 300 },
     },
 
@@ -155,5 +166,6 @@ export const buildStandaloneAuth = (db: DrizzleDB): Auth =>
       process.env.BETTER_AUTH_SECRET ?? 'dev-secret-change-me-please-32ch',
     baseURL: process.env.APP_URL ?? 'http://localhost:3011',
     trustedOrigins: [],
-    sessionExpiresIn: 604800,
+    sessionExpiresIn: 86400,
+    sessionUpdateAge: 3600,
   });

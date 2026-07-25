@@ -63,7 +63,8 @@ export const serviceVarsSchema = z.object({
   TZ: timezone,
 
   BETTER_AUTH_SECRET: z.string(),
-  AUTH_SESSION_EXPIRATION: z.coerce.number().min(1).max(604800).default(604800),
+  AUTH_SESSION_EXPIRATION: z.coerce.number().min(1).max(604800).default(86400),
+  AUTH_SESSION_UPDATE_AGE: z.coerce.number().min(1).max(604800).default(3600),
 
   CORS_ORIGIN: z.string().default('*'),
 
@@ -126,6 +127,7 @@ export const getServiceConfig = (pkg: PackageJson, config: ServiceVars) => {
     auth: {
       secret: config.BETTER_AUTH_SECRET,
       sessionExpiresIn: config.AUTH_SESSION_EXPIRATION,
+      sessionUpdateAge: config.AUTH_SESSION_UPDATE_AGE,
     },
     ws: {
       connectTimeout: config.WS_CONNECT_TIMEOUT,

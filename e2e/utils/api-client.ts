@@ -133,4 +133,22 @@ export class ApiClient {
 
     return response.data;
   }
+
+  /**
+   * Better Auth native sign-out — deletes the current session from Redis
+   * (`secondaryStorage`) and expires the cookie. Uses the current bearer token
+   * to identify the session, then clears it locally.
+   */
+  async logout(): Promise<{ success: boolean }> {
+    const response = await this.post<{ success: boolean }>(
+      '/api/auth/sign-out',
+    );
+    this.clearAuthToken();
+
+    if (!response.ok) {
+      throw new Error(`Logout failed: ${JSON.stringify(response.data)}`);
+    }
+
+    return response.data;
+  }
 }

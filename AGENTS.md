@@ -238,7 +238,7 @@ The application bootstrap registers these globally:
 - **Typed config** via `AppConfigService<ValidatedConfig>` (extends `ConfigService<…, true>`) — access with `.get('db')`, `.getOrThrow('auth')`, etc.
 - **Config DTOs** in `config/dto/` (each exports a Zod schema + a `getXConfig()` mapper): `service-vars`, `db-vars`, `redis-vars`, `oauth-vars`, `ai-vars`, `aws-vars`, `ws-vars`
 - **Config groups** (top-level keys of `ValidatedConfig`): `isProd`, `app`, `log`, `http`, `service`, `slack`, `auth`, `ws`, `cors`, `email`, `db`, `redis`, `oauth`, `ai`, `aws`
-- **Auth env vars**: `BETTER_AUTH_SECRET` (required) + `AUTH_SESSION_EXPIRATION` (seconds, default 604800) feed the `auth` config group (`{ secret, sessionExpiresIn }`). The former `JWT_SECRET`/`JWT_EXPIRATION` are gone, as is the `oauth` group's `callbackUrl` (Better Auth derives OAuth callback URLs from its `basePath`).
+- **Auth env vars**: `BETTER_AUTH_SECRET` (required), `AUTH_SESSION_EXPIRATION` (seconds, default 86400 = 1d) and `AUTH_SESSION_UPDATE_AGE` (seconds, default 3600 = 1h; `superRefine`d to be ≤ expiration) feed the `auth` config group (`{ secret, sessionExpiresIn, sessionUpdateAge }`). `updateAge` drives **rolling sessions** — an active session past that age has its expiry pushed to now + expiration, so active users aren't logged out; logout is Better Auth's native `POST /api/auth/sign-out` (deletes the session from Redis + expires the cookie). The former `JWT_SECRET`/`JWT_EXPIRATION` are gone, as is the `oauth` group's `callbackUrl` (Better Auth derives OAuth callback URLs from its `basePath`).
 - **Environments**: `local`, `dev`, `stage`, `prod` (`AppEnv` enum); **DB types**: `sqlite`, `postgres` (`DbType` enum — only `sqlite` is implemented; the Postgres env surface is validated but the module throws if selected)
 
 ---
@@ -309,7 +309,7 @@ Auth is **Better Auth** (`better-auth`) wired into NestJS via the community pack
 - `basePath: '/api/auth'` and `advanced.database.generateId: () => crypto.randomUUID()` (UUID ids so existing FKs hold)
 - `emailAndPassword` (min 8 / max 64; `sendResetPassword` publishes the `user.password_reset` job)
 - `socialProviders` (google/github/linkedin from the `oauth` config group)
-- `session` (`expiresIn` + `cookieCache { enabled, maxAge: 300 }`) and a Redis-backed `secondaryStorage`
+- `session` (`expiresIn` + `updateAge` for **rolling/sliding sessions** + `cookieCache { enabled, maxAge: 300 }`) and a Redis-backed `secondaryStorage` (session extension re-persists with a fresh Redis TTL)
 - `databaseHooks.user.create.after` — publishes the `user.registered` job (welcome email + WS notification)
 - `plugins: [admin(), bearer()]`
 
