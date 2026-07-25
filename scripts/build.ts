@@ -5,43 +5,39 @@ import { Glob } from 'bun';
 /**
  * Bun-native production build — replaces `nest build` + `tsc-alias`.
  *
- * We transpile every source file to its own output file (1:1, structure
- * preserving) instead of bundling, because Bun's *bundler* (`Bun.build`)
- * miscompiles this app's decorators at scale — in a full-app bundle some
- * decorated classes get emitted with the TC39 standard decorator transform
- * instead of legacy (`experimentalDecorators` + `emitDecoratorMetadata`),
- * which breaks NestJS DI metadata (and Swagger `@ApiProperty`) at boot. The
- * same files compile correctly file-by-file.
+ * Every source file is transpiled to its own output file (1:1, structure
+ * preserving): we hand `Bun.build` all files as entrypoints with
+ * `external: ['*']`, so it transpiles each in place and never bundles them.
  *
- * Drizzle migration SQL is copied verbatim below (not transpiled) so the
- * boot-time migrator can find it under `dist/infra/db/migrations`.
+ * The 1:1 layout is REQUIRED, not cosmetic — two runtime lookups resolve paths
+ * relative to their own file location, so they only work if the source tree is
+ * mirrored in `dist/`:
+ *   - the boot-time migrator reads `join(import.meta.dir, 'migrations')` from
+ *     `infra/db/client.ts` → needs `dist/infra/db/migrations`
+ *   - BullMQ spawns the sandboxed worker from `join(__dirname, '../job.processor')`
+ *     in `infra/queue/services/job-dispatcher.service.ts` → needs a standalone
+ *     `dist/infra/queue/job.processor.js`
+ * A full bundle collapses everything into `dist/main.js`, making both
+ * `import.meta.dir`/`__dirname` resolve to `dist/` and breaking both. (Bundling
+ * also used to miscompile decorators; that appears fixed in current Bun, but the
+ * path-resolution constraint above stands regardless.)
  *
- * `Bun.Transpiler` only strips types / lowers decorators; it does NOT resolve
- * the `@/*` path alias, so we rewrite those specifiers to relative paths here
- * (the job `tsc-alias` + `tsconfig.alias.json` used to do).
+ * Consequences of staying per-file (`external: ['*']`):
+ *   - Bun does NOT resolve the `@/*` alias for external specifiers (even with
+ *     `tsconfig` passed), so we rewrite those to relative paths afterwards
+ *     (`resolveAlias`, line-preserving so the emitted source maps stay valid).
+ *   - The Drizzle migration `.sql`/`.json` are never `import`ed (the migrator
+ *     reads them from disk), so Bun won't emit them — we copy them verbatim.
+ *
+ * `sourcemap: 'linked'` emits a `.js.map` (with embedded `sourcesContent`) next
+ * to each file, so production stack traces from `bun dist/main.js` remap to the
+ * original `.ts` lines — Bun loads the map automatically at runtime, no flag.
  */
 
 const ROOT = join(import.meta.dir, '..');
 const SRC = join(ROOT, 'src');
 const OUT = join(ROOT, 'dist');
-
-const tsconfig = JSON.stringify({
-  compilerOptions: {
-    target: 'esnext',
-    jsx: 'react',
-    experimentalDecorators: true,
-    emitDecoratorMetadata: true,
-  },
-});
-
-// `trimUnusedImports` elides type-only imports (e.g. `import { Repository }`
-// used only in annotations) that would otherwise fail at runtime, while keeping
-// side-effect imports (`reflect-metadata`) and the class imports that
-// `emitDecoratorMetadata` references in `design:paramtypes` for Nest DI.
-const transpilers = {
-  ts: new Bun.Transpiler({ loader: 'ts', tsconfig, trimUnusedImports: true }),
-  tsx: new Bun.Transpiler({ loader: 'tsx', tsconfig, trimUnusedImports: true }),
-};
+const TSCONFIG = join(ROOT, 'tsconfig.json');
 
 /** Rewrite `@/foo/bar` specifiers to a path relative to the output file. */
 function resolveAlias(code: string, outFile: string): string {
@@ -53,24 +49,11 @@ function resolveAlias(code: string, outFile: string): string {
   );
 }
 
-// Without a file path, `Bun.Transpiler` injects a stub for files that reference
-// `__dirname`/`__filename` (e.g. `var __dirname = "", __filename = "input.ts";`).
-// That breaks runtime path resolution (e.g. the Drizzle migrations folder lookup
-// in client.ts, which uses `import.meta.dir`). Strip
-// it so Bun's runtime provides the real values for each output file.
-function stripDirnameStub(code: string): string {
-  return code.replace(
-    /^var (?:__dirname|__filename) = "[^"]*"(?:, (?:__dirname|__filename) = "[^"]*")*;\n?/gm,
-    '',
-  );
-}
-
 await rm(OUT, { recursive: true, force: true });
 
-const glob = new Glob('**/*.{ts,tsx}');
-const jobs: Promise<void>[] = [];
-
-for await (const rel of glob.scan({ cwd: SRC })) {
+// Collect every source file (skip tests + ambient decls) as its own entrypoint.
+const entrypoints: string[] = [];
+for await (const rel of new Glob('**/*.{ts,tsx}').scan({ cwd: SRC })) {
   if (
     rel.endsWith('.spec.ts') ||
     rel.endsWith('.test.ts') ||
@@ -78,28 +61,49 @@ for await (const rel of glob.scan({ cwd: SRC })) {
   ) {
     continue;
   }
-
-  const loader = rel.endsWith('.tsx') ? 'tsx' : 'ts';
-  const srcPath = join(SRC, rel);
-  const outPath = join(OUT, rel.replace(/\.tsx?$/, '.js'));
-
-  jobs.push(
-    (async () => {
-      const source = await Bun.file(srcPath).text();
-      const js = resolveAlias(
-        stripDirnameStub(transpilers[loader].transformSync(source)),
-        outPath,
-      );
-      await mkdir(dirname(outPath), { recursive: true });
-      await writeFile(outPath, js);
-    })(),
-  );
+  entrypoints.push(join(SRC, rel));
 }
 
-await Promise.all(jobs);
+const started = performance.now();
 
-// Copy non-TS runtime assets that the transpiler skips: the Drizzle migration
-// SQL + journal, applied on boot by `migrate()` (see infra/db/client.ts).
+const result = await Bun.build({
+  entrypoints,
+  outdir: OUT,
+  root: SRC,
+  target: 'bun',
+  external: ['*'],
+  splitting: false,
+  sourcemap: 'linked',
+  metafile: true,
+  // Resolve jsx/decorator settings from the project's tsconfig explicitly (so
+  // the build is independent of cwd-based auto-detection).
+  tsconfig: TSCONFIG,
+  // Bun inlines `process.env.NODE_ENV` to its BUILD-TIME value by default (a
+  // bundler special-case, NOT governed by the `env` option). This server reads
+  // all config from the environment at RUNTIME (env is parsed as a whole object
+  // via AppConfigService), so map NODE_ENV back to itself to keep it a live
+  // reference — nothing about the environment is ever frozen into `dist`.
+  define: { 'process.env.NODE_ENV': 'process.env.NODE_ENV' },
+});
+
+if (!result.success) {
+  for (const log of result.logs) console.error(log);
+  throw new AggregateError(result.logs, 'Build failed');
+}
+
+// Rewrite the `@/*` alias in every emitted JS file (line-preserving, so the
+// source maps stay valid).
+const jsOutputs = result.outputs.filter(o => o.kind === 'entry-point');
+await Promise.all(
+  jsOutputs.map(async output => {
+    const code = await Bun.file(output.path).text();
+    const rewritten = resolveAlias(code, output.path);
+    if (rewritten !== code) await writeFile(output.path, rewritten);
+  }),
+);
+
+// Copy non-TS runtime assets that the build skips: the Drizzle migration SQL +
+// journal, applied on boot by `migrate()` (see infra/db/client.ts).
 const assetGlob = new Glob('infra/db/migrations/**/*.{sql,json}');
 let assetCount = 0;
 for await (const rel of assetGlob.scan({ cwd: SRC })) {
@@ -109,6 +113,20 @@ for await (const rel of assetGlob.scan({ cwd: SRC })) {
   assetCount++;
 }
 
+// Persist + summarize the build metafile (input/output graph + byte sizes).
+const durationMs = Math.round(performance.now() - started);
+let totalBytes = 0;
+if (result.metafile) {
+  await writeFile(
+    join(OUT, 'meta.json'),
+    JSON.stringify(result.metafile, null, 2),
+  );
+  totalBytes = Object.values(result.metafile.outputs).reduce(
+    (sum, o) => sum + o.bytes,
+    0,
+  );
+}
 console.log(
-  `✅ Transpiled ${jobs.length} files (+${assetCount} migration assets) to dist/`,
+  `✅ Built ${jsOutputs.length} files (+${jsOutputs.length} source maps, +${assetCount} migration assets), ` +
+    `${(totalBytes / 1024).toFixed(1)} KiB JS, in ${durationMs}ms → dist/ (metafile: dist/meta.json)`,
 );
